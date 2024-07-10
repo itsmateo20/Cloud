@@ -24,10 +24,10 @@ exports.getDocument = async (req, res) => {
 exports.convertDocument = async (req, res) => {
     let args = {
         body: [`Konwersja plików | Chmura`],
-        email: data.email,
-        directory: folder,
+        email: req.user.email,
+        directory: req.folders.folder,
 
-        admin: data.admin,
+        admin: req.user.admin,
 
         loggedIn: true,
     };
