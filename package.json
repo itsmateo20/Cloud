@@ -3,14 +3,14 @@
     "start": "node index.js",
     "setup": "node index.js --setup",
     "update": "node index.js --update",
-    "dev": "node index.js --dev --watch",
+    "dev": "nodemon index.js --dev",
     "startbun": "bun index.js",
     "setupbun": "bun index.js --setup",
     "updatebun": "bun index.js --update",
-    "devbun": "bun index.js --dev --watch"
+    "devbun": "bun --dev --watch index.js"
   },
   "name": "cloud",
-  "version": "1.4.7",
+  "version": "1.4.8",
   "description": "The Cloud Storage App is a web-based application designed for users to store and manage their files and folders in the cloud. It offers a convenient way to organize, upload, download, and delete files and folders, making it easy to access your data from anywhere.",
   "main": "index.js",
   "repository": {
@@ -49,6 +49,7 @@
     "dotenv": "^16.4.5",
     "ejs": "^3.1.10",
     "express": "^4.19.2",
+    "express-rate-limit": "^7.3.1",
     "express-session": "^1.18.0",
     "extract-zip": "^2.0.1",
     "fluent-ffmpeg": "^2.1.3",
