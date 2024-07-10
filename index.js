@@ -45,13 +45,13 @@ async function BeforeStart() {
 BeforeStart().then(() => {
     const express = require('express')
     const expressSession = require('express-session')
+    const rateLimit = require("express-rate-limit");
     const app = express()
+    const setupRoutes = require('./src/routes.js');
 
     const CookieParser = require("cookie-parser")
     const TinyCsrf = require("tiny-csrf")
     const nocache = require('nocache');
-
-    const { readdirSync } = require('fs')
 
     const ffprobe = require('node-ffprobe')
     const ffprobeInstaller = require('@ffprobe-installer/ffprobe');
@@ -60,8 +60,7 @@ BeforeStart().then(() => {
     ffprobe.SYNC = true
 
 
-    require("./database.js").execute().then(() => {
-        app.enable("trust proxy")
+    require("./database.js").execute().then(async () => {
         app.disable('x-powered-by')
         app.disable('x-content-type-options')
         app.set("etag", false)
@@ -72,28 +71,20 @@ BeforeStart().then(() => {
         app.use(expressSession({ secret: process.env.SESSION_SECRET, resave: false, saveUninitialized: true, cookie: { secure: true, sameSite: "strict", maxAge: 1000 * 60 * 60 * 24 * 7, httpOnly: true } }))
         app.use(TinyCsrf(process.env.CSRF_SECRET, ["POST"], ["/file/upload"]));
         app.use(nocache())
+        app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 1000 }))
 
         app.set("view engine", "ejs")
         app.set("views", __dirname + "/src/pages")
         app.use(express.static(__dirname + '/src/assets/'))
         app.use(express.static(__dirname + '/src/dist/'))
 
-        let files = readdirSync(__dirname + '/src/routes/')
-        logger.log(`Started loading ${files.length} routes`, null, { type: "info", name: "ROUTING" })
-        files.forEach(f => {
-            if (f.endsWith(".js") === false) return logger.log(`Found folder inside routes folder: ${f} skipping...`, null, { type: "warn", name: "ROUTING", msgColor: "yellow" })
-            const file = require(`./src/routes/${f}`)
-            if (file && file.url) {
-                app.get(file.url, file.run)
-                if (file.run2) app.post(file.url, file.run2)
-                logger.log(`Loaded ${file.url}`, null, { type: "info", name: "ROUTING" })
-            }
-        })
+        logger.log(`Started loading routes`, null, { type: "info", name: "ROUTING" })
+        await setupRoutes(app)
+
         app.use(function (req, res, next) {
             res.status(404).send("404 Not Found")
-            logger.log(`404 Not Found: ${req.url}`, null, { line: true, type: "warn", name: "USER" })
+            logger.log(`404 Not Found: ${req.url}`, null, { type: "warn", name: "USER", msgColor: "red" })
         });
-        logger.log(`Finished loading ${files.length} routes`, null, { line: true, type: "info", name: "ROUTING" })
 
         logger.log(`Starting on port {green ${process.env.PORT}}`, null, { type: "info", name: "SITE" })
         app.listen(process.env.PORT, () => logger.log(`Webpage listening on port {green ${process.env.PORT}} {gray - You can now view your cloud on http://localhost:${process.env.PORT}}`, null, { type: "info", name: "SITE" }))
@@ -103,6 +94,6 @@ BeforeStart().then(() => {
     })
 
     process.on('unhandledRejection', (reason, error) => {
-        logger.log('Unhandled Rejection at:', error, { type: "error", name: "SITE" })
+        logger.log("Unhandled Rejection at ", reason + error, { type: "error", name: "SITE" })
     });
 })
