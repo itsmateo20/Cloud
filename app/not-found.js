@@ -4,9 +4,9 @@ export async function generateMetadata() {
     return {
         metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL),
         icons: {
-            icon: "/assets/logo/rounded.png",
-            apple: "/assets/logo/rounded.png",
-            shortcut: "/assets/logo/box.png",
+            icon: "/assets/logo/rounded-512x512.png",
+            apple: "/assets/logo/rounded-512x512.png",
+            shortcut: "/assets/logo/512x512.png",
         },
         assets: ['/assets'],
         canonical: `/`,

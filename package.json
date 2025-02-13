@@ -1,9 +1,27 @@
 {
     "name": "cloud",
-    "version": "0.1.0",
-    "private": true,
+    "version": "2.0.0",
+    "description": "The Cloud Storage App is a web-based application designed for users to store and manage their files and folders in the cloud. It offers a convenient way to organize, upload, download, and delete files and folders, making it easy to access your data from anywhere.",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/ItsMateo20/Cloud.git"
+    },
+    "keywords": [
+        "cloud",
+        "files",
+        "storage",
+        "file",
+        "hosting",
+        "host"
+    ],
+    "author": "ItsMateo20",
+    "license": "MIT",
+    "bugs": {
+        "url": "https://github.com/ItsMateo20/Cloud/issues"
+    },
+    "homepage": "https://github.com/ItsMateo20/Cloud#readme",
     "scripts": {
-        "dev": "next dev",
+        "dev": "next dev --turbopack",
         "build": "next build",
         "start": "next start",
         "lint": "next lint"
@@ -12,20 +30,21 @@
         "@prisma/client": "5.22.0",
         "bcrypt": "^5.1.1",
         "bcryptjs": "^2.4.3",
+        "googleapis": "^144.0.0",
         "jsonwebtoken": "^9.0.2",
-        "next": "^15.0.2",
+        "next": "^15.1.7",
         "next-pwa": "^5.6.0",
         "path": "^0.12.7",
         "prisma": "^5.22.0",
-        "react": "^19.0.0-rc-02c0e824-20241028",
-        "react-dom": "^19.0.0-rc-02c0e824-20241028",
-        "react-icons": "^5.3.0",
+        "react": "^19.0.0",
+        "react-dom": "^19.0.0",
+        "react-icons": "^5.4.0",
         "sqlite3": "^5.1.7"
     },
     "devDependencies": {
         "@types/bun": "latest"
     },
     "peerDependencies": {
-        "typescript": "^5.0.0"
+        "typescript": "^5.6.3"
     }
 }

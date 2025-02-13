@@ -1,6 +1,6 @@
 // app/layout.js
 
-import fonts from "./fonts.js";
+import fonts from "@/app/fonts";
 import "@/public/styles/globals.css";
 
 import { AuthProvider } from '@/context/AuthProvider';
@@ -9,9 +9,9 @@ export async function generateMetadata() {
   return {
     metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL),
     icons: {
-      icon: "/assets/logo/rounded.png",
-      apple: "/assets/logo/rounded.png",
-      shortcut: "/assets/logo/box.png",
+      icon: "/assets/logo/rounded-512x512.png",
+      apple: "/assets/logo/rounded-512x512.png",
+      shortcut: "/assets/logo/512x512.png",
     },
     assets: ['/assets'],
     canonical: `/`,
@@ -43,12 +43,12 @@ export async function generateMetadata() {
 
 export default function RootLayout({ children }) {
   return (
-    <AuthProvider>
-      <html lang="en">
-        <body className={fonts.join(" ")}>
+    <html lang="en">
+      <body className={fonts.join(" ")}>
+        <AuthProvider>
           {children}
-        </body>
-      </html>
-    </AuthProvider>
+        </AuthProvider>
+      </body>
+    </html>
   );
 }

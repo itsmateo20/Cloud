@@ -4,7 +4,7 @@ function Get-GitignorePatterns {
         [string]$gitignoreFile
     )
 
-    $patterns = @(".git", ".github", "docs")
+    $patterns = @(".git", ".github", "docs", "node_modules", ".next")
     Get-Content $gitignoreFile | ForEach-Object {
         $line = $_.Trim()
         if (-not [string]::IsNullOrWhiteSpace($line) -and -not $line.StartsWith("#")) {

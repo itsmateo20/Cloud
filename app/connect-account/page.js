@@ -1,28 +1,28 @@
-// app/login/page.js
+// app/connect-account/page.js
 "use client";
 
 import { useAuth } from '@/context/AuthProvider';
 import Layout from '@/components/Layout';
-import loginStyle from "@/public/styles/login.module.css";
-
-import { useEffect, useState } from 'react';
-import Image from 'next/image';
+import connectAccountStyle from "@/public/styles/connect-account.module.css";
+import { useState, useEffect, use } from 'react';
 import Link from 'next/link';
-import { GoogleSignIn } from '@/components/authentication/GoogleSignIn';
+import Image from 'next/image';
+import { redirect } from 'next/navigation';
 
-export default function Page() {
-    const { loading, user, login, authWithGoogle, clearDatabase } = useAuth();
+export default function Page({ searchParams }) {
+    const { user, connectAccount, loading } = useAuth();
 
     const [isMobile, setIsMobile] = useState(null);
+    const { email, signature, type } = use(searchParams) || {};
     const [passwordVisible, setPasswordVisible] = useState(false);
     const [passwordType, setPasswordType] = useState('password');
-    const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
 
+
     useEffect(() => {
         if (typeof window !== 'undefined') {
-            let mobile = window.matchMedia("(max-width: 1023px)");
+            const mobile = window.matchMedia("(max-width: 1023px)");
             setIsMobile(mobile.matches);
 
             const handleResize = () => setIsMobile(window.matchMedia("(max-width: 1023px)").matches);
@@ -31,6 +31,29 @@ export default function Page() {
             return () => window.removeEventListener('resize', handleResize);
         }
     }, []);
+
+    useEffect(() => {
+        if (email && signature) {
+            fetch('/api/auth/validate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, signature }),
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (!data.success) {
+                        console.error(data.error);
+                        console.log("invalid-signature-redirect")
+                        return redirect("/login");
+                    }
+                })
+                .catch(error => {
+                    console.error(error);
+                    console.log("invalid-signature-redirect")
+                    return redirect("/login");
+                });
+        }
+    }, [email, signature]);
 
     const showPassword = () => {
         if (passwordType === 'password') {
@@ -42,11 +65,11 @@ export default function Page() {
         }
     };
 
-    const handleLogin = async () => {
+    const handleConnectAccount = async () => {
         setError('');
 
         try {
-            await login(email, password);
+            await connectAccount(email, password, type);
         } catch (err) {
             setError(err.message);
         }
@@ -54,21 +77,16 @@ export default function Page() {
 
     return (
         <Layout loading={loading} mobile={isMobile} user={user}>
-            <main className={loginStyle.main}>
-                <h1 className={loginStyle.title}>Login</h1>
-                <h2 className={loginStyle.subtitle}>Login into your cloud storage account</h2>
-                <fieldset className={loginStyle.inputWithText}>
+            <main className={connectAccountStyle.main}>
+                <h1 className={connectAccountStyle.title}>Connect Account</h1>
+                <h2 className={connectAccountStyle.subtitle}>An account with this email already exists. Please log in to connect it.</h2>
+
+                <fieldset className={`${connectAccountStyle.inputWithText} ${connectAccountStyle.disabled}`}>
                     <legend>Email</legend>
-                    <input
-                        type="email"
-                        name="email"
-                        defaultValue={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        required
-                    />
+                    <h1>{email}</h1>
                 </fieldset>
 
-                <fieldset className={loginStyle.inputWithText}>
+                <fieldset className={connectAccountStyle.inputWithText}>
                     <legend>Password</legend>
                     <input
                         type={passwordType}
@@ -94,17 +112,14 @@ export default function Page() {
                     </button>
                 </fieldset>
 
-                <GoogleSignIn style={loginStyle} auth={authWithGoogle} />
+                <button onClick={handleConnectAccount} type="button" className={connectAccountStyle.connectAccountButton}>Connect Account</button>
 
-                <button onClick={handleLogin} type="button" className={loginStyle.loginButton}>Log In</button>
-                <button type="button" onClick={() => clearDatabase()}><span>clear</span></button>
+                {error && <p className={connectAccountStyle.error}>{error}</p>}
 
-                {error && <p className={loginStyle.error}>{error}</p>}
-
-                <Link href="/signup" className={loginStyle.signupLink}>
-                    Don't have an account yet? Sign Up
+                <Link href="/login" className={connectAccountStyle.loginLink}>
+                    Not your account? Log In
                 </Link>
             </main>
-        </Layout>
-    )
+        </Layout >
+    );
 }

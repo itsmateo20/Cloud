@@ -1,8 +1,9 @@
+// app/signup/page.js
 "use client";
 
 import { useAuth } from '@/context/AuthProvider';
 import Layout from '@/components/Layout';
-import register from "@/public/styles/register.module.css";
+import signupStyle from "@/public/styles/signup.module.css";
 
 import { useEffect, useState } from 'react';
 import { redirect } from 'next/navigation';
@@ -11,7 +12,7 @@ import Link from 'next/link';
 import { GoogleSignIn } from '@/components/authentication/GoogleSignIn';
 
 export default function Page() {
-    const { user, signup, loading } = useAuth();
+    const { loading, user, signup, clearDatabase } = useAuth();
 
     const [isMobile, setIsMobile] = useState(null);
     const [passwordVisible, setPasswordVisible] = useState(false);
@@ -61,7 +62,6 @@ export default function Page() {
             console.log("Passwords do not match");
             return;
         }
-        console.log("Signing up using", email, password);
         setError('');
 
         try {
@@ -71,12 +71,12 @@ export default function Page() {
         }
     };
 
-    if (!user) return (
-        <Layout loading={false} mobile={isMobile} user={user}>
-            <main className={register.main}>
-                <h1 className={register.title}>Signup</h1>
-                <h2 className={register.subtitle}>Make an account for your cloud storage</h2>
-                <fieldset className={register.inputWithText}>
+    return (
+        <Layout loading={loading} mobile={isMobile} user={user}>
+            <main className={signupStyle.main}>
+                <h1 className={signupStyle.title}>Signup</h1>
+                <h2 className={signupStyle.subtitle}>Make an account for your cloud storage</h2>
+                <fieldset className={signupStyle.inputWithText}>
                     <legend>Email</legend>
                     <input
                         type="email"
@@ -85,7 +85,7 @@ export default function Page() {
                         onChange={(e) => setEmail(e.target.value)}
                         required />
                 </fieldset>
-                <fieldset className={register.inputWithText}>
+                <fieldset className={signupStyle.inputWithText}>
                     <legend>Password</legend>
                     <input
                         type={passwordType}
@@ -108,7 +108,7 @@ export default function Page() {
                         />
                     </button>
                 </fieldset>
-                <fieldset className={register.inputWithText}>
+                <fieldset className={signupStyle.inputWithText}>
                     <legend>Repeat Password</legend>
                     <input
                         type={repeatPasswordType}
@@ -131,11 +131,11 @@ export default function Page() {
                         />
                     </button>
                 </fieldset>
-                <GoogleSignIn style={register} />
-                <button onClick={handleSignup} type="button" className={register.registerButton}>Sign Up</button>
-                <Link href="/login" className={register.registerLink}>Already have an account? Log In</Link>
+                <GoogleSignIn style={signupStyle} />
+                <button onClick={handleSignup} type="button" className={signupStyle.signupButton}>Sign Up</button>
+                <button type="button" onClick={() => clearDatabase()}><span>clear</span></button>
+                <Link href="/login" className={signupStyle.signupLink}>Already have an account? Log In</Link>
             </main>
         </Layout>
-    );
-    else return redirect('/');
+    )
 }

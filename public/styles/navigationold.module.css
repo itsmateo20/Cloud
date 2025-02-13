@@ -613,7 +613,7 @@ img.user-profile,
     height: 22px;
 }
 
-.user-dropdown li img[alt="Logout"] {
+.user-dropdown li img[alt="signout"] {
     width: 19px;
     height: 19px;
 }

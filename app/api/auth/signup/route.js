@@ -1,31 +1,20 @@
-// app/api/auth/signup.js
-import { signUpUser } from '@/lib/auth';
+// app/api/auth/signup/route.js
+
+import { signUp } from '@/lib/auth';
 import { createSession } from '@/lib/session';
-import { NextResponse } from 'next/server';
 
 export async function POST(req) {
     try {
-        console.log("Request body:", req.body);
         const { email, password } = await req.json();
+        if (!email || !password) return new Response(JSON.stringify({ success: false, code: 'missing_email_password' }), { status: 400 });
 
-        if (!email || !password) {
-            return NextResponse.json({ success: false, message: 'Email and password are required' });
-        }
+        const response = await signUp(email, password);
 
-        console.log("Signing up", email);
+        if (!response.success) return new Response(JSON.stringify({ success: false, code: 'signup_error', error: response.message }), { status: 500 });
 
-        const response = await signUpUser(email, password);
-
-        if (response.success) {
-            const user = { userID: response.userID };
-            await createSession(user);
-
-            return NextResponse.json({ success: true, user });
-        } else {
-            return NextResponse.json({ success: false, message: 'Signup error occurred.', error: response.message });
-        }
+        await createSession({ id: response.user.id, email: response.user.email, provider: response.user.provider });
+        return new Response(JSON.stringify({ success: true, code: 'signup_success', user: response.user }), { status: 200 });
     } catch (error) {
-        console.error("Error in POST handler:", error);
-        return NextResponse.json({ success: false, message: 'Signup error occurred.' });
+        return new Response(JSON.stringify({ success: false, code: 'signup_error', error }), { status: 500 });
     }
 }

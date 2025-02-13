@@ -2,13 +2,13 @@
 
 import Image from 'next/image';
 
-export function GoogleSignIn({ style }) {
+export function GoogleSignIn({ style, auth }) {
     const googleAuth = process.env.NEXT_PUBLIC_GOOGLE_AUTH === 'true';
 
     if (googleAuth) return (
         <>
             <h2 className={style.or}>or</h2>
-            <button className={style.gsiMaterialButton}>
+            <button className={style.gsiMaterialButton} onClick={() => auth()}>
                 <div className={style.gsiMaterialButtonState}></div>
                 <div className={style.gsiMaterialButtonContentWrapper}>
                     <div className={style.gsiMaterialButtonIcon}>

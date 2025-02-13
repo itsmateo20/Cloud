@@ -1,0 +1,165 @@
+.main {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: calc(100vh - var(--top-nav-height) - 20px);
+    width: calc(100vw - 20px);
+}
+
+.disabled {
+    pointer-events: none;
+    opacity: 0.5;
+}
+
+.title {
+    font-size: 80px;
+    line-height: 100px;
+}
+
+.subtitle {
+    font-size: 26px;
+    font-weight: 600;
+    color: var(--alt-text-2);
+    text-align: center;
+    max-width: 500px;
+    margin-bottom: 10px;
+}
+
+.inputWithText {
+    position: relative;
+
+    margin: 2px 0;
+    width: 377px;
+    height: 67.69px;
+    border-radius: 10px;
+    border: 3px solid #CFCFCF;
+
+    overflow: hidden;
+
+    transition: all 0.5s ease;
+}
+
+
+.inputWithText:has(input:hover),
+.inputWithText:has(input:focus),
+.inputWithText:has(button:hover),
+.inputWithText:has(button:focus) {
+    border-color: #606060;
+}
+
+.inputWithText legend {
+    margin-left: 12px;
+    padding: 0 4px;
+
+    user-select: none;
+    font-family: var(--font-rubik);
+    font-weight: 600;
+    font-size: 15px;
+    color: var(--alt-text-1);
+
+    transition: all 0.5s ease;
+}
+
+.inputWithText:has(input:hover) legend,
+.inputWithText:has(input:focus) legend,
+.inputWithText:has(button:hover) legend,
+.inputWithText:has(button:focus) legend {
+    color: var(--alt-text-3);
+}
+
+.inputWithText input,
+.inputWithText h1 {
+    position: absolute;
+    top: -9.6px;
+    width: 100%;
+    height: 60px;
+    border: none;
+    padding: 0 12px;
+    box-sizing: border-box;
+    font-family: var(--font-rubik);
+    font-weight: 600;
+    font-size: 23px;
+    color: var(--text);
+    background-color: transparent;
+    outline: none;
+}
+
+.inputWithText h1 {
+    top: 7px;
+}
+
+.inputWithText input[type="password"] {
+    padding: 0 55px 0 12px;
+}
+
+.inputWithText button {
+    background-color: transparent;
+    border: none;
+    position: absolute;
+    right: 15px;
+    top: 6px;
+    width: 30px;
+    cursor: pointer;
+}
+
+.inputWithText button img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    object-position: center;
+    cursor: pointer;
+    filter: var(--alt-svg-1);
+    transition: all 0.5s ease;
+}
+
+
+.inputWithText:has(input:hover) button img,
+.inputWithText:has(input:focus) button img,
+.inputWithText:has(button:hover) button img,
+.inputWithText:has(button:focus) button img {
+    filter: var(--alt-svg-3);
+}
+
+.inputWithText input::placeholder {
+    font-family: var(--font-rubik);
+    font-weight: 400;
+    font-size: 20px;
+    color: var(--alt-text-2);
+}
+
+.connectAccountButton {
+    background-color: var(--btn-background);
+    border: none;
+    border-radius: 10px;
+    padding: 0 20px;
+    height: 57px;
+    width: 410px;
+    font-family: var(--font-rubik);
+    font-weight: 700;
+    font-size: 24px;
+    color: var(--text);
+    cursor: pointer;
+    outline: none;
+    transition: all 0.5s ease;
+    margin-top: 15px;
+}
+
+.connectAccountButton:disabled {
+    cursor: not-allowed;
+}
+
+.connectAccountButton:hover,
+.connectAccountButton:focus,
+.connectAccountButton:active,
+.connectAccountButton:disabled {
+    background-color: var(--btn-disabled-background);
+}
+
+.loginLink {
+    font-family: var(--font-rubik);
+    font-weight: 600;
+    font-size: 16px;
+    color: var(--alt-text-2);
+    margin-top: 10px;
+}

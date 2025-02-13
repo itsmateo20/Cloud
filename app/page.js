@@ -1,5 +1,4 @@
 // app/page.js
-
 "use client";
 
 import { useAuth } from '@/context/AuthProvider';
@@ -7,11 +6,10 @@ import Layout from '@/components/Layout';
 import main from "@/public/styles/main.module.css";
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { redirect } from 'next/navigation';
 
 export default function Page() {
-  const router = useRouter();
-  const { user, loading } = useAuth();
+  const { user, loading, signout } = useAuth();
 
   const [isMobile, setIsMobile] = useState(null);
 
@@ -27,12 +25,12 @@ export default function Page() {
     }
   }, []);
 
-  if (user) return (
+  return (
     <Layout loading={loading} mobile={isMobile} user={user}>
       <main className={main.main}>
         <h1>Hello world</h1>
+        <button type="button" onClick={() => signout()}><span>Wyloguj się</span></button>
       </main>
     </Layout>
-  );
-  else return router.push('/login')
+  )
 }

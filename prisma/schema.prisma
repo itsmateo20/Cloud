@@ -4,14 +4,16 @@ generator client {
 
 datasource db {
   provider = "sqlite"
-  url      = "file:./dev.db"
+  url      = "file:./database.sqlite"
 }
 
 model User {
-  id       Int           @id @default(autoincrement())
-  email    String        @unique
-  password String
-  settings UserSettings?
+  id          Int            @id @default(autoincrement())
+  email       String?        @unique
+  googleEmail String?        @unique
+  password    String?
+  provider    String         @default("credentials")
+  settings    UserSettings[]
 }
 
 model UserSettings {
