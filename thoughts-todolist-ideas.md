@@ -9,3 +9,4 @@
 - Auto file backup (like newly taken pictures or smth it automatically uploads it to the cloud in a folder /TelephoneUpload/(the same path that it was on the phone) or if you set photos/videos to go in s3t folders by you that would be also available, same on pc add the upload function (of course only if you want it and you set where to upload from (what folder) if not set then /PCUpload/(the same path) and yeah)
 - Ads (maybe very maybe) (i really don't want it)
 - Creating files (so it works the same way like in github like the file name setting and preview tab so it formats it correctly to the .type the file was set to
+- add arrows on file view to scroll to other images/videos/files
