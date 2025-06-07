@@ -6,7 +6,7 @@ import { createSession } from '@/lib/session';
 export async function POST(req) {
     try {
         const { email, password } = await req.json();
-        if (!email || !password) return new Response(JSON.stringify({ success: false, code: 'missing_email_password' }), { status: 400 });
+        if (!email || !password) return new Response(JSON.stringify({ success: false, code: 'email_password_missing' }), { status: 400 });
 
         const response = await signIn(email, password);
 

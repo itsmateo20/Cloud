@@ -1,23 +1,24 @@
-// app/login/page.js
+// app/login/google/page.js
 "use client";
 
 import { useAuth } from '@/context/AuthProvider';
 import Layout from '@/components/Layout';
-import loginStyle from "@/public/styles/login.module.css";
+import googleLoginStyle from "@/public/styles/googleAuth.module.css";
 
-import { useEffect, useState } from 'react';
+import { use, useEffect, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { GoogleAuth } from '@/components/authentication/GoogleAuth';
+import { redirect } from 'next/navigation';
 import { getError } from '@/public/error/errors';
 
-export default function Page() {
-    const { loading, user, login, authWithGoogle, clearDatabase } = useAuth();
+export default function Page({ searchParams }) {
+    const { loading, user, linkAccount } = useAuth();
 
     const [isMobile, setIsMobile] = useState(null);
+    const { email, signature } = use(searchParams) || {};
     const [passwordVisible, setPasswordVisible] = useState(false);
     const [passwordType, setPasswordType] = useState('password');
-    const [email, setEmail] = useState('');
+    const [emailLink, setEmail] = useState(email);
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
 
@@ -33,6 +34,29 @@ export default function Page() {
         }
     }, []);
 
+    useEffect(() => {
+        if (email && signature) {
+            fetch('/api/auth/validate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, signature }),
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (!data.success) {
+                        console.error(data.error);
+                        console.log("invalid-signature-redirect")
+                        return redirect("/login");
+                    }
+                })
+                .catch(error => {
+                    console.error(error);
+                    console.log("invalid-signature-redirect")
+                    return redirect("/login");
+                });
+        }
+    }, [email, signature]);
+
     const showPassword = () => {
         if (passwordType === 'password') {
             setPasswordType('text');
@@ -46,17 +70,17 @@ export default function Page() {
     const handleLogin = async () => {
         setError('');
 
-        const response = await login(email, password);
+        const response = await linkAccount(email, emailLink, password, "google");
         const errorMsg = await getError(response.code, { detailed: false, lang: "en" });
         setError(errorMsg.message);
     };
 
     return (
         <Layout loading={loading} mobile={isMobile} user={user}>
-            <main className={loginStyle.main}>
-                <h1 className={loginStyle.title}>Login</h1>
-                <h2 className={loginStyle.subtitle}>Login into your cloud storage account</h2>
-                <fieldset className={loginStyle.inputWithText}>
+            <main className={googleLoginStyle.main}>
+                <h1 className={googleLoginStyle.title}>Google Login Issue</h1>
+                <h2 className={googleLoginStyle.subtitle}>The Google account you're trying to use isn't linked to any registered account. Please enter your credentials to link it.</h2>
+                <fieldset className={googleLoginStyle.inputWithText}>
                     <legend>Email</legend>
                     <input
                         type="email"
@@ -67,7 +91,7 @@ export default function Page() {
                     />
                 </fieldset>
 
-                <fieldset className={loginStyle.inputWithText}>
+                <fieldset className={googleLoginStyle.inputWithText}>
                     <legend>Password</legend>
                     <input
                         type={passwordType}
@@ -93,16 +117,9 @@ export default function Page() {
                     </button>
                 </fieldset>
 
-                <GoogleAuth style={loginStyle} auth={authWithGoogle} type="login" />
+                <button onClick={handleLogin} type="button" className={googleLoginStyle.loginButton}>Link Account</button>
 
-                <button onClick={handleLogin} type="button" className={loginStyle.loginButton}>Log In</button>
-                <button type="button" onClick={() => clearDatabase()}><span>clear</span></button>
-
-                {error && <p className={loginStyle.error}>{error}</p>}
-
-                <Link href="/signup" className={loginStyle.signupLink}>
-                    Don't have an account yet? Sign Up
-                </Link>
+                {error && <p className={googleLoginStyle.error}>{error}</p>}
             </main>
         </Layout>
     )

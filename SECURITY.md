@@ -4,7 +4,7 @@ I appreciate the efforts of security researchers and users in helping me maintai
 
 ## How you can report issues
 
-- You can [report bugs](https://github.com/ItsMateo20/Cloud/issues/new?assignees=ItsMateo20&labels=bug&template=BUG-REPORT.yml&title=%5BBug%5D%3A+) and [vulnerabilities](https://github.com/ItsMateo20/Cloud/issues/new?assignees=ItsMateo20&labels=vulnerability&template=VULNERABILTY.yml&title=%5BVulnerability%5D%3A+) through the [Issues tab](https://github.com/ItsMateo20/Cloud/issues).
+- You can [report bugs](https://github.com/itsmateo20/Cloud/issues/new?assignees=itsmateo20&labels=bug&template=BUG-REPORT.yml&title=%5BBug%5D%3A+) and [vulnerabilities](https://github.com/itsmateo20/Cloud/issues/new?assignees=itsmateo20&labels=vulnerability&template=VULNERABILTY.yml&title=%5BVulnerability%5D%3A+) through the [Issues tab](https://github.com/itsmateo20/Cloud/issues).
 
 ## Expectations
 

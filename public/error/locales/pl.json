@@ -1,0 +1,42 @@
+{
+    "unknown_error": {
+        "short": "Wystąpił nieznany błąd",
+        "long": "Wystąpił nieznany błąd. Spróbuj ponownie później."
+    },
+    "email_password_missing": {
+        "short": "Brak danych",
+        "long": "Proszę podać email oraz hasło aby kontynuować."
+    },
+    "googleEmail_email_password_type_missing": {
+        "short": "Brak danych",
+        "long": "Proszę podać Google email, email, hasło oraz typ aby kontynuować."
+    },
+    "invalid_credentials": {
+        "short": "Nieprawidłowe dane",
+        "long": "Podany email lub hasło są nieprawidłowe. Spróbuj ponownie."
+    },
+    "user_already_exists": {
+        "short": "Użytkownik istnieje",
+        "long": "Konto z tym adresem email już istnieje. Proszę zalogować się."
+    },
+    "user_already_exists_link_google": {
+        "short": "Konto istnieje",
+        "long": "Ten email jest już zarejestrowany. Możesz połączyć konto Google logując się najpierw hasłem."
+    },
+    "user_not_found": {
+        "short": "Nie znaleziono użytkownika",
+        "long": "Nie znaleźliśmy konta z tym adresem email. Proszę najpierw się zarejestrować."
+    },
+    "email_signature_missing": {
+        "short": "Nieprawidłowa weryfikacja",
+        "long": "Weryfikacja email nie powiodła się z powodu braku podpisu. Spróbuj ponownie."
+    },
+    "invalid_type": {
+        "short": "Nieprawidłowy provider",
+        "long": "Ten typ uwierzytelniania nie jest obsługiwany. Użyj prawidłowego providera."
+    },
+    "email_missing": {
+        "short": "Wymagany email",
+        "long": "Proszę podać adres email aby kontynuować z uwierzytelnianiem Google."
+    }
+}

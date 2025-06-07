@@ -6,13 +6,13 @@ import Layout from '@/components/Layout';
 import signupStyle from "@/public/styles/signup.module.css";
 
 import { useEffect, useState } from 'react';
-import { redirect } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { GoogleSignIn } from '@/components/authentication/GoogleSignIn';
+import { GoogleAuth } from '@/components/authentication/GoogleAuth';
+import { getError } from '@/public/error/errors';
 
 export default function Page() {
-    const { loading, user, signup, clearDatabase } = useAuth();
+    const { loading, user, signup, authWithGoogle, clearDatabase } = useAuth();
 
     const [isMobile, setIsMobile] = useState(null);
     const [passwordVisible, setPasswordVisible] = useState(false);
@@ -64,11 +64,9 @@ export default function Page() {
         }
         setError('');
 
-        try {
-            await signup(email, password);
-        } catch (err) {
-            setError(err.message);
-        }
+        const response = await signup(email, password);
+        const errorMsg = await getError(response.code, { detailed: false, lang: "en" });
+        setError(errorMsg.message);
     };
 
     return (
@@ -131,9 +129,14 @@ export default function Page() {
                         />
                     </button>
                 </fieldset>
-                <GoogleSignIn style={signupStyle} />
+
+                <GoogleAuth style={signupStyle} auth={authWithGoogle} type="signup" />
+
                 <button onClick={handleSignup} type="button" className={signupStyle.signupButton}>Sign Up</button>
                 <button type="button" onClick={() => clearDatabase()}><span>clear</span></button>
+
+                {error && <p className={signupStyle.error}>{error}</p>}
+
                 <Link href="/login" className={signupStyle.signupLink}>Already have an account? Log In</Link>
             </main>
         </Layout>

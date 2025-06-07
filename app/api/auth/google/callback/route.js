@@ -2,9 +2,10 @@
 
 import { google } from "googleapis";
 import { createSession } from "@/lib/session";
-import { authenticationWithGoogle } from "@/lib/auth";
+import { authenticationWithGoogle, signIn } from "@/lib/auth";
 
 import crypto from "crypto";
+import { cookies } from "next/headers";
 
 function signEmail(email) {
     const hmac = crypto.createHmac("sha256", process.env.AUTH_SECRET);
@@ -15,6 +16,9 @@ function signEmail(email) {
 export async function GET(req) {
     const { searchParams } = new URL(req.url);
     const code = searchParams.get('code');
+
+    const cookieStore = await cookies();
+    const type = cookieStore.get('auth_type')?.value || "login";
 
     try {
         const oauth2Client = new google.auth.OAuth2(
@@ -29,9 +33,15 @@ export async function GET(req) {
         const oauth2 = google.oauth2({ version: 'v2', auth: oauth2Client });
         const { data: googleUser } = await oauth2.userinfo.get();
 
-        const response = await authenticationWithGoogle(googleUser.email);
+        const response = await authenticationWithGoogle(googleUser.email, type);
         if (!response.success) {
-            if (response.code === "user_already_exists_connect_google") return new Response(null, { status: 301, headers: { Location: `/connect-account?email=${encodeURIComponent(response.googleEmail)}&signature=${signEmail(response.googleEmail)}&type=google` } });
+            if (type === "login") {
+                if (response.code === "user_already_exists_link_google") return new Response(null, { status: 301, headers: { Location: `/link-account/google?email=${encodeURIComponent(googleUser.email)}&signature=${signEmail(googleUser.email)}` } });
+                else if (response.code === "user_not_found") return new Response(null, { status: 301, headers: { Location: `/login/google?email=${encodeURIComponent(googleUser.email)}&signature=${signEmail(googleUser.email)}` } });
+            } else if (type === "signup") {
+                if (response.code === "user_already_exists_linked") return
+                else if (response.code === "user_not_found") return new Response(null, { status: 301, headers: { Location: `/signup/google?email=${encodeURIComponent(googleUser.email)}&signature=${signEmail(googleUser.email)}` } });
+            }
             return new Response(JSON.stringify(response), { status: 500 });
         }
 

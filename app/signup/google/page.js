@@ -1,28 +1,29 @@
-// app/connect-account/page.js
+// app/signup/google/page.js
 "use client";
 
 import { useAuth } from '@/context/AuthProvider';
 import Layout from '@/components/Layout';
-import connectAccountStyle from "@/public/styles/connect-account.module.css";
-import { useState, useEffect, use } from 'react';
-import Link from 'next/link';
+import googleSignupStyle from "@/public/styles/googleAuth.module.css";
+
+import { use, useEffect, useState } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import { getError } from '@/public/error/errors';
 
 export default function Page({ searchParams }) {
-    const { user, connectAccount, loading } = useAuth();
+    const { loading, user, linkAccount } = useAuth();
 
     const [isMobile, setIsMobile] = useState(null);
-    const { email, signature, type } = use(searchParams) || {};
+    const { email, signature } = use(searchParams) || {};
     const [passwordVisible, setPasswordVisible] = useState(false);
     const [passwordType, setPasswordType] = useState('password');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
 
-
     useEffect(() => {
         if (typeof window !== 'undefined') {
-            const mobile = window.matchMedia("(max-width: 1023px)");
+            let mobile = window.matchMedia("(max-width: 1023px)");
             setIsMobile(mobile.matches);
 
             const handleResize = () => setIsMobile(window.matchMedia("(max-width: 1023px)").matches);
@@ -44,13 +45,13 @@ export default function Page({ searchParams }) {
                     if (!data.success) {
                         console.error(data.error);
                         console.log("invalid-signature-redirect")
-                        return redirect("/login");
+                        return redirect("/signup");
                     }
                 })
                 .catch(error => {
                     console.error(error);
                     console.log("invalid-signature-redirect")
-                    return redirect("/login");
+                    return redirect("/signup");
                 });
         }
     }, [email, signature]);
@@ -65,28 +66,30 @@ export default function Page({ searchParams }) {
         }
     };
 
-    const handleConnectAccount = async () => {
+    const handleSignup = async () => {
         setError('');
 
-        try {
-            await connectAccount(email, password, type);
-        } catch (err) {
-            setError(err.message);
-        }
+        // const response = await linkAccount(email, emailLink, password, "google");
+        // const errorMsg = await getError(response.code, { detailed: false, lang: "en" });
+        // setError(errorMsg.message);
     };
 
     return (
         <Layout loading={loading} mobile={isMobile} user={user}>
-            <main className={connectAccountStyle.main}>
-                <h1 className={connectAccountStyle.title}>Connect Account</h1>
-                <h2 className={connectAccountStyle.subtitle}>An account with this email already exists. Please log in to connect it.</h2>
-
-                <fieldset className={`${connectAccountStyle.inputWithText} ${connectAccountStyle.disabled}`}>
+            <main className={googleSignupStyle.main}>
+                <h1 className={googleSignupStyle.title}>Google Signup</h1>
+                <h2 className={googleSignupStyle.subtitle}>Create a password for your account.</h2>
+                <fieldset className={googleSignupStyle.inputWithText}>
                     <legend>Email</legend>
-                    <h1>{email}</h1>
+                    <input
+                        type="email"
+                        name="email"
+                        value={email}
+                        disabled
+                    />
                 </fieldset>
 
-                <fieldset className={connectAccountStyle.inputWithText}>
+                <fieldset className={googleSignupStyle.inputWithText}>
                     <legend>Password</legend>
                     <input
                         type={passwordType}
@@ -112,14 +115,10 @@ export default function Page({ searchParams }) {
                     </button>
                 </fieldset>
 
-                <button onClick={handleConnectAccount} type="button" className={connectAccountStyle.connectAccountButton}>Connect Account</button>
+                <button onClick={handleSignup} type="button" className={googleSignupStyle.loginButton}>Sign up</button>
 
-                {error && <p className={connectAccountStyle.error}>{error}</p>}
-
-                <Link href="/login" className={connectAccountStyle.loginLink}>
-                    Not your account? Log In
-                </Link>
+                {error && <p className={googleSignupStyle.error}>{error}</p>}
             </main>
-        </Layout >
-    );
+        </Layout>
+    )
 }

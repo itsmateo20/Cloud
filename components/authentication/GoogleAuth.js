@@ -1,14 +1,14 @@
-// components/Authentication/GoogleSignIn.js
+// components/Authentication/GoogleAuth.js
 
 import Image from 'next/image';
 
-export function GoogleSignIn({ style, auth }) {
+export function GoogleAuth({ style, auth, type }) {
     const googleAuth = process.env.NEXT_PUBLIC_GOOGLE_AUTH === 'true';
 
     if (googleAuth) return (
         <>
             <h2 className={style.or}>or</h2>
-            <button className={style.gsiMaterialButton} onClick={() => auth()}>
+            <button className={style.gsiMaterialButton} onClick={() => auth(type)}>
                 <div className={style.gsiMaterialButtonState}></div>
                 <div className={style.gsiMaterialButtonContentWrapper}>
                     <div className={style.gsiMaterialButtonIcon}>

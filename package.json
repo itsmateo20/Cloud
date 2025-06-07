@@ -4,7 +4,7 @@
     "description": "The Cloud Storage App is a web-based application designed for users to store and manage their files and folders in the cloud. It offers a convenient way to organize, upload, download, and delete files and folders, making it easy to access your data from anywhere.",
     "repository": {
         "type": "git",
-        "url": "git+https://github.com/ItsMateo20/Cloud.git"
+        "url": "git+https://github.com/itsmateo20/Cloud.git"
     },
     "keywords": [
         "cloud",
@@ -14,12 +14,12 @@
         "hosting",
         "host"
     ],
-    "author": "ItsMateo20",
+    "author": "itsmateo20",
     "license": "MIT",
     "bugs": {
-        "url": "https://github.com/ItsMateo20/Cloud/issues"
+        "url": "https://github.com/itsmateo20/Cloud/issues"
     },
-    "homepage": "https://github.com/ItsMateo20/Cloud#readme",
+    "homepage": "https://github.com/itsmateo20/Cloud#readme",
     "scripts": {
         "dev": "next dev --turbopack",
         "build": "next build",

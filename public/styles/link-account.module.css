@@ -22,8 +22,8 @@
     font-weight: 600;
     color: var(--alt-text-2);
     text-align: center;
-    max-width: 500px;
-    margin-bottom: 10px;
+    max-width: 700px;
+    margin-bottom: 50px;
 }
 
 .inputWithText {
@@ -128,31 +128,31 @@
     color: var(--alt-text-2);
 }
 
-.connectAccountButton {
+.linkAccountButton {
     background-color: var(--btn-background);
     border: none;
     border-radius: 10px;
     padding: 0 20px;
-    height: 57px;
-    width: 410px;
+    height: 70px;
+    width: 507px;
     font-family: var(--font-rubik);
     font-weight: 700;
-    font-size: 24px;
+    font-size: 29px;
     color: var(--text);
     cursor: pointer;
     outline: none;
     transition: all 0.5s ease;
-    margin-top: 15px;
+    margin-top: 50px;
 }
 
-.connectAccountButton:disabled {
+.linkAccountButton:disabled {
     cursor: not-allowed;
 }
 
-.connectAccountButton:hover,
-.connectAccountButton:focus,
-.connectAccountButton:active,
-.connectAccountButton:disabled {
+.linkAccountButton:hover,
+.linkAccountButton:focus,
+.linkAccountButton:active,
+.linkAccountButton:disabled {
     background-color: var(--btn-disabled-background);
 }
 
@@ -161,5 +161,18 @@
     font-weight: 600;
     font-size: 16px;
     color: var(--alt-text-2);
-    margin-top: 10px;
+    margin-top: 8px;
+}
+
+.error {
+    position: absolute;
+    top: 10%;
+    font-family: var(--font-rubik);
+    font-weight: 700;
+    font-size: 24px;
+    color: var(--alt-text-3);
+    padding: 10px 30px;
+    border-radius: 15px;
+    border: 3px solid #606060;
+    transition: all 5s ease;
 }

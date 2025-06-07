@@ -1,0 +1,42 @@
+{
+    "unknown_error": {
+        "short": "Unknown error occurred",
+        "long": "An unknown error occurred. Please try again later."
+    },
+    "email_password_missing": {
+        "short": "Missing credentials",
+        "long": "Please provide both email and password to continue."
+    },
+    "googleEmail_email_password_type_missing": {
+        "short": "Missing credentials",
+        "long": "Please provide the Google email, email, password and type to continue."
+    },
+    "invalid_credentials": {
+        "short": "Invalid credentials",
+        "long": "The email or password you entered is incorrect. Please try again."
+    },
+    "user_already_exists": {
+        "short": "User exists",
+        "long": "An account with this email already exists. Please try signing in instead."
+    },
+    "user_already_exists_link_google": {
+        "short": "Account exists",
+        "long": "This email is already registered. You can link your Google account by signing in with your password first."
+    },
+    "user_not_found": {
+        "short": "User not found",
+        "long": "We couldn't find an account with this email. Please sign up first."
+    },
+    "email_signature_missing": {
+        "short": "Invalid verification",
+        "long": "Email verification failed due to missing signature. Please try again."
+    },
+    "invalid_type": {
+        "short": "Invalid provider",
+        "long": "The authentication provider type is not supported. Please use a valid provider."
+    },
+    "email_missing": {
+        "short": "Email required",
+        "long": "Please provide an email address to continue with Google authentication."
+    }
+}

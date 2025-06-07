@@ -12,7 +12,7 @@ export const AuthProvider = ({ children, locked = true }) => {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
 
-    const publicRoutes = ['/login', '/signup', '/connect-account'];
+    const publicRoutes = ['/login', '/login/google', '/signup', '/signup/google', '/link-account/google'];
 
     useEffect(() => {
         const checkAuthAndRoute = () => {
@@ -59,7 +59,7 @@ export const AuthProvider = ({ children, locked = true }) => {
     }, [pathname, locked, router]);
 
     const login = (email, password) => {
-        setLoading(true);
+        // setLoading(true);
         return fetch('/api/auth/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -123,16 +123,16 @@ export const AuthProvider = ({ children, locked = true }) => {
             });
     };
 
-    const authWithGoogle = () => {
-        window.location.href = '/api/auth/google/auth';
+    const authWithGoogle = (type) => {
+        window.location.href = `/api/auth/google/auth?type=${type}`;
     };
 
-    const connectAccount = (email, password, type) => {
+    const linkAccount = (googleEmail, email, password, type) => {
         setLoading(true);
-        return fetch('/api/auth/connect', {
+        return fetch('/api/auth/link', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password, type }),
+            body: JSON.stringify({ googleEmail, email, password, type }),
         })
             .then(response => response.json())
             .then(data => {
@@ -175,7 +175,7 @@ export const AuthProvider = ({ children, locked = true }) => {
             authWithGoogle,
             signup,
             signout,
-            connectAccount,
+            linkAccount,
             clearDatabase
         }}>
             {children}
