@@ -50,7 +50,7 @@ BeforeStart().then(() => {
     const setupRoutes = require('./src/routes.js');
 
     const CookieParser = require("cookie-parser")
-    const TinyCsrf = require("tiny-csrf")
+    const csrfProtection = require('./src/components/csrfProtection.js')
     const nocache = require('nocache');
 
     const ffprobe = require('node-ffprobe')
@@ -69,7 +69,7 @@ BeforeStart().then(() => {
         app.use(express.json());
         app.use(CookieParser(process.env.COOKIE_SECRET))
         app.use(expressSession({ secret: process.env.SESSION_SECRET, resave: false, saveUninitialized: true, cookie: { secure: true, sameSite: "strict", maxAge: 1000 * 60 * 60 * 24 * 7, httpOnly: true } }))
-        app.use(TinyCsrf(process.env.CSRF_SECRET, ["POST"], ["/file/upload"]));
+        app.use(csrfProtection)
         app.use(nocache())
         app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 1000 }))
 

@@ -1,4 +1,3 @@
-const { gray, cyan, red } = require('chalk');
 const Sequelize = require('sequelize');
 const User = require('./src/models/User.js');
 const UserSettings = require('./src/models/UserSettings.js');

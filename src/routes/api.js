@@ -1,29 +1,72 @@
-// src/controllers/apiController.js
-
 const User = require("../models/User.js")
 const UserSettings = require("../models/UserSettings.js")
 const Whitelisted = require("../models/Whitelisted.js")
+const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 const saltRounds = 10;
+const { readdirSync } = require("fs");
 
-exports.api = async (req, res) => {
-    if (req.params.id === "env" || req.url.path === "/api/env" || req.url.startsWith("/api/env")) {
-        if (req.query.action === "get") {
-            const { DEFAULT_LANGUAGE } = process.env;
-            return res.status(200).json({ success: true, env: { DEFAULT_LANGUAGE } });
-        } else return res.status(500).json({ success: false, message: "UNKNOWN_ERROR" })
-    } else await ApiFunction(req, res);
+module.exports = {
+    name: "Api",
+    url: "/api/:id",
+    run: async (req, res) => {
+        if (req.params.id == "env") {
+            if (req.query.action == "get") {
+                const { DEFAULT_LANGUAGE } = process.env;
+                return res.status(200).json({ success: true, env: { DEFAULT_LANGUAGE } });
+            } else return res.status(500).json({ success: false, message: "UNKNOWN_ERROR" })
+        } else await ApiFunction(req, res, await Auth(req, res));
+    },
+    run2: async (req, res) => {
+        if (req.params.id == "env") {
+            if (req.query.action == "get") {
+                const { DEFAULT_LANGUAGE } = process.env;
+                return res.status(200).json({ success: true, env: { DEFAULT_LANGUAGE } });
+            } else return res.status(500).json({ success: false, message: "UNKNOWN_ERROR" })
+        } else await ApiFunction(req, res, await Auth(req, res));
+    }
 }
 
-async function ApiFunction(req, res) {
+async function Auth(req, res) {
+    if (!req.cookies.token) return res.status(500).json({ success: false, message: "FAILED_AUTHENTICATION" });
+    let decoded;
+    try {
+        decoded = jwt.verify(req.cookies.token, process.env.JWTSECRET, { algorithm: process.env.JWTALGORITHM });
+    } catch (e) { }
+    if (!decoded) return res.status(500).json({ success: false, message: "FAILED_AUTHENTICATION" });
+
+    const data = await User.findOne({
+        where: { email: decoded.email, password: decoded.password },
+    });
+    if (!data) return res.status(500).json({ success: false, message: "FAILED_AUTHENTICATION" });
+    const UserSettingsS = await UserSettings.findOne({
+        where: { email: decoded.email },
+    });
+    if (!UserSettingsS) return res.status(500).json({ success: false, message: "FAILED_AUTHENTICATION" });
+
+    const folder = req.cookies.folder || "";
+
+
+    const userFolder = readdirSync(`${process.env.USERS_DIR}`).some(
+        (userFolder) => userFolder.toLowerCase() === decoded.email
+    );
+
+    if (!userFolder) return res.status(500).json({ success: false, message: "INVALID_FOLDER" });
+    const userFolderPath = `${process.env.USERS_DIR}${decoded.email}`;
+    const folderPath = `${userFolderPath}${folder}`;
+
+    return { decoded, data, UserSettingsS, userFolder, userFolderPath, folderPath }
+}
+
+async function ApiFunction(req, res, { decoded, data, UserSettingsS, userFolder, userFolderPath, folderPath }) {
     if (req.params.id == "csrfToken") {
         if (req.query.action == "get") {
-            const csrfToken = req.session.csrfToken;
+            const csrfToken = req.csrfToken();
             return res.status(200).json({ success: true, csrfToken });
         } else if (req.query.action == "check") {
-            const { _csrf } = req.body;
-            if (!_csrf) return res.status(500).json({ success: false, message: "UNKNOWN_ERROR" });
-            if (_csrf !== req.session.csrfToken) return res.status(500).json({ success: false, message: "INVALID_CSRF_TOKEN" });
+            const { csrfToken } = req.body;
+            if (!csrfToken) return res.status(500).json({ success: false, message: "UNKNOWN_ERROR" });
+            if (csrfToken !== req.csrfToken()) return res.status(500).json({ success: false, message: "INVALID_CSRF_TOKEN" });
             return res.status(200).json({ success: true, message: "VALID_CSRF_TOKEN" });
         } else return res.status(500).json({ success: false, message: "UNKNOWN_ERROR" })
     } else if (req.params.id == "cookies") {
@@ -33,9 +76,9 @@ async function ApiFunction(req, res) {
             const { oldpassword1, oldpassword2, newpassword } = req.body;
             if (!oldpassword1 || !oldpassword2 || !newpassword) return res.status(500).json({ success: false, message: "UNKNOWN_ERROR" });
             if (oldpassword1 != oldpassword2) return res.status(500).json({ success: false, message: "PASSWORDS_NOT_MATCH" });
-            if (!req.user) return res.status(500).json({ success: false, message: "USER_NOT_FOUND" });
-            req.user.password = bcrypt.hashSync(newpassword, saltRounds);
-            await req.user.save();
+            if (!data) return res.status(500).json({ success: false, message: "USER_NOT_FOUND" });
+            data.password = bcrypt.hashSync(newpassword, saltRounds);
+            await data.save();
             return res.status(200).json({ success: true, message: "PASSWORD_CHANGED" });
         } else if (req.query.action == "settings") {
             if (req.query.action2 === "darkMode") {
@@ -44,23 +87,23 @@ async function ApiFunction(req, res) {
                 let newValue
                 if (value.toString() === "true") newValue = true
                 if (value.toString() === "false") newValue = false
-                req.userSettings.darkMode = newValue
-                await req.userSettings.save()
+                UserSettingsS.darkMode = newValue
+                await UserSettingsS.save()
                 res.status(200).json({ success: true, message: "UPDATED_SETTING" })
             } else if (req.query.action2 === "localization") {
                 const { value } = req.body;
-                req.userSettings.localization = value
-                await req.userSettings.save()
+                UserSettingsS.localization = value
+                await UserSettingsS.save()
                 res.status(200).json({ success: true, message: "UPDATED_SETTING" })
             } else if (req.query.action2 === "sortingBy") {
                 const { value } = req.body;
-                req.userSettings.sortingBy = value
-                await req.userSettings.save()
+                UserSettingsS.sortingBy = value
+                await UserSettingsS.save()
                 res.status(200).json({ success: true, message: "UPDATED_SETTING" })
             } else if (req.query.action2 === "sortingDirection") {
                 const { value } = req.body;
-                req.userSettings.sortingDirection = value
-                await req.userSettings.save()
+                UserSettingsS.sortingDirection = value
+                await UserSettingsS.save()
                 res.status(200).json({ success: true, message: "UPDATED_SETTING" })
             } else if (req.query.action2 === "showImage") {
                 const { value } = req.body;
@@ -68,8 +111,8 @@ async function ApiFunction(req, res) {
                 let newValue
                 if (value.toString() === "true") newValue = true
                 if (value.toString() === "false") newValue = false
-                req.userSettings.showImage = newValue
-                await req.userSettings.save()
+                UserSettingsS.showImage = newValue
+                await UserSettingsS.save()
                 res.status(200).json({ success: true, message: "UPDATED_SETTING" })
             } else if (req.query.action2 === "newWindowFileOpen") {
                 const { value } = req.body;
@@ -77,26 +120,26 @@ async function ApiFunction(req, res) {
                 let newValue
                 if (value.toString() === "true") newValue = true
                 if (value.toString() === "false") newValue = false
-                req.userSettings.newWindowFileOpen = newValue
-                await req.userSettings.save()
+                UserSettingsS.newWindowFileOpen = newValue
+                await UserSettingsS.save()
                 res.status(200).json({ success: true, message: "UPDATED_SETTING" })
             } else if (req.query.action2 === "adminMode") {
-                if (!req.user.admin) return res.status(500).json({ success: false, message: "ACCESS_DENIED" });
+                if (!data.admin) return res.status(500).json({ success: false, message: "ACCESS_DENIED" });
                 const { value } = req.body;
                 if (value.toString() !== "true" && value.toString() !== "false") return res.status(500).json({ success: false, message: "UNKNOWN_ERROR" })
                 let newValue
                 if (value.toString() === "true") newValue = true
                 if (value.toString() === "false") newValue = false
-                req.userSettings.adminMode = newValue
-                await req.userSettings.save()
+                UserSettingsS.adminMode = newValue
+                await UserSettingsS.save()
                 res.status(200).json({ success: true, message: "UPDATED_SETTING" })
             } else if (req.query.action2 === "get") {
-                const { darkMode, localization, sortingBy, sortingDirection, showImage, newWindowFileOpen, adminMode } = req.userSettings
-                return res.status(200).json({ success: true, info: { admin: req.user.admin }, settings: { darkMode, localization, sortingBy, sortingDirection, showImage, newWindowFileOpen, adminMode } })
+                const { darkMode, localization, sortingBy, sortingDirection, showImage, newWindowFileOpen, adminMode } = UserSettingsS
+                return res.status(200).json({ success: true, info: { admin: data.admin }, settings: { darkMode, localization, sortingBy, sortingDirection, showImage, newWindowFileOpen, adminMode } })
             } else return res.status(500).json({ success: false, message: "UNKNOWN_ERROR" })
         } else return res.status(500).json({ success: false, message: "UNKNOWN_ERROR" })
     } else if (req.params.id == "admin") {
-        if (!req.user.admin) return res.status(500).json({ success: false, message: "ACCESS_DENIED" });
+        if (!data.admin) return res.status(500).json({ success: false, message: "ACCESS_DENIED" });
         async function getAllEmails() {
             const adminData = await User.findAll({ where: { admin: true } });
             const admins = [];

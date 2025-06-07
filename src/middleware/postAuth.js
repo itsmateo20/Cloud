@@ -23,8 +23,6 @@ module.exports = async (req, res, next) => {
     if (!UserSettingsS) return res.status(500).json({ success: false, message: "FAILED_AUTHENTICATION" });
 
     const folder = req.cookies.folder || "";
-
-
     const userFolder = readdirSync(`${process.env.USERS_DIR}`).some(
         (userFolder) => userFolder.toLowerCase() === decoded.email
     );

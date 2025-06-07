@@ -31,7 +31,7 @@ exports.login = async (req, res) => {
 
     let args = {
         body: ["Zaloguj się | Chmura"],
-        csrfToken: req.csrfToken(),
+        csrfToken: res.locals.csrfToken,
 
         loggedIn: false,
     }
@@ -93,7 +93,7 @@ exports.signup = async (req, res) => {
 
     let args = {
         body: ["Zarejestruj się | Chmura"],
-        csrfToken: req.csrfToken(),
+        csrfToken: res.locals.csrfToken,
 
         loggedIn: false,
     }
