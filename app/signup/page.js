@@ -1,73 +1,95 @@
 // app/signup/page.js
 "use client";
 
-import { useAuth } from '@/context/AuthProvider';
-import Layout from '@/components/Layout';
+import { useAuth } from "@/context/AuthProvider";
+import Layout from "@/components/Layout";
 import signupStyle from "@/public/styles/signup.module.css";
 
-import { useEffect, useState } from 'react';
-import Image from 'next/image';
-import Link from 'next/link';
-import { GoogleAuth } from '@/components/authentication/GoogleAuth';
-import { getError } from '@/public/error/errors';
+import { useEffect, useState } from "react";
+import Image from "next/image";
+import Link from "next/link";
+import { GoogleAuth } from "@/components/authentication/GoogleAuth";
+import { getError } from "@/public/error/errors";
+
+import SoftLoading from "@/components/SoftLoading";
+
+import { IoClose } from "react-icons/io5";
+import { BsCheck } from "react-icons/bs";
 
 export default function Page() {
-    const { loading, user, signup, authWithGoogle, clearDatabase } = useAuth();
+    const { loading, softLoading, user, signup, authWithGoogle } = useAuth();
 
     const [isMobile, setIsMobile] = useState(null);
-    const [passwordVisible, setPasswordVisible] = useState(false);
-    const [repeatPasswordVisible, setRepeatPasswordVisible] = useState(false);
-    const [passwordType, setPasswordType] = useState('password');
-    const [repeatPasswordType, setRepeatPasswordType] = useState('password');
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [repeatPassword, setRepeatPassword] = useState('');
-    const [error, setError] = useState('');
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+    const [repeatPassword, setRepeatPassword] = useState("");
+    const [error, setError] = useState("");
+
+    const [isVisible, setIsVisible] = useState(false);
 
     useEffect(() => {
-        if (typeof window !== 'undefined') {
+        if (typeof window !== "undefined") {
             let mobile = window.matchMedia("(max-width: 1023px)");
             setIsMobile(mobile.matches);
 
             const handleResize = () => setIsMobile(window.matchMedia("(max-width: 1023px)").matches);
-            window.addEventListener('resize', handleResize);
+            window.addEventListener("resize", handleResize);
 
-            return () => window.removeEventListener('resize', handleResize);
+            return () => window.removeEventListener("resize", handleResize);
         }
     }, []);
 
-    const showPassword = () => {
-        if (passwordType === 'password') {
-            setPasswordType('text');
-            setPasswordVisible(true);
-        } else {
-            setPasswordType('password');
-            setPasswordVisible(false);
+    useEffect(() => {
+        if (error) {
+            const errorElement = document.querySelector('.error');
+            if (errorElement) {
+                errorElement.style.top = '-8%';
+            }
+            setTimeout(() => {
+                setError("");
+            }, 1500);
         }
-    };
-
-    const showRepeatPassword = () => {
-        if (repeatPasswordType === 'password') {
-            setRepeatPasswordType('text');
-            setRepeatPasswordVisible(true);
-        } else {
-            setRepeatPasswordType('password');
-            setRepeatPasswordVisible(false);
-        }
-    };
+    }, [email, password, repeatPassword]);
 
     const handleSignup = async () => {
         if (password !== repeatPassword) {
-            setError('Passwords do not match');
-            console.log("Passwords do not match");
-            return;
+            setError("Passwords do not match");
+        } else {
+            setError("");
+            if (passwordRequirements.uppercase && passwordRequirements.lowercase && passwordRequirements.number && passwordRequirements.special && passwordRequirements.minLength && passwordRequirements.matching) {
+                const response = await signup(email, password);
+                const errorMsg = await getError(response?.code, { detailed: false, lang: "en" });
+                setError(errorMsg.message);
+            } else {
+                const errorMsg = await getError("password_requirements_false", { detailed: false, lang: "en" });
+                setError(errorMsg.message);
+            }
         }
-        setError('');
-
-        const response = await signup(email, password);
-        const errorMsg = await getError(response.code, { detailed: false, lang: "en" });
-        setError(errorMsg.message);
     };
+
+    const toggleVisibility = () => {
+        setIsVisible(prev => !prev);
+    };
+
+    const [passwordRequirements, setPasswordRequirements] = useState({
+        uppercase: false,
+        lowercase: false,
+        number: false,
+        special: false,
+        minLength: false,
+        matching: false
+    });
+
+    useEffect(() => {
+        setPasswordRequirements({
+            uppercase: /[A-Z]/.test(password),
+            lowercase: /[a-z]/.test(password),
+            number: /[0-9]/.test(password),
+            special: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password),
+            minLength: password.length >= 8,
+            matching: password === repeatPassword && password.length > 0
+        });
+    }, [password, repeatPassword]);
 
     return (
         <Layout loading={loading} mobile={isMobile} user={user}>
@@ -86,8 +108,8 @@ export default function Page() {
                 <fieldset className={signupStyle.inputWithText}>
                     <legend>Password</legend>
                     <input
-                        type={passwordType}
                         name="password"
+                        type={isVisible ? "text" : "password"}
                         defaultValue={password}
                         onChange={(e) => setPassword(e.target.value)}
                         required
@@ -95,49 +117,68 @@ export default function Page() {
                     />
                     <button
                         type="button"
-                        onClick={showPassword}
+                        onClick={toggleVisibility}
                         aria-label="Toggle Password Visibility"
                     >
                         <Image
-                            src={passwordVisible ? "/assets/authentication/VisibilityOn.svg" : "/assets/authentication/VisibilityOff.svg"}
+                            src={
+                                isVisible
+                                    ? "/assets/authentication/VisibilityOn.svg"
+                                    : "/assets/authentication/VisibilityOff.svg"
+                            }
+                            id="visibilityIcon"
                             width={30}
                             height={30}
                             alt="Visibility"
                         />
                     </button>
                 </fieldset>
+
                 <fieldset className={signupStyle.inputWithText}>
                     <legend>Repeat Password</legend>
                     <input
-                        type={repeatPasswordType}
-                        name='password'
-                        defaultValue={repeatPassword}
+                        name="repeatPassword"
+                        type={isVisible ? "text" : "password"}
+                        value={repeatPassword}
                         onChange={(e) => setRepeatPassword(e.target.value)}
                         required
-                        minLength="8"
+                        minLength={8}
                     />
                     <button
                         type="button"
-                        onClick={showRepeatPassword}
+                        onClick={toggleVisibility}
                         aria-label="Toggle Repeat Password Visibility"
                     >
                         <Image
-                            src={repeatPasswordVisible ? "/assets/authentication/VisibilityOn.svg" : "/assets/authentication/VisibilityOff.svg"}
+                            src={
+                                isVisible
+                                    ? "/assets/authentication/VisibilityOn.svg"
+                                    : "/assets/authentication/VisibilityOff.svg"
+                            }
                             width={30}
                             height={30}
                             alt="Visibility"
+                            loading="eager"
                         />
                     </button>
                 </fieldset>
 
-                <GoogleAuth style={signupStyle} auth={authWithGoogle} type="signup" />
+                <div className={signupStyle.passwordRequirements}>
+                    <h1>{passwordRequirements.uppercase ? <BsCheck size={20} /> : <IoClose size={20} />} Uppercase letter</h1>
+                    <h1>{passwordRequirements.lowercase ? <BsCheck size={20} /> : <IoClose size={20} />} Lowercase letter</h1>
+                    <h1>{passwordRequirements.number ? <BsCheck size={20} /> : <IoClose size={20} />} Number</h1>
+                    <h1>{passwordRequirements.special ? <BsCheck size={20} /> : <IoClose size={20} />} Special character</h1>
+                    <h1>{passwordRequirements.minLength ? <BsCheck size={20} /> : <IoClose size={20} />} 8 characters</h1>
+                    <h1>{passwordRequirements.matching ? <BsCheck size={20} /> : <IoClose size={20} />} Match passwords</h1>
+                </div>
 
-                <button onClick={handleSignup} type="button" className={signupStyle.signupButton}>Sign Up</button>
-                <button type="button" onClick={() => clearDatabase()}><span>clear</span></button>
+                <GoogleAuth auth={authWithGoogle} type="signup" />
 
-                {error && <p className={signupStyle.error}>{error}</p>}
-
+                <button onClick={handleSignup} type="button" className={signupStyle.signupButton} disabled={softLoading}>{softLoading ? <SoftLoading /> : "Sign Up"}</button>
                 <Link href="/login" className={signupStyle.signupLink}>Already have an account? Log In</Link>
+
+
+                {error && <p className="error">{error}</p>}
             </main>
         </Layout>
     )

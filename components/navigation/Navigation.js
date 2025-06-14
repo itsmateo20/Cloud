@@ -2,16 +2,16 @@
 
 "use client";
 
-import { Suspense, useEffect, useState, useRef } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
+import { Suspense, useEffect, useState, useRef } from "react";
+import { usePathname, useRouter } from "next/navigation";
 
-import Loading from '../Loading';
-import UserProfileDropdown from './UserProfileDropdown';
+import Loading from "../Loading";
+import UserProfileDropdown from "./UserProfileDropdown";
 
-import Image from 'next/image';
-import Link from 'next/link';
+import Image from "next/image";
+import Link from "next/link";
 
-import nav from '@/public/styles/navigation.module.css'
+import nav from "@/public/styles/navigation.module.css"
 
 export function Navigation({ user, mobile }) {
     const router = useRouter();
@@ -35,9 +35,9 @@ export function Navigation({ user, mobile }) {
                 !userDropdownRef.current.contains(event.target) &&
                 !userProfileRef.current.contains(event.target)
             ) {
-                if (userDropdownRef.current.classList.contains('show')) {
-                    userDropdownRef.current.classList.remove('show');
-                    userDropdownRef.current.classList.add('hide');
+                if (userDropdownRef.current.classList.contains("show")) {
+                    userDropdownRef.current.classList.remove("show");
+                    userDropdownRef.current.classList.add("hide");
                 }
             }
 
@@ -45,13 +45,13 @@ export function Navigation({ user, mobile }) {
             //     searchBarRef.current &&
             //     !searchBarRef.current.contains(event.target)
             // ) {
-            //     if (searchBarRef.current.classList.contains('show')) {
-            //         searchBarRef.current.classList.remove('show');
-            //         searchBarRef.current.classList.add('hide');
+            //     if (searchBarRef.current.classList.contains("show")) {
+            //         searchBarRef.current.classList.remove("show");
+            //         searchBarRef.current.classList.add("hide");
             //     }
-            //     if (searchResultsRef.current?.classList.contains('show')) {
-            //         searchResultsRef.current.classList.remove('show');
-            //         searchResultsRef.current.classList.add('hide');
+            //     if (searchResultsRef.current?.classList.contains("show")) {
+            //         searchResultsRef.current.classList.remove("show");
+            //         searchResultsRef.current.classList.add("hide");
             //         blurContent(false);
             //     }
             // }
@@ -60,8 +60,8 @@ export function Navigation({ user, mobile }) {
         // const handleInput = (event) => {
         //     if (event.target.value.length > 0) {
         //         setSearchResultsLoading(true);
-        //         document.querySelector('.search-results-title-history')?.classList.add('hide');
-        //         document.querySelector('.search-results-title-suggestion')?.classList.remove('hide');
+        //         document.querySelector(".search-results-title-history")?.classList.add("hide");
+        //         document.querySelector(".search-results-title-suggestion")?.classList.remove("hide");
         //         getSearchResults(event.target.value, true, { limit: 5, filter: ["notes", "exams"] }).then((results) => {
         //             if (JSON.parse(results).length !== 0) setSearchResults(results);
         //             else setSearchResults(false);
@@ -71,17 +71,17 @@ export function Navigation({ user, mobile }) {
         //     } else {
         //         setSearchResults(null);
         //         setSearchResultsLoading(false);
-        //         document.querySelector('.search-results-title-history')?.classList.remove('hide');
-        //         document.querySelector('.search-results-title-suggestion')?.classList.add('hide');
+        //         document.querySelector(".search-results-title-history")?.classList.remove("hide");
+        //         document.querySelector(".search-results-title-suggestion")?.classList.add("hide");
         //     }
         // };
 
         // const handleClickSearchBar = () => {
-        //     if (mobileInfo[0]) return router.push('/app/wyszukiwarka');
-        //     searchBarRef.current.classList.add('show');
-        //     searchBarRef.current.classList.remove('hide');
-        //     searchResultsRef.current.classList.add('show');
-        //     searchResultsRef.current.classList.remove('hide');
+        //     if (mobileInfo[0]) return router.push("/app/wyszukiwarka");
+        //     searchBarRef.current.classList.add("show");
+        //     searchBarRef.current.classList.remove("hide");
+        //     searchResultsRef.current.classList.add("show");
+        //     searchResultsRef.current.classList.remove("hide");
         //     blurContent(true);
         //     if (searchBarInputRef.current) {
         //         searchBarInputRef.current.focus();
@@ -90,21 +90,21 @@ export function Navigation({ user, mobile }) {
 
         // const searchValueCheck = () => {
         //     if (searchValue || searchBarInputRef.current?.value.length > 0) {
-        //         searchBarRef.current?.classList.add('show');
-        //         searchBarRef.current?.classList.remove('hide');
+        //         searchBarRef.current?.classList.add("show");
+        //         searchBarRef.current?.classList.remove("hide");
         //         searchBarInputRef.current.focus();
         //     }
         // };
 
-        document.addEventListener('click', handleClickOutside);
-        // searchBarInputRef.current?.addEventListener('input', handleInput);
-        // searchBarRef.current?.addEventListener('click', handleClickSearchBar);
+        document.addEventListener("click", handleClickOutside);
+        // searchBarInputRef.current?.addEventListener("input", handleInput);
+        // searchBarRef.current?.addEventListener("click", handleClickSearchBar);
         // searchValueCheck();
 
         return () => {
-            document.removeEventListener('click', handleClickOutside);
-            // searchBarInputRef.current?.removeEventListener('input', handleInput);
-            // searchBarRef.current?.removeEventListener('click', handleClickSearchBar);
+            document.removeEventListener("click", handleClickOutside);
+            // searchBarInputRef.current?.removeEventListener("input", handleInput);
+            // searchBarRef.current?.removeEventListener("click", handleClickSearchBar);
             // searchValueCheck();
         };
     }, []);
@@ -113,7 +113,7 @@ export function Navigation({ user, mobile }) {
         <>
             <div className={nav.navigation} >
                 <nav className={nav.topBar}>
-                    <Link className={nav.logo} href="/"><Suspense fallback={<Loading />}><Image src="/assets/logo/WObackground.png" alt="Cloud Storage Icon" width={54} height={33} quality={100} loading='eager' priority /></Suspense></Link>
+                    <Link className={nav.logo} href="/"><Suspense fallback={<Loading />}><Image src="/assets/logo/WObackground.png" alt="Cloud Storage Icon" width={54} height={33} quality={100} loading="eager" priority /></Suspense></Link>
                     <h1 className={nav.title}>Cloud</h1>
                     {/* <div className="search-bar hide" ref={searchBarRef}>
                             <Image src="/assets/app/search.svg" className="search-bar-icon" alt="Search" width={21} height={21} quality={100} loading="eager" />
@@ -172,19 +172,19 @@ export function Navigation({ user, mobile }) {
                 {/* <nav className="side-nav bottom-nav">
                     <img src="/assets/app/corner.svg" id="corner" />
                     <ul>
-                        <li className={pathname.endsWith('/app') ? 'active' : ''}>
+                        <li className={pathname.endsWith("/app") ? "active" : ""}>
                             <Link href="/app">
                                 <Image src="/assets/app/home.svg" alt="Home" width={25} height={25} quality={100} loading="eager" />
                                 <span>Główna</span>
                             </Link>
-                            {pathname.endsWith('/app') ? <div className="selected" /> : ''}
+                            {pathname.endsWith("/app") ? <div className="selected" /> : ""}
                         </li>
-                        <li className={(!pathname.endsWith("/app") && !pathname.startsWith("/app/notatki") && !pathname.startsWith("/app/przygoda") && !pathname.startsWith("/app/testy")) ? 'active' : ''}>
+                        <li className={(!pathname.endsWith("/app") && !pathname.startsWith("/app/notatki") && !pathname.startsWith("/app/przygoda") && !pathname.startsWith("/app/testy")) ? "active" : ""}>
                             <Link href={"/app/" + (user ? user.username : "profil")}>
                                 <Image src="/assets/app/profile.svg" alt="Profile" width={25} height={25} quality={100} loading="eager" />
                                 <span>Profil</span>
                             </Link>
-                            {(!pathname.endsWith("/app") && !pathname.startsWith("/app/notatki") && !pathname.startsWith("/app/przygoda") && !pathname.startsWith("/app/testy")) ? <div className="selected" /> : ''}
+                            {(!pathname.endsWith("/app") && !pathname.startsWith("/app/notatki") && !pathname.startsWith("/app/przygoda") && !pathname.startsWith("/app/testy")) ? <div className="selected" /> : ""}
                         </li>
                     </ul>
                 </nav> */}

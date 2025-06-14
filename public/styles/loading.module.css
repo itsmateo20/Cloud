@@ -5,7 +5,7 @@ div.loading {
     align-items: center;
     height: 100%;
     width: 100%;
-    background-color: #f5f5f5;
+    background-color: var(--background);
     position: absolute;
     top: 0;
     left: 0;
@@ -15,8 +15,8 @@ div.loading {
 div.loading h1 {
     font-family: var(--font-rubik);
     font-weight: 500;
-    font-size: 16px;
-    color: #000;
+    font-size: 25px;
+    color: var(--text);
     margin-left: 10px;
     display: flex;
     flex-direction: row;
@@ -24,12 +24,25 @@ div.loading h1 {
     justify-content: center;
 }
 
+div.softLoading {
+    user-select: none;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+    width: 100%;
+}
+
+
+div.softLoading svg {
+    filter: invert(0%) sepia(100%) saturate(21%) hue-rotate(2deg) brightness(101%) contrast(107%);
+    animation: spin 1s linear infinite;
+}
+
 div.loading h1 svg {
     filter: invert(0%) sepia(100%) saturate(21%) hue-rotate(2deg) brightness(101%) contrast(107%);
     animation: spin 1s linear infinite;
     margin-right: 10px;
-    width: 20px;
-    height: 20px;
 }
 
 @keyframes spin {

@@ -1,4 +1,4 @@
-import Link from 'next/link'
+import Link from "next/link"
 
 export async function generateMetadata() {
     return {
@@ -8,7 +8,7 @@ export async function generateMetadata() {
             apple: "/assets/logo/rounded-512x512.png",
             shortcut: "/assets/logo/512x512.png",
         },
-        assets: ['/assets'],
+        assets: ["/assets"],
         canonical: `/`,
         title: "404 - page not found | Cloud",
         description: "The Cloud Storage App is a web-based application designed for users to store and manage their files and folders in the cloud. It offers a convenient way to organize, upload, download, and delete files and folders, making it easy to access your data from anywhere.",

@@ -132,7 +132,6 @@
     background-color: var(--btn-background);
     border: none;
     border-radius: 10px;
-    padding: 0 20px;
     height: 70px;
     width: 507px;
     font-family: var(--font-rubik);
@@ -162,17 +161,4 @@
     font-size: 16px;
     color: var(--alt-text-2);
     margin-top: 8px;
-}
-
-.error {
-    position: absolute;
-    top: 10%;
-    font-family: var(--font-rubik);
-    font-weight: 700;
-    font-size: 24px;
-    color: var(--alt-text-3);
-    padding: 10px 30px;
-    border-radius: 15px;
-    border: 3px solid #606060;
-    transition: all 5s ease;
 }

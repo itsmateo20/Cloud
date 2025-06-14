@@ -11,16 +11,28 @@
         "short": "Missing credentials",
         "long": "Please provide the Google email, email, password and type to continue."
     },
+    "email_password_signature_missing": {
+        "short": "Missing credentials",
+        "long": "Please provide the email, password, and signature to continue."
+    },
     "invalid_credentials": {
         "short": "Invalid credentials",
         "long": "The email or password you entered is incorrect. Please try again."
     },
+    "password_requirements_false": {
+        "short": "Invalid password",
+        "long": "Your password must include at least one uppercase letter, one lowercase letter, one number, one special character, and be at least 8 characters long."
+    },
     "user_already_exists": {
-        "short": "User exists",
+        "short": "Email already registered",
         "long": "An account with this email already exists. Please try signing in instead."
     },
+    "user_already_exists_linked": {
+        "short": "Email already linked",
+        "long": "This email is already linked to an existing account. Please sign in instead."
+    },
     "user_already_exists_link_google": {
-        "short": "Account exists",
+        "short": "Link with Google",
         "long": "This email is already registered. You can link your Google account by signing in with your password first."
     },
     "user_not_found": {
@@ -37,6 +49,6 @@
     },
     "email_missing": {
         "short": "Email required",
-        "long": "Please provide an email address to continue with Google authentication."
+        "long": "Please provide an email address to continue with authentication."
     }
 }

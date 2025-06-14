@@ -5,7 +5,7 @@ import { cookies } from "next/headers";
 
 export async function GET(req) {
     const { searchParams } = new URL(req.url);
-    const type = searchParams.get('type');
+    const type = searchParams.get("type");
 
     const oauth2Client = new google.auth.OAuth2(
         process.env.GOOGLE_CLIENT_ID,
@@ -14,16 +14,16 @@ export async function GET(req) {
     );
 
     const authUrl = oauth2Client.generateAuthUrl({
-        access_type: 'offline',
-        scope: ['email', 'profile'],
+        access_type: "offline",
+        scope: ["email", "profile"],
     });
 
     const cookieStore = await cookies();
-    cookieStore.set('auth_type', type, {
+    cookieStore.set("auth_type", type, {
         maxAge: 60 * 60,
-        secure: process.env.NODE_ENV === 'production',
-        httpOnly: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
+        secure: process.env.NODE_ENV === "production",
+        httpOnly: process.env.NODE_ENV === "production",
+        sameSite: "lax",
     });
 
     return new Response(null, { status: 302, headers: { Location: authUrl } });

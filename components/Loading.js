@@ -1,6 +1,6 @@
 // components/Loading.js
 
-import loading from '@/public/styles/loading.module.css';
+import loading from "@/public/styles/loading.module.css";
 
 import { AiOutlineLoading3Quarters } from "react-icons/ai";
 

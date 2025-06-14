@@ -1,7 +1,7 @@
 // app/api/database/clear/route.js
 
-import { clear } from '@/lib/clearDatabase';
-import { NextResponse } from 'next/server';
+import { clear } from "@/lib/clearDatabase";
+import { NextResponse } from "next/server";
 
 export async function POST() {
     try {
@@ -11,6 +11,6 @@ export async function POST() {
 
         return NextResponse.json({ success: true, code: "database_cleared" })
     } catch (error) {
-        return NextResponse.json({ success: false, code: 'database_error', error });
+        return NextResponse.json({ success: false, code: "database_error", error });
     }
 }

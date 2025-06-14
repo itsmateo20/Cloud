@@ -1,6 +1,6 @@
 // app/api/auth/session/route.js
 
-import { getSession } from '@/lib/session';
+import { getSession } from "@/lib/session";
 
 export async function POST() {
     const session = await getSession();

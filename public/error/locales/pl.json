@@ -5,38 +5,50 @@
     },
     "email_password_missing": {
         "short": "Brak danych",
-        "long": "Proszę podać email oraz hasło aby kontynuować."
+        "long": "Proszę podać adres e-mail oraz hasło aby kontynuować."
     },
     "googleEmail_email_password_type_missing": {
         "short": "Brak danych",
-        "long": "Proszę podać Google email, email, hasło oraz typ aby kontynuować."
+        "long": "Proszę podać Google adres e-mail, adres e-mail, hasło oraz typ aby kontynuować."
+    },
+    "email_password_signature_missing": {
+        "short": "Brak danych",
+        "long": "Proszę podać adres e-mail, hasło oraz podpis aby kontynuować."
     },
     "invalid_credentials": {
         "short": "Nieprawidłowe dane",
-        "long": "Podany email lub hasło są nieprawidłowe. Spróbuj ponownie."
+        "long": "Podany adres e-mail lub hasło są nieprawidłowe. Spróbuj ponownie."
+    },
+    "password_requirements_false": {
+        "short": "Nieprawidłowe hasło",
+        "long": "Hasło musi zawierać co najmniej jedną wielką literę, jedną małą literę, jedną cyfrę, jeden znak specjalny oraz mieć co najmniej 8 znaków długości."
     },
     "user_already_exists": {
-        "short": "Użytkownik istnieje",
-        "long": "Konto z tym adresem email już istnieje. Proszę zalogować się."
+        "short": "Adres e-mail już zarejestrowany",
+        "long": "Konto z tym adresem e-mail już istnieje. Proszę spróbuj się zalogować."
+    },
+    "user_already_exists_linked": {
+        "short": "Adres e-mail już powiązany",
+        "long": "Ten adres e-mail jest już powiązany z istniejącym kontem. Proszę się zalogować."
     },
     "user_already_exists_link_google": {
-        "short": "Konto istnieje",
-        "long": "Ten email jest już zarejestrowany. Możesz połączyć konto Google logując się najpierw hasłem."
+        "short": "Połącz z Google",
+        "long": "Ten adres e-mail jest już zarejestrowany. Możesz połączyć konto Google, logując się najpierw za pomocą hasła."
     },
     "user_not_found": {
         "short": "Nie znaleziono użytkownika",
-        "long": "Nie znaleźliśmy konta z tym adresem email. Proszę najpierw się zarejestrować."
+        "long": "Nie znaleźliśmy konta z tym adresem e-mail. Proszę najpierw się zarejestrować."
     },
     "email_signature_missing": {
         "short": "Nieprawidłowa weryfikacja",
-        "long": "Weryfikacja email nie powiodła się z powodu braku podpisu. Spróbuj ponownie."
+        "long": "Weryfikacja adresu e-mail nie powiodła się z powodu braku podpisu. Spróbuj ponownie."
     },
     "invalid_type": {
         "short": "Nieprawidłowy provider",
         "long": "Ten typ uwierzytelniania nie jest obsługiwany. Użyj prawidłowego providera."
     },
     "email_missing": {
-        "short": "Wymagany email",
-        "long": "Proszę podać adres email aby kontynuować z uwierzytelnianiem Google."
+        "short": "Wymagany adres e-mail",
+        "long": "Proszę podać adres e-mail aby kontynuować z uwierzytelnianiem."
     }
 }

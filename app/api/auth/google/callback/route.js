@@ -15,10 +15,10 @@ function signEmail(email) {
 
 export async function GET(req) {
     const { searchParams } = new URL(req.url);
-    const code = searchParams.get('code');
+    const code = searchParams.get("code");
 
     const cookieStore = await cookies();
-    const type = cookieStore.get('auth_type')?.value || "login";
+    const type = cookieStore.get("auth_type")?.value || "login";
 
     try {
         const oauth2Client = new google.auth.OAuth2(
@@ -30,7 +30,7 @@ export async function GET(req) {
         const { tokens } = await oauth2Client.getToken(code);
         oauth2Client.setCredentials(tokens);
 
-        const oauth2 = google.oauth2({ version: 'v2', auth: oauth2Client });
+        const oauth2 = google.oauth2({ version: "v2", auth: oauth2Client });
         const { data: googleUser } = await oauth2.userinfo.get();
 
         const response = await authenticationWithGoogle(googleUser.email, type);
@@ -39,17 +39,33 @@ export async function GET(req) {
                 if (response.code === "user_already_exists_link_google") return new Response(null, { status: 301, headers: { Location: `/link-account/google?email=${encodeURIComponent(googleUser.email)}&signature=${signEmail(googleUser.email)}` } });
                 else if (response.code === "user_not_found") return new Response(null, { status: 301, headers: { Location: `/login/google?email=${encodeURIComponent(googleUser.email)}&signature=${signEmail(googleUser.email)}` } });
             } else if (type === "signup") {
-                if (response.code === "user_already_exists_linked") return
-                else if (response.code === "user_not_found") return new Response(null, { status: 301, headers: { Location: `/signup/google?email=${encodeURIComponent(googleUser.email)}&signature=${signEmail(googleUser.email)}` } });
+                if (response.code === "user_already_exists_linked") {
+                    const loginResponse = await authenticationWithGoogle(googleUser.email, "login");
+                    if (!loginResponse.success) return new Response(JSON.stringify(loginResponse), { status: 500 });
+
+                    await createSession({
+                        id: loginResponse.user.id,
+                        email: loginResponse.user?.email,
+                        googleEmail: googleUser.email,
+                        provider: loginResponse.user.provider
+                    });
+
+                    return new Response(JSON.stringify({ success: true, code: "authentication_success" }), { status: 301, headers: { Location: "/" } });
+                } else if (response.code === "user_not_found") return new Response(null, { status: 301, headers: { Location: `/signup/google?email=${encodeURIComponent(googleUser.email)}&signature=${signEmail(googleUser.email)}` } });
             }
+
             return new Response(JSON.stringify(response), { status: 500 });
         }
 
-        await createSession({ id: response.user.id, googleEmail: googleUser.email, provider: response.user.provider });
+        await createSession({
+            id: response.user.id,
+            email: response.user?.email,
+            googleEmail: googleUser.email,
+            provider: response.user.provider
+        });
 
-        return new Response(JSON.stringify({ success: true, code: 'authentication_success' }), { status: 301, headers: { Location: "/" } });
+        return new Response(JSON.stringify({ success: true, code: "authentication_success" }), { status: 301, headers: { Location: "/" } });
     } catch (error) {
-        console.log(error);
-        return new Response(JSON.stringify({ success: false, code: 'authentication_failed' }), { status: 500 });
+        return new Response(JSON.stringify({ success: false, code: "authentication_failed", error }), { status: 500 });
     }
 }

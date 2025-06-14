@@ -24,13 +24,11 @@
 .inputWithText {
     position: relative;
 
-    margin: 2px 0;
+    margin: 3px 0 6px 0;
     width: 377px;
-    height: 67.69px;
+    height: 60px;
     border-radius: 10px;
-    border: 3px solid #CFCFCF;
-
-    overflow: hidden;
+    border: 3px solid var(--border-color);
 
     transition: all 0.5s ease;
 }
@@ -39,17 +37,20 @@
 .inputWithText:has(input:focus),
 .inputWithText:has(button:hover),
 .inputWithText:has(button:focus) {
-    border-color: #606060;
+    border-color: var(--border-color-hover);
 }
 
 .inputWithText legend {
-    margin-left: 12px;
+    position: absolute;
+    top: 15px;
+    left: 12px;
     padding: 0 4px;
+    background-color: var(--background);
 
     user-select: none;
     font-family: var(--font-rubik);
     font-weight: 600;
-    font-size: 15px;
+    font-size: 20px;
     color: var(--alt-text-1);
 
     transition: all 0.5s ease;
@@ -60,6 +61,14 @@
 .inputWithText:has(button:hover) legend,
 .inputWithText:has(button:focus) legend {
     color: var(--alt-text-3);
+}
+
+.inputWithText:has(input:focus) legend,
+.inputWithText:has(button:focus) legend,
+.inputWithText:has(input:not([value=""])) legend {
+    top: -10px;
+    left: 12px;
+    font-size: 15px;
 }
 
 .inputWithText h1 {
@@ -80,18 +89,27 @@
 
 .inputWithText input {
     position: absolute;
-    top: -9.6px;
+    top: -2px;
+
     width: 100%;
     height: 60px;
-    border: none;
     padding: 0 12px;
+
+    border: none;
     box-sizing: border-box;
+    background-color: transparent;
+
     font-family: var(--font-rubik);
     font-weight: 600;
     font-size: 23px;
     color: var(--text);
-    background-color: transparent;
+
+    transition: all 0.5s ease;
     outline: none;
+}
+
+.inputWithText:has(input:not([value=""]):not(:focus)) input {
+    color: var(--alt-text-1);
 }
 
 .inputWithText input[type="password"] {
@@ -103,7 +121,7 @@
     border: none;
     position: absolute;
     right: 15px;
-    top: 6px;
+    top: 13.5px;
     width: 30px;
     cursor: pointer;
 }
@@ -133,128 +151,10 @@
     color: var(--alt-text-2);
 }
 
-.or {
-    color: var(--alt-text-2);
-    font-weight: 800;
-    font-size: 16px;
-    margin: 10px 0;
-}
-
-.gsiMaterialButton {
-    -moz-user-select: none;
-    -webkit-user-select: none;
-    -ms-user-select: none;
-    -webkit-appearance: none;
-    user-select: none;
-    appearance: none;
-    background-color: #F2F2F2;
-    background-image: none;
-    border: none;
-    -webkit-border-radius: 20px;
-    border-radius: 50%;
-    -webkit-box-sizing: border-box;
-    box-sizing: border-box;
-    color: #1f1f1f;
-    cursor: pointer;
-    font-family: 'Roboto', arial, sans-serif;
-    font-size: 14px;
-    height: 40px;
-    letter-spacing: 0.25px;
-    outline: none;
-    overflow: hidden;
-    padding: 0;
-    position: relative;
-    text-align: center;
-    -webkit-transition: background-color .218s, border-color .218s, box-shadow .218s;
-    transition: background-color .218s, border-color .218s, box-shadow .218s;
-    vertical-align: middle;
-    white-space: nowrap;
-    width: 40px;
-    max-width: 400px;
-    min-width: min-content;
-}
-
-.gsiMaterialButton .gsiMaterialButtonIcon {
-    height: 100%;
-    min-width: 20px;
-    width: 100%;
-    margin: 0;
-    padding: 9.5px;
-}
-
-.gsiMaterialButton .gsiMaterialButtonContentWrapper {
-    -webkit-align-items: center;
-    align-items: center;
-    display: flex;
-    -webkit-flex-direction: row;
-    flex-direction: row;
-    -webkit-flex-wrap: nowrap;
-    flex-wrap: nowrap;
-    height: 100%;
-    justify-content: space-between;
-    position: relative;
-    width: 100%;
-}
-
-.gsiMaterialButton .gsiMaterialButtonContents {
-    -webkit-flex-grow: 1;
-    flex-grow: 1;
-    font-family: 'Roboto', arial, sans-serif;
-    font-weight: 500;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    vertical-align: top;
-}
-
-.gsiMaterialButton .gsiMaterialButtonState {
-    -webkit-transition: opacity .218s;
-    transition: opacity .218s;
-    bottom: 0;
-    left: 0;
-    opacity: 0;
-    position: absolute;
-    right: 0;
-    top: 0;
-}
-
-.gsiMaterialButton:disabled {
-    cursor: not-allowed;
-    background-color: var(--btn-disabled-background);
-}
-
-.gsiMaterialButton:disabled .gsiMaterialButtonState {
-    background-color: var(--btn-disabled-background);
-}
-
-.gsiMaterialButton:disabled .gsiMaterialButtonContents {
-    opacity: 38%;
-}
-
-.gsiMaterialButton:disabled .gsiMaterialButtonIcon {
-    opacity: 38%;
-}
-
-.gsiMaterialButton:not(:disabled):active .gsiMaterialButtonState,
-.gsiMaterialButton:not(:disabled):focus .gsiMaterialButtonState {
-    background-color: #191919;
-    opacity: 12%;
-}
-
-.gsiMaterialButton:not(:disabled):hover {
-    -webkit-box-shadow: 0 1px 2px 0 rgba(60, 64, 67, .30), 0 1px 3px 1px rgba(60, 64, 67, .15);
-    box-shadow: 0 1px 2px 0 rgba(60, 64, 67, .30), 0 1px 3px 1px rgba(60, 64, 67, .15);
-}
-
-.gsiMaterialButton:not(:disabled):hover .gsiMaterialButtonState {
-    background-color: #191919;
-    opacity: 8%;
-}
-
 .loginButton {
     background-color: var(--btn-background);
     border: none;
     border-radius: 10px;
-    padding: 0 20px;
     height: 57px;
     width: 410px;
     font-family: var(--font-rubik);
@@ -284,17 +184,4 @@
     font-size: 16px;
     color: var(--alt-text-2);
     margin-top: 10px;
-}
-
-.error {
-    position: absolute;
-    top: 10%;
-    font-family: var(--font-rubik);
-    font-weight: 700;
-    font-size: 24px;
-    color: var(--alt-text-3);
-    padding: 10px 30px;
-    border-radius: 15px;
-    border: 3px solid #606060;
-    transition: all 5s ease;
 }

@@ -1,7 +1,9 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
+import { createContext, useContext, useState, useEffect } from "react";
+import { useRouter, usePathname } from "next/navigation";
+
+import { api } from "@/utils/api";
 
 const AuthContext = createContext();
 
@@ -11,173 +13,159 @@ export const AuthProvider = ({ children, locked = true }) => {
 
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [softLoading, setSoftLoading] = useState(false);
 
-    const publicRoutes = ['/login', '/login/google', '/signup', '/signup/google', '/link-account/google'];
+    const publicRoutes = [
+        "/login",
+        "/login/google",
+        "/signup",
+        "/signup/google",
+        "/link-account/google",
+    ];
 
     useEffect(() => {
-        const checkAuthAndRoute = () => {
-            setLoading(true);
+        const checkAuthAndRoute = async () => {
+            try {
+                setLoading(true);
 
-            // Check route validity
-            fetch(pathname)
-                .catch(error => {
-                    console.log("Route check error:", error);
-                })
-                .then(response => {
-                    if (response && response.status === 404) {
-                        setLoading(false);
-                        return;
-                    }
-
-                    return fetch('/api/auth/session', { method: 'POST' });
-                })
-                .then(response => response?.json())
-                .then(data => {
-                    if (!data.success) {
-                        if (data.code === 'not_authenticated') {
-                            setUser(null);
-                            if (locked && !publicRoutes.includes(pathname)) {
-                                return router.push("/login");
-                            }
-                        }
-                    } else {
-                        setUser(data.user);
-                        if (publicRoutes.includes(pathname)) {
-                            return router.push("/");
-                        }
-                    }
-                })
-                .catch(error => {
-                    console.log(error);
-                })
-                .finally(() => {
+                const routeRes = await fetch(pathname);
+                if (routeRes.status === 404) {
                     setLoading(false);
-                });
+                    return;
+                }
+
+                const sessionRes = await api.post("/api/auth/session");
+                if (!sessionRes.success) {
+                    setUser(null);
+                    if (sessionRes.code === "not_authenticated" && locked && !publicRoutes.includes(pathname)) {
+                        return router.push("/login");
+                    }
+                } else {
+                    setUser(sessionRes.user);
+                    if (publicRoutes.includes(pathname)) {
+                        return router.push("/");
+                    }
+                }
+            } catch (error) {
+                console.error("Auth check failed:", error);
+            }
+
+            setLoading(false);
         };
 
         checkAuthAndRoute();
     }, [pathname, locked, router]);
 
-    const login = (email, password) => {
-        // setLoading(true);
-        return fetch('/api/auth/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password }),
-        })
-            .then(response => response.json())
-            .then(data => {
-                if (!data.success) {
-                    return { success: false, code: data.code };
-                }
-                setUser(data.user);
-                router.push("/");
-            })
-            .catch(error => {
-                return { success: false, error: error.message };
-            })
-            .finally(() => {
-                setLoading(false);
-            });
+    const login = async (email, password) => {
+        setSoftLoading(true);
+        try {
+            const data = await api.post("/api/auth/login", { email, password });
+            if (!data.success) return { success: false, code: data.code };
+            setUser(data.user);
+            router.push("/");
+        } catch (error) {
+            return { success: false, error: error.message };
+        } finally {
+            setSoftLoading(false);
+        }
     };
 
-    const signup = (email, password) => {
-        setLoading(true);
-        return fetch('/api/auth/signup', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password }),
-        })
-            .then(response => response.json())
-            .then(data => {
-                if (!data.success) {
-                    return { success: false, code: data.code };
-                }
-                setUser(data.user);
-                router.push("/");
-            })
-            .catch(error => {
-                return { success: false, error: error.message };
-            })
-            .finally(() => {
-                setLoading(false);
-            });
+    const signup = async (email, password) => {
+        setSoftLoading(true);
+        try {
+            const data = await api.post("/api/auth/signup", { email, password });
+            if (!data.success) return { success: false, code: data.code };
+            setUser(data.user);
+            router.push("/");
+        } catch (error) {
+            return { success: false, error: error.message };
+        } finally {
+            setSoftLoading(false);
+        }
     };
 
-    const signout = () => {
-        setLoading(true);
-        return fetch('/api/auth/signout', { method: 'POST' })
-            .then(response => response.json())
-            .then(data => {
-                if (!data.success) {
-                    return { success: false, code: data.code };
-                }
-                setUser(null);
-                router.push("/login");
-            })
-            .catch(error => {
-                return { success: false, error: error.message };
-            })
-            .finally(() => {
-                setLoading(false);
+    const signupwiththirdparty = async (email, password, type, signature) => {
+        setSoftLoading(true);
+        try {
+            const data = await api.post("/api/auth/thirdparty/signup", {
+                email,
+                password,
+                type,
+                signature
             });
+            if (!data.success) return { success: false, code: data.code };
+            setUser(data.user);
+            router.push("/");
+        } catch (error) {
+            return { success: false, error: error.message };
+        } finally {
+            setSoftLoading(false);
+        }
+    };
+
+    const signout = async () => {
+        setSoftLoading(true);
+        try {
+            const data = await api.post("/api/auth/signout");
+            if (!data.success) return { success: false, code: data.code };
+            setUser(null);
+            router.push("/login");
+        } catch (error) {
+            return { success: false, error: error.message };
+        } finally {
+            setSoftLoading(false);
+        }
+    };
+
+    const linkAccount = async (googleEmail, email, password, type) => {
+        setSoftLoading(true);
+        try {
+            const data = await api.post("/api/auth/link", {
+                googleEmail,
+                email,
+                password,
+                type,
+            });
+            if (!data.success) return { success: false, code: data.code };
+            setUser(data.user);
+            router.push("/");
+        } catch (error) {
+            return { success: false, error: error.message };
+        } finally {
+            setSoftLoading(false);
+        }
     };
 
     const authWithGoogle = (type) => {
         window.location.href = `/api/auth/google/auth?type=${type}`;
     };
 
-    const linkAccount = (googleEmail, email, password, type) => {
-        setLoading(true);
-        return fetch('/api/auth/link', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ googleEmail, email, password, type }),
-        })
-            .then(response => response.json())
-            .then(data => {
-                if (!data.success) {
-                    return { success: false, code: data.code };
-                }
-                setUser(data.user);
-                router.push("/");
-            })
-            .catch(error => {
-                return { success: false, error: error.message };
-            })
-            .finally(() => {
-                setLoading(false);
-            });
-    };
-
-
-    // temporary function to clear the database
-    const clearDatabase = () => {
-        return fetch('/api/database/clear', { method: 'POST' })
-            .then(response => response.json())
-            .then(data => {
-                if (!data.success) {
-                    return { success: false, code: data.code, error: data.error };
-                }
-                return router.refresh();
-            })
-            .catch(error => {
-                console.log(error);
-                return { success: false, error: error.message };
-            });
+    const clearDatabase = async () => {
+        try {
+            const res = await api.post("/api/database/clear");
+            if (!res.success) return { success: false, code: res.code, error: res.error };
+            router.refresh();
+        } catch (error) {
+            console.error("Clear DB error:", error);
+            return { success: false, error: error.message };
+        }
     };
 
     return (
-        <AuthContext.Provider value={{
-            user,
-            loading,
-            login,
-            authWithGoogle,
-            signup,
-            signout,
-            linkAccount,
-            clearDatabase
-        }}>
+        <AuthContext.Provider
+            value={{
+                user,
+                loading,
+                softLoading,
+                login,
+                signup,
+                signupwiththirdparty,
+                signout,
+                linkAccount,
+                authWithGoogle,
+                clearDatabase,
+            }}
+        >
             {children}
         </AuthContext.Provider>
     );

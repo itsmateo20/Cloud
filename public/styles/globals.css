@@ -1,8 +1,9 @@
 :root {
   --background: #ffffff;
+  --nav-background: #f1f1f1;
   --top-nav-height: 60px;
   --side-nav-width: 60px;
-  --text: #303030;
+  --text: #181818;
   --alt-text-1: #CFCFCF;
   --alt-text-2: #ADADAD;
   --alt-text-3: #606060;
@@ -10,23 +11,38 @@
   --alt-svg-3: invert(37%) sepia(0%) saturate(0%) hue-rotate(323deg) brightness(93%) contrast(81%);
   --btn-background: #F2F2F2;
   --btn-disabled-background: #D8D8D8;
+  --border-color: #CFCFCF;
+  --border-color-hover: #606060;
 }
 
-/* @media (prefers-color-scheme: dark) {
+@media (prefers-color-scheme: light) {
+  html {
+    color-scheme: light;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
   :root {
-    --background: #1a1a1a;
+    --background: #161616;
+    --nav-background: #141414;
     --top-nav-height: 60px;
     --side-nav-width: 60px;
-    --text: #f5f5f5;
-    --alt-text-1: #b3b3b3;
-    --alt-text-2: #8c8c8c;
-    --alt-text-3: #5f5f5f;
-    --alt-svg-1: invert(91%) sepia(0%) saturate(0%) hue-rotate(193deg) brightness(110%) contrast(80%);
-    --alt-svg-3: invert(67%) sepia(0%) saturate(0%) hue-rotate(323deg) brightness(120%) contrast(90%);
-    --btn-background: #333333;
-    --btn-disabled-background: #555555;
+    --text: #ecedef;
+    --alt-text-1: #606060;
+    --alt-text-2: #ADADAD;
+    --alt-text-3: #CFCFCF;
+    --alt-svg-1: invert(37%) sepia(0%) saturate(0%) hue-rotate(323deg) brightness(93%) contrast(81%);
+    --alt-svg-3: invert(83%) sepia(0%) saturate(0%) hue-rotate(193deg) brightness(99%) contrast(98%);
+    --btn-background: #272727;
+    --btn-disabled-background: #2c2c2c;
+    --border-color: #575757;
+    --border-color-hover: #888888;
   }
-} */
+
+  html {
+    color-scheme: dark;
+  }
+}
 
 
 input:-webkit-autofill:focus,
@@ -37,6 +53,23 @@ input:-webkit-autofill {
   -webkit-text-fill-color: var(--text) !important;
   color: var(--text) !important;
   appearance: none !important;
+}
+
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear,
+input[type="password"]::-webkit-credentials-auto-fill-button,
+input[type="password"]::-webkit-textfield-decoration-container,
+input[type="password"]::-webkit-inner-spin-button,
+input[type="password"]::-webkit-clear-button,
+input[type="password"]::-webkit-password-toggle-button {
+  display: none !important;
+  appearance: none;
+}
+
+input[type="password"] {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
 }
 
 html,
@@ -66,8 +99,16 @@ a {
   text-decoration: none;
 }
 
-@media (prefers-color-scheme: dark) {
-  html {
-    color-scheme: dark;
-  }
+.error {
+  position: absolute;
+  top: 8%;
+  font-family: var(--font-rubik);
+  font-weight: 700;
+  font-size: 20px;
+  color: var(--alt-text-3);
+  padding: 10px 30px;
+  border-radius: 10px;
+  border: 3px solid #606060;
+  transition: all 1s ease-in-out;
+  user-select: none;
 }

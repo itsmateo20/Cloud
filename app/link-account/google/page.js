@@ -1,46 +1,42 @@
 // app/link-account/page.js
 "use client";
 
-import { useAuth } from '@/context/AuthProvider';
-import Layout from '@/components/Layout';
+import { useAuth } from "@/context/AuthProvider";
+import Layout from "@/components/Layout";
 import linkAccountStyle from "@/public/styles/link-account.module.css";
-import { useState, useEffect, use } from 'react';
-import Link from 'next/link';
-import Image from 'next/image';
-import { redirect } from 'next/navigation';
-import { getError } from '@/public/error/errors';
+import { useState, useEffect, use } from "react";
+import Link from "next/link";
+import Image from "next/image";
+import { redirect } from "next/navigation";
+import { getError } from "@/public/error/errors";
+
+import { api } from "@/utils/api";
 
 export default function Page({ searchParams }) {
     const { user, linkAccount, loading } = useAuth();
 
     const [isMobile, setIsMobile] = useState(null);
     const { email, signature } = use(searchParams) || {};
-    const [passwordVisible, setPasswordVisible] = useState(false);
-    const [passwordType, setPasswordType] = useState('password');
-    const [password, setPassword] = useState('');
-    const [error, setError] = useState('');
+    const [password, setPassword] = useState("");
+    const [error, setError] = useState("");
 
+    const [isVisible, setIsVisible] = useState(false);
 
     useEffect(() => {
-        if (typeof window !== 'undefined') {
+        if (typeof window !== "undefined") {
             const mobile = window.matchMedia("(max-width: 1023px)");
             setIsMobile(mobile.matches);
 
             const handleResize = () => setIsMobile(window.matchMedia("(max-width: 1023px)").matches);
-            window.addEventListener('resize', handleResize);
+            window.addEventListener("resize", handleResize);
 
-            return () => window.removeEventListener('resize', handleResize);
+            return () => window.removeEventListener("resize", handleResize);
         }
     }, []);
 
     useEffect(() => {
         if (email && signature) {
-            fetch('/api/auth/validate', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, signature }),
-            })
-                .then(response => response.json())
+            api.post("/api/auth/validate", { email, signature })
                 .then(data => {
                     if (!data.success) {
                         console.error(data.error);
@@ -56,24 +52,52 @@ export default function Page({ searchParams }) {
         }
     }, [email, signature]);
 
-    const showPassword = () => {
-        if (passwordType === 'password') {
-            setPasswordType('text');
-            setPasswordVisible(true);
+    useEffect(() => {
+        if (error) {
+            const errorElement = document.querySelector('.error');
+            if (errorElement) {
+                errorElement.style.top = '-8%';
+            }
+            setTimeout(() => {
+                setError("");
+            }, 1500);
+        }
+    }, [email, password]);
+
+    const handleLinkAccount = async () => {
+        setError("");
+
+        if (passwordRequirements.uppercase && passwordRequirements.lowercase && passwordRequirements.number && passwordRequirements.special && passwordRequirements.minLength) {
+            const response = await linkAccount(email, email, password, "google");
+            const errorMsg = await getError(response.code, { detailed: false, lang: "en" });
+            setError(errorMsg.message);
         } else {
-            setPasswordType('password');
-            setPasswordVisible(false);
+            const errorMsg = await getError("password_requirements_false", { detailed: false, lang: "en" });
+            setError(errorMsg.message);
         }
     };
 
-    const handleLinkAccount = async () => {
-        setError('');
+    const toggleVisibility = () => {
+        setPassword(prev => !prev);
+    }
 
+    const [passwordRequirements, setPasswordRequirements] = useState({
+        uppercase: false,
+        lowercase: false,
+        number: false,
+        special: false,
+        minLength: false
+    });
 
-        const response = await linkAccount(email, email, password, "google");
-        const errorMsg = await getError(response.code, { detailed: false, lang: "en" });
-        setError(errorMsg.message);
-    };
+    useEffect(() => {
+        setPasswordRequirements({
+            uppercase: /[A-Z]/.test(password),
+            lowercase: /[a-z]/.test(password),
+            number: /[0-9]/.test(password),
+            special: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password),
+            minLength: password.length >= 8,
+        });
+    }, [password]);
 
     return (
         <Layout loading={loading} mobile={isMobile} user={user}>
@@ -89,8 +113,8 @@ export default function Page({ searchParams }) {
                 <fieldset className={linkAccountStyle.inputWithText}>
                     <legend>Password</legend>
                     <input
-                        type={passwordType}
                         name="password"
+                        type={isVisible ? "text" : "password"}
                         defaultValue={password}
                         onChange={(e) => setPassword(e.target.value)}
                         required
@@ -98,27 +122,28 @@ export default function Page({ searchParams }) {
                     />
                     <button
                         type="button"
-                        onClick={showPassword}
+                        onClick={toggleVisibility}
                         aria-label="Toggle Password Visibility"
                     >
                         <Image
-                            src={passwordVisible ? "/assets/authentication/VisibilityOn.svg" : "/assets/authentication/VisibilityOff.svg"}
+                            src={
+                                isVisible
+                                    ? "/assets/authentication/VisibilityOn.svg"
+                                    : "/assets/authentication/VisibilityOff.svg"
+                            }
                             width={30}
                             height={30}
                             alt="Visibility"
-                            loading='eager'
-                            quality={100}
+                            loading="eager"
                         />
                     </button>
                 </fieldset>
 
                 <button onClick={handleLinkAccount} type="button" className={linkAccountStyle.linkAccountButton}>Link Account</button>
 
-                {error && <p className={linkAccountStyle.error}>{error}</p>}
+                {error && <p className="error">{error}</p>}
 
-                <Link href="/login" className={linkAccountStyle.loginLink}>
-                    Not your account? Log In
-                </Link>
+                <Link href="/login" className={linkAccountStyle.loginLink}>Not your account? Log In</Link>
             </main>
         </Layout >
     );

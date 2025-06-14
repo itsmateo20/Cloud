@@ -7,7 +7,7 @@
     align-items: center;
     height: var(--top-nav-height);
     width: 100vw;
-    background-color: #f1f1f1;
+    background-color: var(--nav-background);
     padding: 0 15px;
     filter: drop-shadow(3px 0px 50px rgba(0, 0, 0, 0.05))
         /* filter: drop-shadow(3px 0px 50px rgba(0, 0, 0, 0.05)) drop-shadow(0px 3px 50px rgba(0, 0, 0, 0.05)); */
@@ -15,10 +15,18 @@
 
 .logo {
     filter: drop-shadow(9px 5px 6.5px rgba(0, 0, 0, 0.25));
+}
 
+
+@media (prefers-color-scheme: dark) {
+    .logo {
+        filter: drop-shadow(9px 5px 6.5px rgba(255, 255, 255, 0.25));
+
+    }
 }
 
 .title {
     font-size: 24px;
     margin: 0 auto 0 15px;
+    color: var(--text);
 }

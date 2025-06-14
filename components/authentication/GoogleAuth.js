@@ -1,9 +1,10 @@
 // components/Authentication/GoogleAuth.js
 
-import Image from 'next/image';
+import style from "./googleAuthButton.module.css";
+import Image from "next/image";
 
-export function GoogleAuth({ style, auth, type }) {
-    const googleAuth = process.env.NEXT_PUBLIC_GOOGLE_AUTH === 'true';
+export function GoogleAuth({ auth, type }) {
+    const googleAuth = process.env.NEXT_PUBLIC_GOOGLE_AUTH === "true";
 
     if (googleAuth) return (
         <>
