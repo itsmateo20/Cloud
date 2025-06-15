@@ -13,7 +13,7 @@ import { getError } from "@/public/error/errors";
 import SoftLoading from "@/components/SoftLoading";
 
 export default function Page() {
-    const { loading, softLoading, user, login, authWithGoogle } = useAuth();
+    const { loading, softLoading, user, login, authWithGoogle, clearDatabase } = useAuth();
 
     const [isMobile, setIsMobile] = useState(null);
     const [email, setEmail] = useState("");
@@ -130,6 +130,8 @@ export default function Page() {
 
                 <button onClick={handleLogin} type="button" className={loginStyle.loginButton} disabled={softLoading}>{softLoading ? <SoftLoading /> : "Log In"}</button>
                 <Link href="/signup" className={loginStyle.signupLink}>Don't have an account yet? Sign Up</Link>
+
+                <button type="button" onClick={() => clearDatabase()}><span>clear</span></button>
 
                 {error && <p className="error">{error}</p>}
             </main>

@@ -1,5 +1,4 @@
 // components/Navigation.js
-
 "use client";
 
 import { Suspense, useEffect, useState, useRef } from "react";
@@ -21,7 +20,6 @@ export function Navigation({ user, mobile }) {
     const searchBarRef = useRef(null);
     const searchResultsRef = useRef(null);
     const userDropdownRef = useRef(null);
-    const userProfileRef = useRef(null);
 
     const [searchResults, setSearchResults] = useState(null);
     const [searchResultsLoading, setSearchResultsLoading] = useState(false);
@@ -114,6 +112,7 @@ export function Navigation({ user, mobile }) {
             <div className={nav.navigation} >
                 <nav className={nav.topBar}>
                     <Link className={nav.logo} href="/"><Suspense fallback={<Loading />}><Image src="/assets/logo/WObackground.png" alt="Cloud Storage Icon" width={54} height={33} quality={100} loading="eager" priority /></Suspense></Link>
+                    {/* {!isMobile && <h1 className={nav.title}>Cloud</h1>} */}
                     <h1 className={nav.title}>Cloud</h1>
                     {/* <div className="search-bar hide" ref={searchBarRef}>
                             <Image src="/assets/app/search.svg" className="search-bar-icon" alt="Search" width={21} height={21} quality={100} loading="eager" />
@@ -164,32 +163,12 @@ export function Navigation({ user, mobile }) {
                             </div>
                         </div> */}
                     {user ?
-                        <UserProfileDropdown user={user} mobile={isMobile} refs={[userDropdownRef, userProfileRef]} />
+                        <UserProfileDropdown user={user} mobile={isMobile} />
                         :
                         null
                     }
                 </nav >
-                {/* <nav className="side-nav bottom-nav">
-                    <img src="/assets/app/corner.svg" id="corner" />
-                    <ul>
-                        <li className={pathname.endsWith("/app") ? "active" : ""}>
-                            <Link href="/app">
-                                <Image src="/assets/app/home.svg" alt="Home" width={25} height={25} quality={100} loading="eager" />
-                                <span>Główna</span>
-                            </Link>
-                            {pathname.endsWith("/app") ? <div className="selected" /> : ""}
-                        </li>
-                        <li className={(!pathname.endsWith("/app") && !pathname.startsWith("/app/notatki") && !pathname.startsWith("/app/przygoda") && !pathname.startsWith("/app/testy")) ? "active" : ""}>
-                            <Link href={"/app/" + (user ? user.username : "profil")}>
-                                <Image src="/assets/app/profile.svg" alt="Profile" width={25} height={25} quality={100} loading="eager" />
-                                <span>Profil</span>
-                            </Link>
-                            {(!pathname.endsWith("/app") && !pathname.startsWith("/app/notatki") && !pathname.startsWith("/app/przygoda") && !pathname.startsWith("/app/testy")) ? <div className="selected" /> : ""}
-                        </li>
-                    </ul>
-                </nav> */}
             </div >
-            <div id="navigationBlur" />
         </>
     );
 }

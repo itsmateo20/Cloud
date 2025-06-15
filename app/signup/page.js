@@ -175,7 +175,7 @@ export default function Page() {
                 <GoogleAuth auth={authWithGoogle} type="signup" />
 
                 <button onClick={handleSignup} type="button" className={signupStyle.signupButton} disabled={softLoading}>{softLoading ? <SoftLoading /> : "Sign Up"}</button>
-                <Link href="/login" className={signupStyle.signupLink}>Already have an account? Log In</Link>
+                <Link href="/login" className={signupStyle.loginLink}>Already have an account? Log In</Link>
 
 
                 {error && <p className="error">{error}</p>}

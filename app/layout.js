@@ -6,27 +6,27 @@ import "@/public/styles/globals.css";
 import { AuthProvider } from "@/context/AuthProvider";
 
 export async function generateMetadata() {
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+
   return {
-    metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL),
+    metadataBase: new URL(siteUrl),
     icons: {
       icon: "/assets/logo/rounded-512x512.png",
       apple: "/assets/logo/rounded-512x512.png",
       shortcut: "/assets/logo/512x512.png",
     },
-    assets: ["/assets"],
-    canonical: `/`,
     title: "Home | Cloud",
     description: "The Cloud Storage App is a web-based application designed for users to store and manage their files and folders in the cloud. It offers a convenient way to organize, upload, download, and delete files and folders, making it easy to access your data from anywhere.",
-    author: "itsmateo20",
     keywords: "cloud, storage, cloudstorage",
+    authors: [{ name: "itsmateo20" }],
     openGraph: {
       title: "Home | Cloud",
-      description: "The Cloud Storage App is a web-based application designed for users to store and manage their files and folders in the cloud. It offers a convenient way to organize, upload, download, and delete files and folders, making it easy to access your data from anywhere.",
-      url: `${process.env.NEXT_PUBLIC_SITE_URL}`,
-      siteName: `${process.env.NEXT_PUBLIC_SITE_URL.replace("https://", "").replace("http://", "")}`,
+      description: "The Cloud Storage App is a web-based application designed for users to store and manage their files and folders in the cloud.",
+      url: siteUrl,
+      siteName: siteUrl.replace(/^https?:\/\//, ""),
       images: [
         {
-          url: `${process.env.NEXT_PUBLIC_SITE_URL}/assets/logo/thumbnail.png`,
+          url: `${siteUrl}/assets/logo/thumbnail.png`,
         },
       ],
       locale: "en_US",
@@ -35,10 +35,21 @@ export async function generateMetadata() {
     twitter: {
       card: "summary_large_image",
       title: "Home | Cloud",
-      description: "The Cloud Storage App is a web-based application designed for users to store and manage their files and folders in the cloud. It offers a convenient way to organize, upload, download, and delete files and folders, making it easy to access your data from anywhere.",
-      images: [`${process.env.NEXT_PUBLIC_SITE_URL}/assets/logo/thumbnail.png`],
-    }
-  }
+      description: "The Cloud Storage App is a web-based application designed for users to store and manage their files and folders in the cloud.",
+      images: [`${siteUrl}/assets/logo/thumbnail.png`],
+    },
+  };
+}
+
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#f1f1f1' },
+    { media: '(prefers-color-scheme: dark)', color: '#141414' },
+  ],
 };
 
 export default function RootLayout({ children }) {

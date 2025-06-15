@@ -8,28 +8,28 @@
 }
 
 .title {
-    font-size: 80px;
-    line-height: 100px;
+    font-size: clamp(50px, 10vw, 80px);
+    line-height: clamp(80px, 9vw, 100px);
+    text-align: center;
 }
 
 .subtitle {
-    font-size: 26px;
+    font-size: clamp(20px, 3vw, 26px);
     font-weight: 600;
     color: var(--alt-text-2);
     text-align: center;
-    max-width: 300px;
-    margin-bottom: 50px;
+    max-width: clamp(250px, 50vw, 300px);
+    margin-bottom: clamp(30px, 5vw, 50px);
 }
 
 .inputWithText {
     position: relative;
-
     margin: 3px 0 6px 0;
-    width: 377px;
-    height: 60px;
-    border-radius: 10px;
+    width: clamp(280px, 50vw, 377px);
+    min-height: 55px;
+    height: clamp(55px, 10vw, 60px);
+    border-radius: clamp(5px, 2vw, 10px);
     border: 3px solid var(--border-color);
-
     transition: all 0.5s ease;
 }
 
@@ -46,13 +46,11 @@
     left: 12px;
     padding: 0 4px;
     background-color: var(--background);
-
     user-select: none;
     font-family: var(--font-rubik);
     font-weight: 600;
     font-size: 20px;
     color: var(--alt-text-1);
-
     transition: all 0.5s ease;
 }
 
@@ -71,39 +69,19 @@
     font-size: 15px;
 }
 
-/* .inputWithText h1 {
-    position: absolute;
-    top: -9.6px;
-    width: 100%;
-    height: 60px;
-    border: none;
-    padding: 0 12px;
-    box-sizing: border-box;
-    font-family: var(--font-rubik);
-    font-weight: 600;
-    font-size: 23px;
-    color: var(--text);
-    background-color: transparent;
-    outline: none;
-} */
-
 .inputWithText input {
     position: absolute;
     top: -2px;
-
     width: 100%;
     height: 60px;
     padding: 0 12px;
-
     border: none;
     box-sizing: border-box;
     background-color: transparent;
-
     font-family: var(--font-rubik);
     font-weight: 600;
     font-size: 23px;
     color: var(--text);
-
     transition: all 0.5s ease;
     outline: none;
 }
@@ -122,7 +100,7 @@
     position: absolute;
     right: 15px;
     top: 13.5px;
-    width: 30px;
+    width: clamp(25px, 5vw, 30px);
     cursor: pointer;
 }
 
@@ -136,7 +114,6 @@
     transition: all 0.5s ease;
 }
 
-
 .inputWithText:has(input:hover) button img,
 .inputWithText:has(input:focus) button img,
 .inputWithText:has(button:hover) button img,
@@ -147,15 +124,13 @@
 .inputWithText input::placeholder {
     font-family: var(--font-rubik);
     font-weight: 400;
-    font-size: 20px;
+    font-size: 23px;
     color: var(--alt-text-2);
 }
 
-
 .passwordRequirements {
-    width: 377px;
-    height: 90px;
-
+    width: clamp(280px, 50vw, 377px);
+    height: clamp(70px, 15vw, 90px);
     display: flex;
     align-items: flex-start;
     align-content: space-around;
@@ -169,7 +144,7 @@
     display: flex;
     align-items: center;
     flex-direction: row;
-    font-size: 16px;
+    font-size: clamp(13px, 2.5vw, 16px);
     font-weight: 600;
     white-space: nowrap;
     color: var(--alt-text-1)
@@ -183,16 +158,16 @@
     background-color: var(--btn-background);
     border: none;
     border-radius: 10px;
-    height: 57px;
-    width: 410px;
+    height: clamp(50px, 10vw, 57px);
+    width: clamp(280px, 50vw, 410px);
     font-family: var(--font-rubik);
     font-weight: 700;
-    font-size: 24px;
+    font-size: clamp(20px, 3vw, 24px);
     color: var(--text);
     cursor: pointer;
     outline: none;
     transition: all 0.5s ease;
-    margin-top: 15px;
+    margin-top: clamp(10px, 3vw, 15px);
 }
 
 .signupButton:disabled {
@@ -206,10 +181,39 @@
     background-color: var(--btn-disabled-background);
 }
 
-.signupLink {
+.loginLink {
     font-family: var(--font-rubik);
     font-weight: 600;
-    font-size: 16px;
+    font-size: clamp(13px, 2vw, 16px);
     color: var(--alt-text-2);
     margin-top: 10px;
+}
+
+@media (max-width: 500px) {
+    .inputWithText legend {
+        font-size: clamp(18px, 2.5vw, 20px);
+    }
+
+    .inputWithText input {
+        font-size: clamp(20px, 3vw, 23px);
+        top: -5px;
+    }
+}
+
+@media (max-width: 425px) {
+
+    .inputWithText,
+    .signupButton {
+        width: 90%;
+    }
+
+    .inputWithText legend {
+        left: 7px;
+    }
+
+    .inputWithText:has(input:focus) legend,
+    .inputWithText:has(button:focus) legend,
+    .inputWithText:has(input:not([value=""])) legend {
+        left: 7px;
+    }
 }
