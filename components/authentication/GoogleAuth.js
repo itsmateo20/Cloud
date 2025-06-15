@@ -1,6 +1,6 @@
 // components/Authentication/GoogleAuth.js
 
-import style from "./googleAuthButton.module.css";
+import style from "@/components/authentication/GoogleAuth.module.css";
 import Image from "next/image";
 
 export function GoogleAuth({ auth, type }) {

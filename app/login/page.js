@@ -82,59 +82,57 @@ export default function Page() {
     }, [password]);
 
     return (
-        <Layout loading={loading} mobile={isMobile} user={user}>
-            <main className={loginStyle.main}>
-                <h1 className={loginStyle.title}>Login</h1>
-                <h2 className={loginStyle.subtitle}>Login into your cloud storage account</h2>
-                <fieldset className={loginStyle.inputWithText}>
-                    <legend>Email</legend>
-                    <input
-                        type="email"
-                        name="email"
-                        defaultValue={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        required
+        <Layout mainStyle={loginStyle.main} loading={loading} mobile={isMobile} user={user}>
+            <h1 className={loginStyle.title}>Login</h1>
+            <h2 className={loginStyle.subtitle}>Login into your cloud storage account</h2>
+            <fieldset className={loginStyle.inputWithText}>
+                <legend>Email</legend>
+                <input
+                    type="email"
+                    name="email"
+                    defaultValue={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                />
+            </fieldset>
+
+            <fieldset className={loginStyle.inputWithText}>
+                <legend>Password</legend>
+                <input
+                    name="password"
+                    type={isVisible ? "text" : "password"}
+                    defaultValue={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    minLength="8"
+                />
+                <button
+                    type="button"
+                    onClick={toggleVisibility}
+                >
+                    <Image
+                        src={
+                            isVisible
+                                ? "/assets/authentication/VisibilityOn.svg"
+                                : "/assets/authentication/VisibilityOff.svg"
+                        }
+                        width={30}
+                        height={30}
+                        id="visibilityIcon"
+                        alt="Visibility"
+                        loading="eager"
                     />
-                </fieldset>
+                </button>
+            </fieldset>
 
-                <fieldset className={loginStyle.inputWithText}>
-                    <legend>Password</legend>
-                    <input
-                        name="password"
-                        type={isVisible ? "text" : "password"}
-                        defaultValue={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        required
-                        minLength="8"
-                    />
-                    <button
-                        type="button"
-                        onClick={toggleVisibility}
-                    >
-                        <Image
-                            src={
-                                isVisible
-                                    ? "/assets/authentication/VisibilityOn.svg"
-                                    : "/assets/authentication/VisibilityOff.svg"
-                            }
-                            width={30}
-                            height={30}
-                            id="visibilityIcon"
-                            alt="Visibility"
-                            loading="eager"
-                        />
-                    </button>
-                </fieldset>
+            <GoogleAuth auth={authWithGoogle} type="login" />
 
-                <GoogleAuth auth={authWithGoogle} type="login" />
+            <button onClick={handleLogin} type="button" className={loginStyle.loginButton} disabled={softLoading}>{softLoading ? <SoftLoading /> : "Log In"}</button>
+            <Link href="/signup" className={loginStyle.signupLink}>Don't have an account yet? Sign Up</Link>
 
-                <button onClick={handleLogin} type="button" className={loginStyle.loginButton} disabled={softLoading}>{softLoading ? <SoftLoading /> : "Log In"}</button>
-                <Link href="/signup" className={loginStyle.signupLink}>Don't have an account yet? Sign Up</Link>
+            <button type="button" onClick={() => clearDatabase()}><span>clear</span></button>
 
-                <button type="button" onClick={() => clearDatabase()}><span>clear</span></button>
-
-                {error && <p className="error">{error}</p>}
-            </main>
+            {error && <p className="error">{error}</p>}
         </Layout>
     )
 }

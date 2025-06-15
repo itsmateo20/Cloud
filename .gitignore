@@ -3,3 +3,4 @@
 .env*.local
 /prisma/database.*
 /prisma/migrations/
+/uploads

@@ -1,6 +1,9 @@
+/* /public/styles/globals.css */
+
 :root {
   --background: #ffffff;
   --nav-background: #f1f1f1;
+  --nav-background-filter: brightness(0) saturate(100%) invert(100%) sepia(99%) saturate(133%) hue-rotate(240deg) brightness(112%) contrast(89%);
   --nav-user-profile-background: #EEEEEE;
   --nav-user-profile-border: #C6C3BD;
   --top-nav-height: 60px;
@@ -14,12 +17,18 @@
   --btn-disabled-background: #D8D8D8;
   --border-color: #CFCFCF;
   --border-color-hover: #606060;
+
+  --scrollbar-thumb-hover: #B0B0B0;
+  --folder-arrow-color: #606060;
+  --explorer-hover: #dfdfdf;
+  --explorer-selected: #c7c7c7;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #161616;
     --nav-background: #141414;
+    --nav-background-filter: brightness(0) saturate(100%) invert(0%) sepia(1%) saturate(580%) hue-rotate(360deg) brightness(101%) contrast(84%);
     --nav-user-profile-background: #1A1A1A;
     --nav-user-profile-border: #272727;
     --top-nav-height: 60px;
@@ -33,6 +42,11 @@
     --btn-disabled-background: #2c2c2c;
     --border-color: #575757;
     --border-color-hover: #888888;
+
+    --scrollbar-thumb-hover: #4c4c4c;
+    --folder-arrow-color: #c1c1c1;
+    --explorer-hover: #2c2c2c;
+    --explorer-selected: #3c3c3c;
   }
 }
 
@@ -74,7 +88,7 @@ body {
 }
 
 body {
-  padding: calc(var(--top-nav-height) + 10px) 10px 10px 10px;
+  padding-top: var(--top-nav-height);
   font-weight: 700;
   color: var(--text);
   background: var(--background);

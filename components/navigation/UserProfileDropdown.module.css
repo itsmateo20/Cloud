@@ -1,37 +1,4 @@
-.topBar {
-    position: fixed;
-    left: 0;
-    top: 0;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    height: var(--top-nav-height);
-    width: 100vw;
-    background-color: var(--nav-background);
-    padding: 0 15px;
-    filter: drop-shadow(3px 0px 50px rgba(0, 0, 0, 0.05));
-    /* filter: drop-shadow(3px 0px 50px rgba(0, 0, 0, 0.05)) drop-shadow(0px 3px 50px rgba(0, 0, 0, 0.05)); */
-    transition: filter 0.5s ease, background-color 0.5s ease;
-}
-
-.logo {
-    filter: drop-shadow(9px 5px 6.5px rgba(0, 0, 0, 0.25));
-    transition: all 0.5s ease;
-}
-
-
-@media (prefers-color-scheme: dark) {
-    .logo {
-        filter: drop-shadow(9px 5px 6.5px rgba(255, 255, 255, 0.25));
-
-    }
-}
-
-.title {
-    font-size: 24px;
-    margin: 0 auto 0 15px;
-    color: var(--text);
-}
+/* /components/navigation/UserProfileDropdown.module.css */
 
 .userProfile {
     display: flex;
@@ -71,7 +38,7 @@
     right: 15px;
     background-color: var(--nav-user-profile-background);
     border: 3px solid var(--nav-user-profile-border);
-    border-radius: 10px;
+    border-radius: 20px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     cursor: default;
     z-index: 2;
@@ -146,7 +113,6 @@
 .userDropdown li svg {
     width: 22px;
     height: 22px;
-    /* filter: var(--alt-svg-2); */
     color: var(--text);
-    /* transition: filter 0.3s ease; */
+    transition: color 0.3s ease;
 }

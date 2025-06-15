@@ -1,19 +1,17 @@
-// components/app/navigation/UserProfileDropdown.js
+// components/navigation/UserProfileDropdown.js
+
 "use client";
 
 import { useAuth } from "@/context/AuthProvider";
 
 import { useEffect, Suspense, useState, useRef } from "react";
-import { useRouter } from "next/navigation";
 import gravatar from 'gravatar';
 
-import Loading from "@/components/Loading";
 import SoftLoading from "@/components/SoftLoading";
 
 import Image from "next/image";
-import Link from "next/link";
 
-import nav from "@/public/styles/navigation.module.css"
+import nav from "@/components/navigation/UserProfileDropdown.module.css";
 import { TbLogout } from "react-icons/tb";
 
 export default function UserProfileDropdown({ user, mobile }) {
@@ -25,8 +23,6 @@ export default function UserProfileDropdown({ user, mobile }) {
     const [openedManually, setOpenedManually] = useState(false);
     const [profileImage, setProfileImage] = useState(null);
     const [dropdownVisible, setDropdownVisible] = useState(false);
-
-
 
     useEffect(() => {
         const gravatarUrl = gravatar.url(user.email, { s: '120', r: 'pg', d: 'identicon' });

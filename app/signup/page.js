@@ -92,94 +92,92 @@ export default function Page() {
     }, [password, repeatPassword]);
 
     return (
-        <Layout loading={loading} mobile={isMobile} user={user}>
-            <main className={signupStyle.main}>
-                <h1 className={signupStyle.title}>Signup</h1>
-                <h2 className={signupStyle.subtitle}>Make an account for your cloud storage</h2>
-                <fieldset className={signupStyle.inputWithText}>
-                    <legend>Email</legend>
-                    <input
-                        type="email"
-                        name="email"
-                        defaultValue={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        required />
-                </fieldset>
-                <fieldset className={signupStyle.inputWithText}>
-                    <legend>Password</legend>
-                    <input
-                        name="password"
-                        type={isVisible ? "text" : "password"}
-                        defaultValue={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        required
-                        minLength="8"
+        <Layout mainStyle={signupStyle.main} loading={loading} mobile={isMobile} user={user}>
+            <h1 className={signupStyle.title}>Signup</h1>
+            <h2 className={signupStyle.subtitle}>Make an account for your cloud storage</h2>
+            <fieldset className={signupStyle.inputWithText}>
+                <legend>Email</legend>
+                <input
+                    type="email"
+                    name="email"
+                    defaultValue={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required />
+            </fieldset>
+            <fieldset className={signupStyle.inputWithText}>
+                <legend>Password</legend>
+                <input
+                    name="password"
+                    type={isVisible ? "text" : "password"}
+                    defaultValue={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    minLength="8"
+                />
+                <button
+                    type="button"
+                    onClick={toggleVisibility}
+                    aria-label="Toggle Password Visibility"
+                >
+                    <Image
+                        src={
+                            isVisible
+                                ? "/assets/authentication/VisibilityOn.svg"
+                                : "/assets/authentication/VisibilityOff.svg"
+                        }
+                        id="visibilityIcon"
+                        width={30}
+                        height={30}
+                        alt="Visibility"
                     />
-                    <button
-                        type="button"
-                        onClick={toggleVisibility}
-                        aria-label="Toggle Password Visibility"
-                    >
-                        <Image
-                            src={
-                                isVisible
-                                    ? "/assets/authentication/VisibilityOn.svg"
-                                    : "/assets/authentication/VisibilityOff.svg"
-                            }
-                            id="visibilityIcon"
-                            width={30}
-                            height={30}
-                            alt="Visibility"
-                        />
-                    </button>
-                </fieldset>
+                </button>
+            </fieldset>
 
-                <fieldset className={signupStyle.inputWithText}>
-                    <legend>Repeat Password</legend>
-                    <input
-                        name="repeatPassword"
-                        type={isVisible ? "text" : "password"}
-                        value={repeatPassword}
-                        onChange={(e) => setRepeatPassword(e.target.value)}
-                        required
-                        minLength={8}
+            <fieldset className={signupStyle.inputWithText}>
+                <legend>Repeat Password</legend>
+                <input
+                    name="repeatPassword"
+                    type={isVisible ? "text" : "password"}
+                    value={repeatPassword}
+                    onChange={(e) => setRepeatPassword(e.target.value)}
+                    required
+                    minLength={8}
+                />
+                <button
+                    type="button"
+                    onClick={toggleVisibility}
+                    aria-label="Toggle Repeat Password Visibility"
+                >
+                    <Image
+                        src={
+                            isVisible
+                                ? "/assets/authentication/VisibilityOn.svg"
+                                : "/assets/authentication/VisibilityOff.svg"
+                        }
+                        width={30}
+                        height={30}
+                        alt="Visibility"
+                        loading="eager"
                     />
-                    <button
-                        type="button"
-                        onClick={toggleVisibility}
-                        aria-label="Toggle Repeat Password Visibility"
-                    >
-                        <Image
-                            src={
-                                isVisible
-                                    ? "/assets/authentication/VisibilityOn.svg"
-                                    : "/assets/authentication/VisibilityOff.svg"
-                            }
-                            width={30}
-                            height={30}
-                            alt="Visibility"
-                            loading="eager"
-                        />
-                    </button>
-                </fieldset>
+                </button>
+            </fieldset>
 
-                <div className={signupStyle.passwordRequirements}>
-                    <h1>{passwordRequirements.uppercase ? <BsCheck size={20} /> : <IoClose size={20} />} Uppercase letter</h1>
-                    <h1>{passwordRequirements.lowercase ? <BsCheck size={20} /> : <IoClose size={20} />} Lowercase letter</h1>
-                    <h1>{passwordRequirements.number ? <BsCheck size={20} /> : <IoClose size={20} />} Number</h1>
-                    <h1>{passwordRequirements.special ? <BsCheck size={20} /> : <IoClose size={20} />} Special character</h1>
-                    <h1>{passwordRequirements.minLength ? <BsCheck size={20} /> : <IoClose size={20} />} 8 characters</h1>
-                    <h1>{passwordRequirements.matching ? <BsCheck size={20} /> : <IoClose size={20} />} Match passwords</h1>
-                </div>
+            <div className={signupStyle.passwordRequirements}>
+                <h1>{passwordRequirements.uppercase ? <BsCheck size={20} /> : <IoClose size={20} />} Uppercase letter</h1>
+                <h1>{passwordRequirements.lowercase ? <BsCheck size={20} /> : <IoClose size={20} />} Lowercase letter</h1>
+                <h1>{passwordRequirements.number ? <BsCheck size={20} /> : <IoClose size={20} />} Number</h1>
+                <h1>{passwordRequirements.special ? <BsCheck size={20} /> : <IoClose size={20} />} Special character</h1>
+                <h1>{passwordRequirements.minLength ? <BsCheck size={20} /> : <IoClose size={20} />} 8 characters</h1>
+                <h1>{passwordRequirements.matching ? <BsCheck size={20} /> : <IoClose size={20} />} Match passwords</h1>
+            </div>
 
-                <GoogleAuth auth={authWithGoogle} type="signup" />
+            <GoogleAuth auth={authWithGoogle} type="signup" />
 
-                <button onClick={handleSignup} type="button" className={signupStyle.signupButton} disabled={softLoading}>{softLoading ? <SoftLoading /> : "Sign Up"}</button>
-                <Link href="/login" className={signupStyle.loginLink}>Already have an account? Log In</Link>
+            <button onClick={handleSignup} type="button" className={signupStyle.signupButton} disabled={softLoading}>{softLoading ? <SoftLoading /> : "Sign Up"}</button>
+            <Link href="/login" className={signupStyle.loginLink}>Already have an account? Log In</Link>
 
 
-                {error && <p className="error">{error}</p>}
-            </main>
+            {error && <p className="error">{error}</p>}
         </Layout>
     )
 }

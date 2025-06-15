@@ -117,92 +117,90 @@ export default function Page({ searchParams }) {
     }, [password, repeatPassword]);
 
     return (
-        <Layout loading={loading} mobile={isMobile} user={user}>
-            <main className={googleSignupStyle.main}>
-                <h1 className={googleSignupStyle.title}>Google Signup</h1>
-                <h2 className={googleSignupStyle.subtitle}>Create a password for your account.</h2>
-                <fieldset className={googleSignupStyle.inputWithText}>
-                    <legend>Email</legend>
-                    <input
-                        type="email"
-                        name="email"
-                        value={email}
-                        disabled
+        <Layout mainStyle={googleSignupStyle.main} loading={loading} mobile={isMobile} user={user}>
+            <h1 className={googleSignupStyle.title}>Google Signup</h1>
+            <h2 className={googleSignupStyle.subtitle}>Create a password for your account.</h2>
+            <fieldset className={googleSignupStyle.inputWithText}>
+                <legend>Email</legend>
+                <input
+                    type="email"
+                    name="email"
+                    value={email}
+                    disabled
+                />
+            </fieldset>
+
+            <fieldset className={googleSignupStyle.inputWithText}>
+                <legend>Password</legend>
+                <input
+                    name="password"
+                    type={isVisible ? "text" : "password"}
+                    defaultValue={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    minLength="8"
+                />
+                <button
+                    type="button"
+                    onClick={toggleVisibility}
+                    aria-label="Toggle Password Visibility"
+                >
+                    <Image
+                        src={
+                            isVisible
+                                ? "/assets/authentication/VisibilityOn.svg"
+                                : "/assets/authentication/VisibilityOff.svg"
+                        }
+                        width={30}
+                        height={30}
+                        id="visibilityIcon"
+                        alt="Visibility"
+                        loading="eager"
                     />
-                </fieldset>
+                </button>
+            </fieldset>
 
-                <fieldset className={googleSignupStyle.inputWithText}>
-                    <legend>Password</legend>
-                    <input
-                        name="password"
-                        type={isVisible ? "text" : "password"}
-                        defaultValue={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        required
-                        minLength="8"
+            <fieldset className={googleSignupStyle.inputWithText}>
+                <legend>Repeat Password</legend>
+                <input
+                    name="repeatPassword"
+                    type={isVisible ? "text" : "password"}
+                    value={repeatPassword}
+                    onChange={(e) => setRepeatPassword(e.target.value)}
+                    required
+                    minLength={8}
+                />
+                <button
+                    type="button"
+                    onClick={toggleVisibility}
+                    aria-label="Toggle Repeat Password Visibility"
+                >
+                    <Image
+                        src={
+                            isVisible
+                                ? "/assets/authentication/VisibilityOn.svg"
+                                : "/assets/authentication/VisibilityOff.svg"
+                        }
+                        width={30}
+                        height={30}
+                        alt="Visibility"
+                        loading="eager"
                     />
-                    <button
-                        type="button"
-                        onClick={toggleVisibility}
-                        aria-label="Toggle Password Visibility"
-                    >
-                        <Image
-                            src={
-                                isVisible
-                                    ? "/assets/authentication/VisibilityOn.svg"
-                                    : "/assets/authentication/VisibilityOff.svg"
-                            }
-                            width={30}
-                            height={30}
-                            id="visibilityIcon"
-                            alt="Visibility"
-                            loading="eager"
-                        />
-                    </button>
-                </fieldset>
+                </button>
+            </fieldset>
 
-                <fieldset className={googleSignupStyle.inputWithText}>
-                    <legend>Repeat Password</legend>
-                    <input
-                        name="repeatPassword"
-                        type={isVisible ? "text" : "password"}
-                        value={repeatPassword}
-                        onChange={(e) => setRepeatPassword(e.target.value)}
-                        required
-                        minLength={8}
-                    />
-                    <button
-                        type="button"
-                        onClick={toggleVisibility}
-                        aria-label="Toggle Repeat Password Visibility"
-                    >
-                        <Image
-                            src={
-                                isVisible
-                                    ? "/assets/authentication/VisibilityOn.svg"
-                                    : "/assets/authentication/VisibilityOff.svg"
-                            }
-                            width={30}
-                            height={30}
-                            alt="Visibility"
-                            loading="eager"
-                        />
-                    </button>
-                </fieldset>
+            <div className={googleSignupStyle.passwordRequirements}>
+                <h1>{passwordRequirements.uppercase ? <BsCheck size={20} /> : <IoClose size={20} />} Uppercase letter</h1>
+                <h1>{passwordRequirements.lowercase ? <BsCheck size={20} /> : <IoClose size={20} />} Lowercase letter</h1>
+                <h1>{passwordRequirements.number ? <BsCheck size={20} /> : <IoClose size={20} />} Number</h1>
+                <h1>{passwordRequirements.special ? <BsCheck size={20} /> : <IoClose size={20} />} Special character</h1>
+                <h1>{passwordRequirements.minLength ? <BsCheck size={20} /> : <IoClose size={20} />} 8 characters</h1>
+                <h1>{passwordRequirements.matching ? <BsCheck size={20} /> : <IoClose size={20} />} Match passwords</h1>
+            </div>
 
-                <div className={googleSignupStyle.passwordRequirements}>
-                    <h1>{passwordRequirements.uppercase ? <BsCheck size={20} /> : <IoClose size={20} />} Uppercase letter</h1>
-                    <h1>{passwordRequirements.lowercase ? <BsCheck size={20} /> : <IoClose size={20} />} Lowercase letter</h1>
-                    <h1>{passwordRequirements.number ? <BsCheck size={20} /> : <IoClose size={20} />} Number</h1>
-                    <h1>{passwordRequirements.special ? <BsCheck size={20} /> : <IoClose size={20} />} Special character</h1>
-                    <h1>{passwordRequirements.minLength ? <BsCheck size={20} /> : <IoClose size={20} />} 8 characters</h1>
-                    <h1>{passwordRequirements.matching ? <BsCheck size={20} /> : <IoClose size={20} />} Match passwords</h1>
-                </div>
+            <button onClick={handleSignup} type="button" className={googleSignupStyle.signupButton} disabled={softLoading}>{softLoading ? <SoftLoading /> : "Sign up"}</button>
 
-                <button onClick={handleSignup} type="button" className={googleSignupStyle.signupButton} disabled={softLoading}>{softLoading ? <SoftLoading /> : "Sign up"}</button>
-
-                {error && <p className="error">{error}</p>}
-            </main>
+            {error && <p className="error">{error}</p>}
         </Layout>
     )
 }

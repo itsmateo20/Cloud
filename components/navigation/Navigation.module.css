@@ -1,0 +1,34 @@
+/* /components/navigation/Navigation.module.css */
+
+.navigation {
+    position: fixed;
+    left: 0;
+    top: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: var(--top-nav-height);
+    width: 100vw;
+    background-color: var(--nav-background);
+    padding: 0 15px;
+    transition: filter 0.5s ease, background-color 0.5s ease;
+}
+
+.logo {
+    filter: drop-shadow(9px 5px 6.5px rgba(2, 1, 1, 0.25));
+    transition: all 0.5s ease;
+}
+
+
+@media (prefers-color-scheme: dark) {
+    .logo {
+        filter: drop-shadow(9px 5px 6.5px rgba(255, 255, 255, 0.25));
+
+    }
+}
+
+.title {
+    font-size: 24px;
+    margin: 0 auto 0 15px;
+    color: var(--text);
+}

@@ -1,0 +1,140 @@
+/* /components/app/FolderTree.module.css */
+
+.folderTree {
+    height: 100%;
+    overflow-y: auto;
+    font-size: 14px;
+}
+
+.header {
+    padding: 8px;
+}
+
+.rootFolder {
+    display: flex;
+    align-items: center;
+    padding: 6px 8px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background-color 0.15s ease;
+}
+
+.rootFolder:hover {
+    background-color: var(--explorer-hover);
+}
+
+.rootFolder.selected {
+    background-color: var(--explorer-selected);
+}
+
+.folders {
+    padding: 4px 0;
+}
+
+.folderItem {
+    position: relative;
+    user-select: none;
+}
+
+.folderContent {
+    display: flex;
+    align-items: center;
+    padding: 2px 8px;
+    min-height: 24px;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.folderContent:hover {
+    background-color: var(--explorer-hover)
+}
+
+.folderItem.selected .folderContent {
+    background-color: var(--explorer-selected);
+}
+
+.expandButton {
+    width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    margin-right: 2px;
+    border-radius: 2px;
+    transition: background-color 0.15s ease;
+}
+
+.expandButton:hover {
+    background-color: var(--explorer-hover);
+}
+
+.folderItem.selected .expandButton:hover {
+    background-color: var(--explorer-selected);
+}
+
+.expandButton:empty {
+    cursor: default;
+}
+
+.expandButton:empty:hover {
+    background-color: transparent;
+}
+
+.arrow {
+    transition: transform 0.15s ease;
+    color: var(--folder-arrow-color);
+}
+
+.arrow.expanded {
+    transform: rotate(90deg);
+}
+
+.folderIcon {
+    margin-right: 6px;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.folderName {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: pointer;
+}
+
+.subfolders {
+    position: relative;
+}
+
+.subfolders::before {
+    content: '';
+    position: absolute;
+    left: 15px;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background-color: var(--explorer-selected);
+}
+
+/* Scrollbar styling */
+.folderTree::-webkit-scrollbar {
+    width: 8px;
+}
+
+.folderTree::-webkit-scrollbar-track {
+    background: var(--explorer-hover);
+}
+
+.folderTree::-webkit-scrollbar-thumb {
+    background: var(--explorer-selected);
+    border-radius: 4px;
+}
+
+.folderTree::-webkit-scrollbar-thumb:hover {
+    background: var(--scrollbar-thumb-hover);
+}

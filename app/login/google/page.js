@@ -83,55 +83,53 @@ export default function Page({ searchParams }) {
     }
 
     return (
-        <Layout loading={loading} mobile={isMobile} user={user}>
-            <main className={googleLoginStyle.main}>
-                <h1 className={googleLoginStyle.title}>Google Login Issue</h1>
-                <h2 className={googleLoginStyle.subtitle}>The Google account you're trying to use isn't linked to any registered account. Please enter your credentials to link it.</h2>
-                <fieldset className={googleLoginStyle.inputWithText}>
-                    <legend>Email</legend>
-                    <input
-                        type="email"
-                        name="email"
-                        defaultValue={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        required
+        <Layout mainStyle={googleLoginStyle.main} loading={loading} mobile={isMobile} user={user}>
+            <h1 className={googleLoginStyle.title}>Google Login Issue</h1>
+            <h2 className={googleLoginStyle.subtitle}>The Google account you're trying to use isn't linked to any registered account. Please enter your credentials to link it.</h2>
+            <fieldset className={googleLoginStyle.inputWithText}>
+                <legend>Email</legend>
+                <input
+                    type="email"
+                    name="email"
+                    defaultValue={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                />
+            </fieldset>
+
+            <fieldset className={googleLoginStyle.inputWithText}>
+                <legend>Password</legend>
+                <input
+                    name="password"
+                    type={isVisible ? "text" : "password"}
+                    defaultValue={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    minLength="8"
+                />
+                <button
+                    type="button"
+                    onClick={toggleVisibility}
+                    aria-label="Toggle Password Visibility"
+                >
+                    <Image
+                        src={
+                            isVisible
+                                ? "/assets/authentication/VisibilityOn.svg"
+                                : "/assets/authentication/VisibilityOff.svg"
+                        }
+                        width={30}
+                        height={30}
+                        id="visibilityIcon"
+                        alt="Visibility"
+                        loading="eager"
                     />
-                </fieldset>
+                </button>
+            </fieldset>
 
-                <fieldset className={googleLoginStyle.inputWithText}>
-                    <legend>Password</legend>
-                    <input
-                        name="password"
-                        type={isVisible ? "text" : "password"}
-                        defaultValue={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        required
-                        minLength="8"
-                    />
-                    <button
-                        type="button"
-                        onClick={toggleVisibility}
-                        aria-label="Toggle Password Visibility"
-                    >
-                        <Image
-                            src={
-                                isVisible
-                                    ? "/assets/authentication/VisibilityOn.svg"
-                                    : "/assets/authentication/VisibilityOff.svg"
-                            }
-                            width={30}
-                            height={30}
-                            id="visibilityIcon"
-                            alt="Visibility"
-                            loading="eager"
-                        />
-                    </button>
-                </fieldset>
+            <button onClick={handleLogin} type="button" className={googleLoginStyle.loginButton} disabled={softLoading}>{softLoading ? <SoftLoading /> : "Link Account"}</button>
 
-                <button onClick={handleLogin} type="button" className={googleLoginStyle.loginButton} disabled={softLoading}>{softLoading ? <SoftLoading /> : "Link Account"}</button>
-
-                {error && <p className="error">{error}</p>}
-            </main>
+            {error && <p className="error">{error}</p>}
         </Layout>
     )
 }

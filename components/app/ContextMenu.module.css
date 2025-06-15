@@ -1,0 +1,72 @@
+/* components/app/ContextMenu.module.css */
+
+.contextMenu {
+    position: fixed;
+    background: white;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 1000;
+    min-width: 200px;
+    padding: 4px 0;
+    font-size: 14px;
+    user-select: none;
+}
+
+.menuItem {
+    display: flex;
+    align-items: center;
+    padding: 8px 16px;
+    cursor: pointer;
+    transition: background-color 0.1s ease;
+}
+
+.menuItem:hover {
+    background-color: #f0f0f0;
+}
+
+.menuItem.danger {
+    color: #dc2626;
+}
+
+.menuItem.danger:hover {
+    background-color: #fef2f2;
+}
+
+.icon {
+    margin-right: 12px;
+    width: 16px;
+    display: inline-block;
+    text-align: center;
+}
+
+.separator {
+    height: 1px;
+    background-color: #e5e5e5;
+    margin: 4px 0;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    .contextMenu {
+        background: #2d2d2d;
+        border-color: #555;
+        color: white;
+    }
+
+    .menuItem:hover {
+        background-color: #404040;
+    }
+
+    .menuItem.danger {
+        color: #f87171;
+    }
+
+    .menuItem.danger:hover {
+        background-color: #3c1f1f;
+    }
+
+    .separator {
+        background-color: #555;
+    }
+}
