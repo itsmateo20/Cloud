@@ -36,9 +36,9 @@ export default function Page() {
 
     useEffect(() => {
         if (error) {
-            const errorElement = document.querySelector('.error');
+            const errorElement = document.querySelector(".error");
             if (errorElement) {
-                errorElement.style.top = '-8%';
+                errorElement.style.top = "-8%";
             }
             setTimeout(() => {
                 setError("");
@@ -76,7 +76,7 @@ export default function Page() {
             uppercase: /[A-Z]/.test(password),
             lowercase: /[a-z]/.test(password),
             number: /[0-9]/.test(password),
-            special: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password),
+            special: /[!@#$%^&*()_+\-=\[\]{};":"\\|,.<>\/?]/.test(password),
             minLength: password.length >= 8,
         });
     }, [password]);

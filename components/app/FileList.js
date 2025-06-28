@@ -2,17 +2,16 @@
 
 import { useState, useEffect } from "react";
 import styles from "./FileList.module.css";
-import Loading from "../Loading";
 import SoftLoading from "../SoftLoading";
 import { ContextMenu } from "./ContextMenu";
+import { ImageViewer } from "./ImageViewer";
 
-export function FileList({ currentPath, onFolderDoubleClick }) {
+export function FileList({ socket, currentPath, onFolderDoubleClick }) {
     const [folders, setFolders] = useState([]);
     const [files, setFiles] = useState([]);
     const [loading, setLoading] = useState(false);
     const [selectedItems, setSelectedItems] = useState(new Set());
 
-    // Context menu state
     const [contextMenu, setContextMenu] = useState({
         visible: false,
         x: 0,
@@ -20,11 +19,109 @@ export function FileList({ currentPath, onFolderDoubleClick }) {
         items: []
     });
 
+    const [imageViewer, setImageViewer] = useState({
+        isOpen: false,
+        currentIndex: 0,
+        images: []
+    });
+
     useEffect(() => {
         loadContents();
+
+        socket.on("file-updated", (payload) => {
+            if (payload.path === currentPath) {
+                handleFileUpdate(payload);
+            }
+        });
     }, [currentPath]);
 
-    // Close context menu when clicking elsewhere
+    const handleFileUpdate = (payload) => {
+        switch (payload.action) {
+            case 'rename':
+                handleItemRename(payload.oldName, payload.newName);
+                break;
+            case 'delete':
+                handleItemsDelete(payload.deletedItems);
+                break;
+            case 'upload':
+            case 'create':
+                handleItemsAdd(payload.newItems);
+                break;
+            case 'refresh':
+            default:
+                loadContents();
+                break;
+        }
+    };
+
+    const handleItemRename = (oldName, newName) => {
+        setFolders(prev => prev.map(folder =>
+            folder.name === oldName
+                ? { ...folder, name: newName, path: folder.path.replace(oldName, newName) }
+                : folder
+        ));
+
+        setFiles(prev => prev.map(file =>
+            file.name === oldName
+                ? { ...file, name: newName, path: file.path.replace(oldName, newName) }
+                : file
+        ));
+
+        setSelectedItems(prev => {
+            const newSelected = new Set();
+            prev.forEach(path => {
+                if (path.endsWith(oldName)) {
+                    newSelected.add(path.replace(oldName, newName));
+                } else {
+                    newSelected.add(path);
+                }
+            });
+            return newSelected;
+        });
+    };
+
+    const handleItemsDelete = (deletedItems) => {
+        const deletedNames = deletedItems.map(item => item.name);
+
+        setFolders(prev => prev.filter(folder => !deletedNames.includes(folder.name)));
+        setFiles(prev => prev.filter(file => !deletedNames.includes(file.name)));
+
+        setSelectedItems(prev => {
+            const newSelected = new Set();
+            prev.forEach(path => {
+                const itemName = path.split('/').pop();
+                if (!deletedNames.includes(itemName)) {
+                    newSelected.add(path);
+                }
+            });
+            return newSelected;
+        });
+    };
+
+    const handleItemsAdd = (newItems) => {
+        newItems.forEach(item => {
+            if (item.type === 'folder') {
+                setFolders(prev => {
+                    if (prev.some(f => f.name === item.name)) return prev;
+                    return [...prev, item].sort((a, b) => a.name.localeCompare(b.name));
+                });
+            } else {
+                setFiles(prev => {
+                    if (prev.some(f => f.name === item.name)) return prev;
+                    return [...prev, item].sort((a, b) => a.name.localeCompare(b.name));
+                });
+            }
+        });
+    };
+
+    const getImageFiles = () => {
+        const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg', 'webp'];
+        return files.filter(file => {
+            const ext = file.name.split('.').pop()?.toLowerCase();
+            return imageExtensions.includes(ext);
+        });
+    };
+
     useEffect(() => {
         const handleClick = () => {
             if (contextMenu.visible) {
@@ -70,12 +167,10 @@ export function FileList({ currentPath, onFolderDoubleClick }) {
     const handleItemRightClick = (item, event) => {
         event.preventDefault();
 
-        // If right-clicking on unselected item, select only that item
         if (!selectedItems.has(item.path)) {
             setSelectedItems(new Set([item.path]));
         }
 
-        // Get selected items data
         const allItems = [...folders, ...files];
         const selectedItemsData = allItems.filter(i =>
             selectedItems.has(i.path) || i.path === item.path
@@ -92,6 +187,101 @@ export function FileList({ currentPath, onFolderDoubleClick }) {
         });
     };
 
+    const isImageFile = (filename) => {
+        const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg', 'webp'];
+        const ext = filename.split('.').pop()?.toLowerCase();
+        return imageExtensions.includes(ext);
+    };
+
+    const openImageViewer = (file) => {
+        const images = getImageFiles();
+        const currentIndex = images.findIndex(img => img.path === file.path);
+
+        if (currentIndex !== -1) {
+            setImageViewer({
+                isOpen: true,
+                currentIndex,
+                images
+            });
+        }
+    };
+
+    const handleImageViewerAction = async (action, image) => {
+        switch (action) {
+            case 'rename':
+                const newName = prompt('Enter new name:', image.name);
+                if (newName && newName !== image.name) {
+                    try {
+                        const response = await fetch('/api/files/rename', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                oldPath: image.path,
+                                newName: newName
+                            })
+                        });
+
+                        if (response.ok) setImageViewer(prev => ({ ...prev, isOpen: false }));
+                        else alert('Failed to rename file');
+                    } catch (error) {
+                        console.error('Error renaming:', error);
+                        alert('Error renaming file');
+                    }
+                }
+                break;
+
+            case 'delete':
+                const confirmed = confirm(`Are you sure you want to delete "${image.name}"?`);
+                if (confirmed) {
+                    try {
+                        const response = await fetch('/api/files/delete', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                paths: [image.path]
+                            })
+                        });
+
+                        if (response.ok) setImageViewer(prev => ({ ...prev, isOpen: false }));
+                        else alert('Failed to delete file');
+                    } catch (error) {
+                        console.error('Error deleting:', error);
+                        alert('Error deleting file');
+                    }
+                }
+                break;
+
+            case 'share':
+                if (navigator.share) {
+                    try {
+                        await navigator.share({
+                            title: image.name,
+                            url: `/api/files/download?path=${encodeURIComponent(image.path)}`
+                        });
+                    } catch (error) {
+                        console.log('Share cancelled or failed');
+                    }
+                } else {
+                    const shareUrl = `${window.location.origin}/api/files/download?path=${encodeURIComponent(image.path)}`;
+                    navigator.clipboard.writeText(shareUrl);
+                    alert('Share link copied to clipboard');
+                }
+                break;
+
+            case 'favorite':
+                console.log('Add to favorites:', image);
+                break;
+
+            case 'properties':
+                alert(`Properties for: ${image.name}\nPath: ${image.path}\nSize: ${formatFileSize(image.size)}\nModified: ${formatDate(image.modified)}`);
+                break;
+        }
+    };
+
     const handleFolderDoubleClick = (folder) => {
         onFolderDoubleClick(folder.path);
     };
@@ -101,16 +291,12 @@ export function FileList({ currentPath, onFolderDoubleClick }) {
 
         switch (action) {
             case 'open':
-                if (items[0].type === 'folder') {
-                    handleFolderDoubleClick(items[0]);
-                } else {
-                    // Handle file opening
-                    window.open(`/api/files/download?path=${encodeURIComponent(items[0].path)}`, '_blank');
-                }
+                if (items[0].type === 'folder') handleFolderDoubleClick(items[0]);
+                else if (isImageFile(items[0].name)) openImageViewer(items[0]);
+                else window.open(`/api/files/download?path=${encodeURIComponent(items[0].path)}`, '_blank');
                 break;
 
             case 'download':
-                // Handle download
                 items.forEach(item => {
                     if (item.type === 'file') {
                         const link = document.createElement('a');
@@ -139,13 +325,8 @@ export function FileList({ currentPath, onFolderDoubleClick }) {
                                 })
                             });
 
-                            if (response.ok) {
-                                loadContents(); // Refresh the list
-                            } else {
-                                alert('Failed to rename file/folder');
-                            }
+                            if (!response.ok) alert('Failed to rename file/folder');
                         } catch (error) {
-                            console.error('Error renaming:', error);
                             alert('Error renaming file/folder');
                         }
                     }
@@ -166,21 +347,15 @@ export function FileList({ currentPath, onFolderDoubleClick }) {
                             })
                         });
 
-                        if (response.ok) {
-                            loadContents(); // Refresh the list
-                            setSelectedItems(new Set()); // Clear selection
-                        } else {
-                            alert('Failed to delete items');
-                        }
+                        if (response.ok) setSelectedItems(new Set());
+                        else alert('Failed to delete items');
                     } catch (error) {
-                        console.error('Error deleting:', error);
                         alert('Error deleting items');
                     }
                 }
                 break;
 
             case 'copy':
-                // Copy paths to clipboard or implement copy functionality
                 const paths = items.map(item => item.path).join('\n');
                 navigator.clipboard.writeText(paths).then(() => {
                     console.log('Paths copied to clipboard');
@@ -190,7 +365,6 @@ export function FileList({ currentPath, onFolderDoubleClick }) {
                 break;
 
             case 'share':
-                // Implement share functionality
                 if (navigator.share && items.length === 1) {
                     try {
                         await navigator.share({
@@ -201,7 +375,6 @@ export function FileList({ currentPath, onFolderDoubleClick }) {
                         console.log('Share cancelled or failed');
                     }
                 } else {
-                    // Fallback: copy share link
                     const shareUrl = `${window.location.origin}/api/files/download?path=${encodeURIComponent(items[0].path)}`;
                     navigator.clipboard.writeText(shareUrl);
                     alert('Share link copied to clipboard');
@@ -209,13 +382,10 @@ export function FileList({ currentPath, onFolderDoubleClick }) {
                 break;
 
             case 'favorite':
-                // Implement favorite functionality
                 console.log('Add to favorites:', items);
-                // You could store favorites in localStorage or send to API
                 break;
 
             case 'properties':
-                // Show properties dialog
                 alert(`Properties for: ${items[0].name}\nPath: ${items[0].path}\nSize: ${items[0].size ? formatFileSize(items[0].size) : 'N/A'}\nModified: ${formatDate(items[0].modified)}`);
                 break;
 
@@ -316,6 +486,11 @@ export function FileList({ currentPath, onFolderDoubleClick }) {
                         key={file.path}
                         className={`${styles.item} ${selectedItems.has(file.path) ? styles.selected : ''}`}
                         onClick={(e) => handleItemClick(file, e)}
+                        onDoubleClick={() => {
+                            if (isImageFile(file.name)) {
+                                openImageViewer(file);
+                            }
+                        }}
                         onContextMenu={(e) => handleItemRightClick(file, e)}
                     >
                         <div className={styles.cell} style={{ width: '40%' }}>
@@ -348,6 +523,15 @@ export function FileList({ currentPath, onFolderDoubleClick }) {
                 onClose={() => setContextMenu(prev => ({ ...prev, visible: false }))}
                 selectedItems={contextMenu.items}
                 onAction={handleContextMenuAction}
+            />
+
+            <ImageViewer
+                isOpen={imageViewer.isOpen}
+                currentImageIndex={imageViewer.currentIndex}
+                images={imageViewer.images}
+                onClose={() => setImageViewer(prev => ({ ...prev, isOpen: false }))}
+                onNavigate={(newIndex) => setImageViewer(prev => ({ ...prev, currentIndex: newIndex }))}
+                onAction={handleImageViewerAction}
             />
         </div>
     );

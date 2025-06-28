@@ -4,3 +4,4 @@
 /prisma/database.*
 /prisma/migrations/
 /uploads
+*.pdn

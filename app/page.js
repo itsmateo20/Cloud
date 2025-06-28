@@ -2,6 +2,8 @@
 "use client";
 
 import { useAuth } from "@/context/AuthProvider";
+import { io } from "socket.io-client";
+
 import Layout from "@/components/Layout";
 import main from "@/public/styles/main.module.css";
 
@@ -12,11 +14,13 @@ import Image from "next/image";
 import { FolderTree } from "@/components/app/FolderTree";
 import { FileList } from "@/components/app/FileList";
 
+let socket;
+
 export default function Page() {
   const { user, loading } = useAuth();
 
   const [isMobile, setIsMobile] = useState(null);
-  const [currentPath, setCurrentPath] = useState('');
+  const [currentPath, setCurrentPath] = useState("");
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -31,20 +35,26 @@ export default function Page() {
   }, []);
 
   useEffect(() => {
+    if (!socket) socket = io();
+
     const handlePopState = (event) => {
       if (event.state && event.state.folderPath !== undefined) {
         setCurrentPath(event.state.folderPath);
       }
     };
 
-    window.addEventListener('popstate', handlePopState);
+    window.addEventListener("popstate", handlePopState);
 
     if (window.history.state === null) {
-      window.history.replaceState({ folderPath: '' }, '', window.location.href);
+      window.history.replaceState({ folderPath: "" }, "", window.location.href);
     }
 
     return () => {
-      window.removeEventListener('popstate', handlePopState);
+      socket?.off("folder-structure-updated");
+      socket?.off("file-updated");
+      socket = null;
+
+      window.removeEventListener("popstate", handlePopState);
     };
   }, []);
 
@@ -55,7 +65,7 @@ export default function Page() {
 
     window.history.pushState(
       { folderPath },
-      '',
+      "",
       window.location.pathname + window.location.search
     );
   };
@@ -77,7 +87,7 @@ export default function Page() {
       </div> */}
       <div className={main.diskContainerRow}>
         <Resizable
-          defaultSize={{ width: 300, height: '100%' }}
+          defaultSize={{ width: 300, height: "100%" }}
           minWidth={200}
           maxWidth={500}
           minHeight="100%"
@@ -103,12 +113,14 @@ export default function Page() {
               className={main.corner}
             />
             <FolderTree
+              socket={socket}
               onFolderSelect={handleFolderSelect}
               selectedPath={currentPath}
             />
           </div>
         </Resizable>
         <FileList
+          socket={socket}
           currentPath={currentPath}
           onFolderDoubleClick={handleFolderDoubleClick}
         />

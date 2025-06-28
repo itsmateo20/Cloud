@@ -1,16 +1,20 @@
 // app/api/auth/google/auth/route.js
 
+import { NextResponse } from "next/server";
 import { google } from "googleapis";
 import { cookies } from "next/headers";
+import { getSiteUrl } from "@/lib/getSiteUrl";
 
 export async function GET(req) {
     const { searchParams } = new URL(req.url);
     const type = searchParams.get("type");
 
+    const siteUrl = await getSiteUrl();
+
     const oauth2Client = new google.auth.OAuth2(
         process.env.GOOGLE_CLIENT_ID,
         process.env.GOOGLE_CLIENT_SECRET,
-        process.env.GOOGLE_REDIRECT_URI
+        siteUrl + "/api/auth/google/callback"
     );
 
     const authUrl = oauth2Client.generateAuthUrl({
@@ -26,5 +30,5 @@ export async function GET(req) {
         sameSite: "lax",
     });
 
-    return new Response(null, { status: 302, headers: { Location: authUrl } });
+    return NextResponse.redirect(authUrl);
 }

@@ -1,7 +1,7 @@
 // components/app/ContextMenu.js
 
-import { useEffect, useRef } from 'react';
-import styles from './ContextMenu.module.css';
+import { useEffect, useRef } from "react";
+import styles from "./ContextMenu.module.css";
 
 export function ContextMenu({
     x,
@@ -23,23 +23,22 @@ export function ContextMenu({
         };
 
         const handleKeyDown = (event) => {
-            if (event.key === 'Escape') {
+            if (event.key === "Escape") {
                 onClose();
             }
         };
 
-        document.addEventListener('mousedown', handleClickOutside);
-        document.addEventListener('keydown', handleKeyDown);
+        document.addEventListener("mousedown", handleClickOutside);
+        document.addEventListener("keydown", handleKeyDown);
 
         return () => {
-            document.removeEventListener('mousedown', handleClickOutside);
-            document.removeEventListener('keydown', handleKeyDown);
+            document.removeEventListener("mousedown", handleClickOutside);
+            document.removeEventListener("keydown", handleKeyDown);
         };
     }, [isVisible, onClose]);
 
     useEffect(() => {
         if (isVisible && menuRef.current) {
-            // Adjust position if menu would go off screen
             const rect = menuRef.current.getBoundingClientRect();
             const viewportWidth = window.innerWidth;
             const viewportHeight = window.innerHeight;
@@ -58,7 +57,7 @@ export function ContextMenu({
 
     const isMultipleSelected = selectedItems.length > 1;
     const selectedItem = selectedItems[0];
-    const isFolder = selectedItem?.type === 'folder';
+    const isFolder = selectedItem?.type === "folder";
 
     const handleAction = (action) => {
         onAction(action, selectedItems);
@@ -71,50 +70,50 @@ export function ContextMenu({
             className={styles.contextMenu}
             style={{ left: x, top: y }}
         >
-            <div className={styles.menuItem} onClick={() => handleAction('open')}>
+            <div className={styles.menuItem} onClick={() => handleAction("open")}>
                 <span className={styles.icon}>📂</span>
-                {isFolder ? 'Open' : 'Open'}
+                {isFolder ? "Open" : "Open"}
             </div>
 
             {!isFolder && (
-                <div className={styles.menuItem} onClick={() => handleAction('download')}>
+                <div className={styles.menuItem} onClick={() => handleAction("download")}>
                     <span className={styles.icon}>⬇️</span>
-                    Download{isMultipleSelected ? ` (${selectedItems.length})` : ''}
+                    Download{isMultipleSelected ? ` (${selectedItems.length})` : ""}
                 </div>
             )}
 
             <div className={styles.separator}></div>
 
-            <div className={styles.menuItem} onClick={() => handleAction('cut')}>
+            <div className={styles.menuItem} onClick={() => handleAction("cut")}>
                 <span className={styles.icon}>✂️</span>
                 Cut
             </div>
 
-            <div className={styles.menuItem} onClick={() => handleAction('copy')}>
+            <div className={styles.menuItem} onClick={() => handleAction("copy")}>
                 <span className={styles.icon}>📋</span>
                 Copy
             </div>
 
             <div className={styles.separator}></div>
 
-            <div className={styles.menuItem} onClick={() => handleAction('rename')}>
+            <div className={styles.menuItem} onClick={() => handleAction("rename")}>
                 <span className={styles.icon}>✏️</span>
                 Rename
             </div>
 
-            <div className={styles.menuItem} onClick={() => handleAction('favorite')}>
+            <div className={styles.menuItem} onClick={() => handleAction("favorite")}>
                 <span className={styles.icon}>⭐</span>
                 Add to Favorites
             </div>
 
-            <div className={styles.menuItem} onClick={() => handleAction('share')}>
+            <div className={styles.menuItem} onClick={() => handleAction("share")}>
                 <span className={styles.icon}>🔗</span>
                 Share
             </div>
 
             <div className={styles.separator}></div>
 
-            <div className={styles.menuItem} onClick={() => handleAction('properties')}>
+            <div className={styles.menuItem} onClick={() => handleAction("properties")}>
                 <span className={styles.icon}>ℹ️</span>
                 Properties
             </div>
@@ -123,10 +122,10 @@ export function ContextMenu({
 
             <div
                 className={`${styles.menuItem} ${styles.danger}`}
-                onClick={() => handleAction('delete')}
+                onClick={() => handleAction("delete")}
             >
                 <span className={styles.icon}>🗑️</span>
-                Delete{isMultipleSelected ? ` (${selectedItems.length})` : ''}
+                Delete{isMultipleSelected ? ` (${selectedItems.length})` : ""}
             </div>
         </div>
     );

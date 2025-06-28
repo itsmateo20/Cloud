@@ -4,6 +4,7 @@ import { createContext, useContext, useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 
 import { api } from "@/utils/api";
+import { NextResponse } from "next/server";
 
 const AuthContext = createContext();
 
@@ -37,17 +38,13 @@ export const AuthProvider = ({ children, locked = true }) => {
                 const sessionRes = await api.post("/api/auth/session");
                 if (!sessionRes.success) {
                     setUser(null);
-                    if (sessionRes.code === "not_authenticated" && locked && !publicRoutes.includes(pathname)) {
-                        return router.push("/login");
-                    }
+                    if (sessionRes.code === "not_authenticated" && locked && !publicRoutes.includes(pathname)) return router.push("/login");
                 } else {
                     setUser(sessionRes.user);
-                    if (publicRoutes.includes(pathname)) {
-                        return router.push("/");
-                    }
+                    if (publicRoutes.includes(pathname)) return router.push("/");
                 }
             } catch (error) {
-                console.error("Auth check failed:", error);
+                return NextResponse.json({ success: false, code: "auth_check_failed", error }, { status: 500 });
             }
 
             setLoading(false);
@@ -60,11 +57,11 @@ export const AuthProvider = ({ children, locked = true }) => {
         setSoftLoading(true);
         try {
             const data = await api.post("/api/auth/login", { email, password });
-            if (!data.success) return { success: false, code: data.code };
+            if (!data.success) return NextResponse.json({ success: false, code: data.code });
             setUser(data.user);
             router.push("/");
         } catch (error) {
-            return { success: false, error: error.message };
+            return NextResponse.json({ success: false, error: error.message });
         } finally {
             setSoftLoading(false);
         }
@@ -74,11 +71,11 @@ export const AuthProvider = ({ children, locked = true }) => {
         setSoftLoading(true);
         try {
             const data = await api.post("/api/auth/signup", { email, password });
-            if (!data.success) return { success: false, code: data.code };
+            if (!data.success) return NextResponse.json({ success: false, code: data.code });
             setUser(data.user);
             router.push("/");
         } catch (error) {
-            return { success: false, error: error.message };
+            return NextResponse.json({ success: false, error: error.message });
         } finally {
             setSoftLoading(false);
         }
@@ -93,11 +90,11 @@ export const AuthProvider = ({ children, locked = true }) => {
                 type,
                 signature
             });
-            if (!data.success) return { success: false, code: data.code };
+            if (!data.success) return NextResponse.json({ success: false, code: data.code });
             setUser(data.user);
             router.push("/");
         } catch (error) {
-            return { success: false, error: error.message };
+            return NextResponse.json({ success: false, error: error.message });
         } finally {
             setSoftLoading(false);
         }
@@ -107,11 +104,11 @@ export const AuthProvider = ({ children, locked = true }) => {
         setSoftLoading(true);
         try {
             const data = await api.post("/api/auth/signout");
-            if (!data.success) return { success: false, code: data.code };
+            if (!data.success) return NextResponse.json({ success: false, code: data.code });
             setUser(null);
             router.push("/login");
         } catch (error) {
-            return { success: false, error: error.message };
+            return NextResponse.json({ success: false, error: error.message });
         } finally {
             setSoftLoading(false);
         }
@@ -126,11 +123,11 @@ export const AuthProvider = ({ children, locked = true }) => {
                 password,
                 type,
             });
-            if (!data.success) return { success: false, code: data.code };
+            if (!data.success) return NextResponse.json({ success: false, code: data.code });
             setUser(data.user);
             router.push("/");
         } catch (error) {
-            return { success: false, error: error.message };
+            return NextResponse.json({ success: false, error: error.message });
         } finally {
             setSoftLoading(false);
         }
@@ -143,11 +140,10 @@ export const AuthProvider = ({ children, locked = true }) => {
     const clearDatabase = async () => {
         try {
             const res = await api.post("/api/database/clear");
-            if (!res.success) return { success: false, code: res.code, error: res.error };
+            if (!res.success) return NextResponse.json({ success: false, code: res.code, error: res.error });
             router.refresh();
         } catch (error) {
-            console.error("Clear DB error:", error);
-            return { success: false, error: error.message };
+            return NextResponse.json({ success: false, code: "clear_database_error", error });
         }
     };
 

@@ -1,4 +1,4 @@
-/* /public/styles/main.module.css */
+/* public/styles/main.module.css */
 
 .main {
     height: calc(100lvh - var(--top-nav-height));

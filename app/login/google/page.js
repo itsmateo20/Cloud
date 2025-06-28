@@ -60,9 +60,9 @@ export default function Page({ searchParams }) {
 
     useEffect(() => {
         if (error) {
-            const errorElement = document.querySelector('.error');
+            const errorElement = document.querySelector(".error");
             if (errorElement) {
-                errorElement.style.top = '-8%';
+                errorElement.style.top = "-8%";
             }
             setTimeout(() => {
                 setError("");
@@ -85,7 +85,7 @@ export default function Page({ searchParams }) {
     return (
         <Layout mainStyle={googleLoginStyle.main} loading={loading} mobile={isMobile} user={user}>
             <h1 className={googleLoginStyle.title}>Google Login Issue</h1>
-            <h2 className={googleLoginStyle.subtitle}>The Google account you're trying to use isn't linked to any registered account. Please enter your credentials to link it.</h2>
+            <h2 className={googleLoginStyle.subtitle}>The Google account you"re trying to use isn't linked to any registered account. Please enter your credentials to link it.</h2>
             <fieldset className={googleLoginStyle.inputWithText}>
                 <legend>Email</legend>
                 <input

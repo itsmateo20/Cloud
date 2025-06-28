@@ -19,10 +19,10 @@ export function Navigation({ user, mobile }) {
     const pathname = usePathname();
 
     return (
-        <nav className={nav.navigation} style={pathname !== '/' ? { filter: 'drop-shadow(3px 0px 50px rgba(0, 0, 0, 0.3))' } : null}>
+        <nav className={nav.navigation} style={pathname !== "/" ? { filter: "drop-shadow(3px 0px 50px rgba(0, 0, 0, 0.3))" } : null}>
             <Link className={nav.logo} href="/">
                 <Suspense fallback={<Loading />}>
-                    <Image src="/assets/logo/WObackground.png" alt="Cloud Storage Icon" width={54} height={33} quality={100} loading="eager" priority />
+                    <Image src="/assets/logo/logo.png" alt="Cloud Storage Icon" width={54} height={33} quality={100} loading="eager" priority />
                 </Suspense>
             </Link>
             <h1 className={nav.title}>Cloud</h1>

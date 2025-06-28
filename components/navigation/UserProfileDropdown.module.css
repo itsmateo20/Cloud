@@ -37,8 +37,8 @@
     top: var(--top-nav-height);
     right: 15px;
     background-color: var(--nav-user-profile-background);
-    border: 3px solid var(--nav-user-profile-border);
-    border-radius: 20px;
+    border: 2px solid var(--nav-user-profile-border);
+    border-radius: 15px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     cursor: default;
     z-index: 2;

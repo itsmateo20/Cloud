@@ -1,6 +1,6 @@
-/* /public/styles/loading.module.css */
+/* public/styles/loading.module.css */
 
-div.loading {
+.loading {
     user-select: none;
     display: flex;
     justify-content: center;
@@ -14,7 +14,7 @@ div.loading {
     z-index: 5;
 }
 
-div.loading h1 {
+.loading h1 {
     font-family: var(--font-rubik);
     font-weight: 500;
     font-size: 25px;
@@ -26,7 +26,7 @@ div.loading h1 {
     justify-content: center;
 }
 
-div.softLoading {
+.softLoading {
     user-select: none;
     display: flex;
     justify-content: center;
@@ -36,12 +36,12 @@ div.softLoading {
 }
 
 
-div.softLoading svg {
+.softLoading svg {
     filter: invert(0%) sepia(100%) saturate(21%) hue-rotate(2deg) brightness(101%) contrast(107%);
     animation: spin 1s linear infinite;
 }
 
-div.loading h1 svg {
+.loading h1 svg {
     filter: invert(0%) sepia(100%) saturate(21%) hue-rotate(2deg) brightness(101%) contrast(107%);
     animation: spin 1s linear infinite;
     margin-right: 10px;

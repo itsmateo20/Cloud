@@ -4,9 +4,9 @@ import loading from "@/public/styles/loading.module.css";
 
 import { AiOutlineLoading3Quarters } from "react-icons/ai";
 
-export default function SoftLoading() {
+export default function SoftLoading({ style }) {
     return (
-        <div className={loading.softLoading}>
+        <div className={style ? style.softLoading : loading.softLoading}>
             <AiOutlineLoading3Quarters size={23} />
         </div>
     );

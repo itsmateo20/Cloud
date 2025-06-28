@@ -5,7 +5,7 @@
 import { useAuth } from "@/context/AuthProvider";
 
 import { useEffect, Suspense, useState, useRef } from "react";
-import gravatar from 'gravatar';
+import gravatar from "gravatar";
 
 import SoftLoading from "@/components/SoftLoading";
 
@@ -25,7 +25,7 @@ export default function UserProfileDropdown({ user, mobile }) {
     const [dropdownVisible, setDropdownVisible] = useState(false);
 
     useEffect(() => {
-        const gravatarUrl = gravatar.url(user.email, { s: '120', r: 'pg', d: 'identicon' });
+        const gravatarUrl = gravatar.url(user.email, { s: "120", r: "pg", d: "identicon" });
         setProfileImage(gravatarUrl);
 
         return () => {
