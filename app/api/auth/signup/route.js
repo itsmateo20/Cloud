@@ -17,6 +17,6 @@ export async function POST(req) {
         await createSession({ id: response.user.id, email: response.user.email, googleEmail: response.user?.googleEmail, provider: response.user.provider });
         return new Response(JSON.stringify({ success: true, code: "signup_success", user: response.user }), { status: 200 });
     } catch (error) {
-        return new Response(JSON.stringify({ success: false, code: "signup_error", error }), { status: 500 });
+        return new Response(JSON.stringify({ success: false, code: "signup_failed", error }), { status: 500 });
     }
 }

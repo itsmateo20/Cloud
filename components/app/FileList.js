@@ -1,16 +1,102 @@
 // components/app/FileList.js
 
-import { useState, useEffect } from "react";
-import styles from "./FileList.module.css";
-import SoftLoading from "../SoftLoading";
-import { ContextMenu } from "./ContextMenu";
-import { ImageViewer } from "./ImageViewer";
+import { useState, useEffect, forwardRef, useImperativeHandle, useCallback } from "react";
+import { api } from "@/utils/api";
+import { downloadFile, downloadFolder } from "@/utils/downloadUtils";
 
-export function FileList({ socket, currentPath, onFolderDoubleClick }) {
+import styles from "./FileList.module.css";
+import SoftLoading from "@/components/SoftLoading";
+
+import { ContextMenu } from "./ContextMenu";
+import { FileViewer } from "./FileViewer";
+
+const formatDate = (date) => {
+    if (!date) return '—';
+
+    try {
+        const dateObj = new Date(date);
+
+        if (isNaN(dateObj.getTime())) {
+            return '—';
+        }
+
+        return dateObj.toLocaleDateString() + ' ' + dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } catch (error) {
+        return '—';
+    }
+};
+
+const getFileIcon = (filename) => {
+    const ext = filename.split('.').pop()?.toLowerCase();
+    switch (ext) {
+        case 'jpg':
+        case 'jpeg':
+        case 'png':
+        case 'gif':
+        case 'bmp':
+        case 'svg':
+            return '🖼️';
+        case 'pdf':
+            return '📄';
+        case 'doc':
+        case 'docx':
+            return '📝';
+        case 'xls':
+        case 'xlsx':
+            return '📊';
+        case 'txt':
+            return '📃';
+        case 'zip':
+        case 'rar':
+        case '7z':
+            return '🗜️';
+        case 'mp3':
+        case 'wav':
+        case 'flac':
+            return '🎵';
+        case 'mp4':
+        case 'avi':
+        case 'mkv':
+            return '🎬';
+        default:
+            return '📄';
+    }
+};
+
+const getFileType = (filename) => {
+    const ext = filename.split('.').pop()?.toLowerCase();
+    const types = {
+        'jpg': 'Image', 'jpeg': 'Image', 'png': 'Image', 'gif': 'Image', 'bmp': 'Image', 'svg': 'Image', 'webp': 'Image',
+        'mp4': 'Video', 'webm': 'Video', 'ogg': 'Video', 'avi': 'Video', 'mov': 'Video', 'wmv': 'Video', 'flv': 'Video', 'mkv': 'Video',
+        'mp3': 'Audio', 'wav': 'Audio', 'flac': 'Audio', 'm4a': 'Audio', 'aac': 'Audio',
+        'pdf': 'PDF Document', 'doc': 'Word Document', 'docx': 'Word Document', 'xls': 'Excel Spreadsheet', 'xlsx': 'Excel Spreadsheet',
+        'ppt': 'PowerPoint', 'pptx': 'PowerPoint', 'txt': 'Text Document', 'rtf': 'Rich Text Document',
+        'js': 'JavaScript', 'jsx': 'React JSX', 'ts': 'TypeScript', 'tsx': 'TypeScript JSX', 'html': 'HTML Document',
+        'css': 'CSS Stylesheet', 'scss': 'SCSS Stylesheet', 'sass': 'Sass Stylesheet', 'py': 'Python', 'java': 'Java',
+        'c': 'C Source', 'cpp': 'C++ Source', 'h': 'Header File', 'cs': 'C# Source', 'php': 'PHP', 'rb': 'Ruby',
+        'go': 'Go Source', 'rs': 'Rust Source', 'swift': 'Swift Source', 'sql': 'SQL Script',
+        'zip': 'ZIP Archive', 'rar': 'RAR Archive', '7z': '7-Zip Archive', 'tar': 'TAR Archive', 'gz': 'Gzip Archive',
+        'json': 'JSON File', 'xml': 'XML File', 'yml': 'YAML File', 'yaml': 'YAML File', 'toml': 'TOML File',
+        'ini': 'Configuration File', 'cfg': 'Configuration File', 'conf': 'Configuration File'
+    };
+    return types[ext] || 'File';
+};
+
+const FileList = forwardRef(({
+    socket,
+    currentPath,
+    onFolderDoubleClick,
+    onContentChange,
+    onSelectionChange,
+    onFilesUpload,
+    sortBy = 'name',
+    viewMode = 'list',
+}, ref) => {
     const [folders, setFolders] = useState([]);
     const [files, setFiles] = useState([]);
     const [loading, setLoading] = useState(false);
     const [selectedItems, setSelectedItems] = useState(new Set());
+    const [lastSelectedItem, setLastSelectedItem] = useState(null);
 
     const [contextMenu, setContextMenu] = useState({
         visible: false,
@@ -19,21 +105,92 @@ export function FileList({ socket, currentPath, onFolderDoubleClick }) {
         items: []
     });
 
-    const [imageViewer, setImageViewer] = useState({
+    const [fileViewer, setFileViewer] = useState({
         isOpen: false,
         currentIndex: 0,
-        images: []
+        files: []
     });
 
-    useEffect(() => {
-        loadContents();
+    const [isDragOver, setIsDragOver] = useState(false);
+    const loadContents = useCallback(async () => {
+        setLoading(true);
+        try {
+            const data = await api.get(`/api/files?path=${encodeURIComponent(currentPath)}`);
+            setFolders(data.folders || []);
+            setFiles(data.files || []);
+            setSelectedItems(new Set());
+            setLastSelectedItem(null);
+        } catch (error) {
+            console.error('Error loading contents:', error);
+            setFolders([]);
+            setFiles([]);
+        } finally {
+            setLoading(false);
+        }
+    }, [currentPath]);
+    const refreshContent = useCallback(() => {
+        if (currentPath === "favorites") {
 
-        socket.on("file-updated", (payload) => {
+            api.get("/api/user/favorites")
+                .then(data => {
+                    if (data.success) {
+                        setFiles(data.files || []);
+                        setFolders(data.folders || []);
+                    }
+                });
+        } else {
+            loadContents();
+        }
+    }, [onContentChange, currentPath, loadContents]);
+    useImperativeHandle(ref, () => ({
+        triggerFavorite: (items) => {
+            handleContextMenuAction('favorite', items);
+        },
+        refresh: refreshContent
+    }));
+
+    useEffect(() => {
+        if (currentPath === "favorites") {
+            api.get("/api/user/favorites")
+                .then(async data => {
+                    if (data.success) {
+                        setFiles(data.files || []);
+                        setFolders(data.folders || []);
+                        try {
+                            const cleanupResponse = await api.post('/api/user/favorites', {
+                                action: 'cleanup-orphaned'
+                            });
+
+                            if (cleanupResponse.success && cleanupResponse.cleaned > 0) {
+                                const refreshData = await api.get("/api/user/favorites");
+                                if (refreshData.success) {
+                                    setFiles(refreshData.files || []);
+                                    setFolders(refreshData.folders || []);
+                                }
+                            }
+                        } catch (error) {
+                            console.error('Error cleaning up orphaned favorites:', error);
+                        }
+                    }
+                });
+        } else {
+            loadContents();
+        }
+    }, [currentPath]);
+
+    useEffect(() => {
+        if (!socket) return;
+
+        socket?.on("file-updated", (payload) => {
             if (payload.path === currentPath) {
                 handleFileUpdate(payload);
             }
         });
-    }, [currentPath]);
+
+        return () => {
+            socket?.off("file-updated");
+        };
+    }, [socket, currentPath]);
 
     const handleFileUpdate = (payload) => {
         switch (payload.action) {
@@ -44,8 +201,10 @@ export function FileList({ socket, currentPath, onFolderDoubleClick }) {
                 handleItemsDelete(payload.deletedItems);
                 break;
             case 'upload':
+                handleItemsAdd(payload.files || payload.newItems);
+                break;
             case 'create':
-                handleItemsAdd(payload.newItems);
+                handleItemsAdd(payload.newItems || payload.files);
                 break;
             case 'refresh':
             default:
@@ -99,27 +258,44 @@ export function FileList({ socket, currentPath, onFolderDoubleClick }) {
     };
 
     const handleItemsAdd = (newItems) => {
+        if (!newItems || !Array.isArray(newItems)) {
+            console.warn('handleItemsAdd called with invalid newItems:', newItems);
+            loadContents();
+            return;
+        }
+
         newItems.forEach(item => {
-            if (item.type === 'folder') {
+            const itemType = item.type || (item.name && item.name.includes('.') ? 'file' : 'folder');
+            const itemName = item.name;
+            const itemPath = item.path;
+
+            if (itemType === 'folder') {
                 setFolders(prev => {
-                    if (prev.some(f => f.name === item.name)) return prev;
-                    return [...prev, item].sort((a, b) => a.name.localeCompare(b.name));
+                    if (prev.some(f => f.name === itemName)) return prev;
+                    return [...prev, {
+                        ...item,
+                        type: 'folder',
+                        name: itemName,
+                        path: itemPath
+                    }].sort((a, b) => a.name.localeCompare(b.name));
                 });
             } else {
                 setFiles(prev => {
-                    if (prev.some(f => f.name === item.name)) return prev;
-                    return [...prev, item].sort((a, b) => a.name.localeCompare(b.name));
+                    if (prev.some(f => f.name === itemName)) return prev;
+                    return [...prev, {
+                        ...item,
+                        type: 'file',
+                        name: itemName,
+                        path: itemPath,
+                        size: item.size || 0
+                    }].sort((a, b) => a.name.localeCompare(b.name));
                 });
             }
         });
     };
 
-    const getImageFiles = () => {
-        const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg', 'webp'];
-        return files.filter(file => {
-            const ext = file.name.split('.').pop()?.toLowerCase();
-            return imageExtensions.includes(ext);
-        });
+    const getViewableFiles = () => {
+        return files.filter(item => item.type !== 'email-group' && item.type === 'file');
     };
 
     useEffect(() => {
@@ -133,23 +309,6 @@ export function FileList({ socket, currentPath, onFolderDoubleClick }) {
         return () => document.removeEventListener('click', handleClick);
     }, [contextMenu.visible]);
 
-    const loadContents = async () => {
-        setLoading(true);
-        try {
-            const response = await fetch(`/api/files?path=${encodeURIComponent(currentPath)}`);
-            const data = await response.json();
-            setFolders(data.folders || []);
-            setFiles(data.files || []);
-            setSelectedItems(new Set());
-        } catch (error) {
-            console.error('Error loading contents:', error);
-            setFolders([]);
-            setFiles([]);
-        } finally {
-            setLoading(false);
-        }
-    };
-
     const handleItemClick = (item, event) => {
         if (event.ctrlKey || event.metaKey) {
             const newSelected = new Set(selectedItems);
@@ -159,24 +318,47 @@ export function FileList({ socket, currentPath, onFolderDoubleClick }) {
                 newSelected.add(item.path);
             }
             setSelectedItems(newSelected);
+            setLastSelectedItem(item);
+        } else if (event.shiftKey && lastSelectedItem) {
+            const allItems = [...folders, ...files];
+            const lastIndex = allItems.findIndex(i => i.path === lastSelectedItem.path);
+            const currentIndex = allItems.findIndex(i => i.path === item.path);
+
+            if (lastIndex !== -1 && currentIndex !== -1) {
+                const startIndex = Math.min(lastIndex, currentIndex);
+                const endIndex = Math.max(lastIndex, currentIndex);
+
+                const rangeItems = allItems.slice(startIndex, endIndex + 1);
+                const newSelected = new Set(selectedItems);
+                rangeItems.forEach(rangeItem => {
+                    newSelected.add(rangeItem.path);
+                });
+
+                setSelectedItems(newSelected);
+            }
         } else {
             setSelectedItems(new Set([item.path]));
+            setLastSelectedItem(item);
         }
     };
 
     const handleItemRightClick = (item, event) => {
         event.preventDefault();
-
+        let updatedSelection;
         if (!selectedItems.has(item.path)) {
-            setSelectedItems(new Set([item.path]));
+            updatedSelection = new Set([item.path]);
+            setSelectedItems(updatedSelection);
+            setLastSelectedItem(item);
+        } else {
+            updatedSelection = selectedItems;
         }
 
         const allItems = [...folders, ...files];
         const selectedItemsData = allItems.filter(i =>
-            selectedItems.has(i.path) || i.path === item.path
+            updatedSelection.has(i.path) && i.type !== 'email-group'
         ).map(i => ({
             ...i,
-            type: folders.includes(i) ? 'folder' : 'file'
+            type: i.type === 'folder' ? 'folder' : 'file'
         }));
 
         setContextMenu({
@@ -187,44 +369,53 @@ export function FileList({ socket, currentPath, onFolderDoubleClick }) {
         });
     };
 
-    const isImageFile = (filename) => {
-        const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg', 'webp'];
+    const isViewableFile = (filename) => {
         const ext = filename.split('.').pop()?.toLowerCase();
-        return imageExtensions.includes(ext);
+        const viewableExtensions = [
+            'jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg', 'webp',
+            'mp4', 'webm', 'ogg', 'avi', 'mov', 'wmv', 'flv', 'mkv',
+            'txt', 'md', 'json', 'xml', 'csv', 'log',
+            'js', 'jsx', 'ts', 'tsx', 'html', 'htm', 'css', 'scss', 'sass',
+            'py', 'java', 'c', 'cpp', 'h', 'cs', 'php', 'rb', 'go', 'rs',
+            'swift', 'sql', 'sh', 'bash', 'ps1', 'yml', 'yaml', 'toml', 'ini', 'cfg',
+            'pdf'
+        ];
+        return viewableExtensions.includes(ext);
     };
 
-    const openImageViewer = (file) => {
-        const images = getImageFiles();
-        const currentIndex = images.findIndex(img => img.path === file.path);
+    const openFileViewer = (file) => {
+        const viewableFiles = getViewableFiles();
+        const currentIndex = viewableFiles.findIndex(f => f.path === file.path);
 
         if (currentIndex !== -1) {
-            setImageViewer({
+            setFileViewer({
                 isOpen: true,
                 currentIndex,
-                images
+                files: viewableFiles
             });
         }
     };
 
-    const handleImageViewerAction = async (action, image) => {
+    const handleFileViewerAction = async (action, file) => {
         switch (action) {
             case 'rename':
-                const newName = prompt('Enter new name:', image.name);
-                if (newName && newName !== image.name) {
+                const newName = prompt('Enter new name:', file.name);
+                if (newName && newName !== file.name) {
                     try {
-                        const response = await fetch('/api/files/rename', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                            },
-                            body: JSON.stringify({
-                                oldPath: image.path,
-                                newName: newName
-                            })
-                        });
+                        const requestData = {
+                            oldPath: file.path,
+                            newName: newName
+                        };
 
-                        if (response.ok) setImageViewer(prev => ({ ...prev, isOpen: false }));
-                        else alert('Failed to rename file');
+
+                        const response = await api.post('/api/files/rename', requestData);
+
+                        if (response.success) {
+                            setFileViewer(prev => ({ ...prev, isOpen: false }));
+                            refreshContent();
+                        } else {
+                            alert('Failed to rename file');
+                        }
                     } catch (error) {
                         console.error('Error renaming:', error);
                         alert('Error renaming file');
@@ -233,21 +424,22 @@ export function FileList({ socket, currentPath, onFolderDoubleClick }) {
                 break;
 
             case 'delete':
-                const confirmed = confirm(`Are you sure you want to delete "${image.name}"?`);
+                const confirmed = confirm(`Are you sure you want to delete "${file.name}"?`);
                 if (confirmed) {
                     try {
-                        const response = await fetch('/api/files/delete', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                            },
-                            body: JSON.stringify({
-                                paths: [image.path]
-                            })
-                        });
+                        const requestData = {
+                            paths: [file.path]
+                        };
 
-                        if (response.ok) setImageViewer(prev => ({ ...prev, isOpen: false }));
-                        else alert('Failed to delete file');
+
+                        const response = await api.post('/api/files/delete', requestData);
+
+                        if (response.success) {
+                            setFileViewer(prev => ({ ...prev, isOpen: false }));
+                            refreshContent();
+                        } else {
+                            alert('Failed to delete file');
+                        }
                     } catch (error) {
                         console.error('Error deleting:', error);
                         alert('Error deleting file');
@@ -255,29 +447,25 @@ export function FileList({ socket, currentPath, onFolderDoubleClick }) {
                 }
                 break;
 
-            case 'share':
-                if (navigator.share) {
-                    try {
-                        await navigator.share({
-                            title: image.name,
-                            url: `/api/files/download?path=${encodeURIComponent(image.path)}`
-                        });
-                    } catch (error) {
-                        console.log('Share cancelled or failed');
-                    }
-                } else {
-                    const shareUrl = `${window.location.origin}/api/files/download?path=${encodeURIComponent(image.path)}`;
-                    navigator.clipboard.writeText(shareUrl);
-                    alert('Share link copied to clipboard');
+            case 'favorite':
+                try {
+                    const action = file.isFavorited ? 'remove' : 'add';
+                    await api.post('/api/user/favorites', {
+                        fileId: file.id,
+                        action
+                    });
+
+                    setFiles(prev => prev.map(f =>
+                        f.path === file.path ? { ...f, isFavorited: !f.isFavorited } : f
+                    ));
+                    refreshContent();
+                } catch (error) {
+                    console.error('Error updating favorite status:', error);
                 }
                 break;
 
-            case 'favorite':
-                console.log('Add to favorites:', image);
-                break;
-
             case 'properties':
-                alert(`Properties for: ${image.name}\nPath: ${image.path}\nSize: ${formatFileSize(image.size)}\nModified: ${formatDate(image.modified)}`);
+                alert(`Properties for: ${file.name}\nPath: ${file.path}\nSize: ${formatFileSize(file.size)}\nModified: ${formatDate(file.modified)}`);
                 break;
         }
     };
@@ -286,25 +474,29 @@ export function FileList({ socket, currentPath, onFolderDoubleClick }) {
         onFolderDoubleClick(folder.path);
     };
 
-    const handleContextMenuAction = async (action, items) => {
-        console.log(`Action: ${action}`, items);
+    const handleFileDoubleClick = (file) => {
+        if (isViewableFile(file.name)) {
+            openFileViewer(file);
+        } else {
+            downloadFile(file.path, file.name);
+        }
+    };
 
+    const handleContextMenuAction = async (action, items) => {
         switch (action) {
             case 'open':
                 if (items[0].type === 'folder') handleFolderDoubleClick(items[0]);
-                else if (isImageFile(items[0].name)) openImageViewer(items[0]);
-                else window.open(`/api/files/download?path=${encodeURIComponent(items[0].path)}`, '_blank');
+                else if (isViewableFile(items[0].name)) openFileViewer(items[0]);
+                else downloadFile(items[0].path, items[0].name);
                 break;
 
             case 'download':
                 items.forEach(item => {
                     if (item.type === 'file') {
-                        const link = document.createElement('a');
-                        link.href = `/api/files/download?path=${encodeURIComponent(item.path)}`;
-                        link.download = item.name;
-                        document.body.appendChild(link);
-                        link.click();
-                        document.body.removeChild(link);
+                        downloadFile(item.path, item.name);
+                    } else if (item.type === 'folder') {
+                        downloadFolder(item.path, item.name);
+                    } else {
                     }
                 });
                 break;
@@ -314,40 +506,98 @@ export function FileList({ socket, currentPath, onFolderDoubleClick }) {
                     const newName = prompt('Enter new name:', items[0].name);
                     if (newName && newName !== items[0].name) {
                         try {
-                            const response = await fetch('/api/files/rename', {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                },
-                                body: JSON.stringify({
-                                    oldPath: items[0].path,
-                                    newName: newName
-                                })
-                            });
+                            const oldPath = items[0].path;
+                            const requestData = {
+                                oldPath: oldPath,
+                                newName: newName
+                            };
 
-                            if (!response.ok) alert('Failed to rename file/folder');
+                            const response = await api.post('/api/files/rename', requestData);
+
+                            if (response.success) {
+                                if (items[0].isFavorited) {
+                                    const newPath = oldPath.replace(items[0].name, newName);
+                                    await api.post('/api/user/favorites', {
+                                        action: 'update-path',
+                                        items: [{
+                                            oldPath: oldPath,
+                                            newPath: newPath,
+                                            newName: newName,
+                                            isFolder: items[0].type === 'folder'
+                                        }]
+                                    });
+                                }
+                                refreshContent();
+                            } else {
+                                alert('Failed to rename file/folder');
+                            }
                         } catch (error) {
+                            console.error('Error renaming:', error);
                             alert('Error renaming file/folder');
                         }
+                    }
+                } else {
+                    const baseName = prompt(`What do you want to rename the ${items.length} files to?`, 'file');
+                    if (baseName) {
+                        const renamePromises = [];
+
+                        for (let i = 0; i < items.length; i++) {
+                            const item = items[i];
+                            const originalExt = item.name.includes('.') ? '.' + item.name.split('.').pop() : '';
+                            const newName = i === 0
+                                ? baseName + originalExt
+                                : `${baseName} (${i})${originalExt}`;
+
+                            const oldPath = item.path;
+                            const newPath = oldPath.replace(item.name, newName);
+
+                            try {
+                                const requestData = {
+                                    oldPath: oldPath,
+                                    newName: newName
+                                };
+
+                                const response = await api.post('/api/files/rename', requestData);
+                                if (response.success && item.isFavorited) {
+                                    renamePromises.push(api.post('/api/user/favorites', {
+                                        action: 'update-path',
+                                        items: [{
+                                            oldPath: oldPath,
+                                            newPath: newPath,
+                                            newName: newName,
+                                            isFolder: item.type === 'folder'
+                                        }]
+                                    }));
+                                }
+                            } catch (error) {
+                                console.error('Error renaming:', error);
+                                alert(`Failed to rename "${item.name}" to "${newName}"`);
+                            }
+                        }
+                        if (renamePromises.length > 0) {
+                            await Promise.all(renamePromises);
+                        }
+                        refreshContent();
                     }
                 }
                 break;
 
             case 'delete':
-                const confirmed = confirm(`Are you sure you want to delete ${items.length} item(s)?`);
-                if (confirmed) {
+                const deleteConfirmed = confirm(`Are you sure you want to delete ${items.length} item(s)?`);
+                if (deleteConfirmed) {
                     try {
-                        const response = await fetch('/api/files/delete', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                            },
-                            body: JSON.stringify({
-                                paths: items.map(item => item.path)
-                            })
-                        });
+                        const requestData = {
+                            paths: items.map(item => item.path)
+                        };
 
-                        if (response.ok) setSelectedItems(new Set());
+
+                        const response = await api.post('/api/files/delete', requestData);
+
+                        if (response.success) {
+                            setSelectedItems(new Set());
+                            setLastSelectedItem(null);
+                            refreshContent();
+                        }
                         else alert('Failed to delete items');
                     } catch (error) {
                         alert('Error deleting items');
@@ -355,34 +605,147 @@ export function FileList({ socket, currentPath, onFolderDoubleClick }) {
                 }
                 break;
 
-            case 'copy':
-                const paths = items.map(item => item.path).join('\n');
-                navigator.clipboard.writeText(paths).then(() => {
-                    console.log('Paths copied to clipboard');
-                }).catch(err => {
-                    console.error('Failed to copy paths:', err);
-                });
-                break;
-
-            case 'share':
-                if (navigator.share && items.length === 1) {
+            case 'favorite':
+                if (items.length === 1) {
+                    const item = items[0];
+                    const favoriteAction = item.isFavorited ? 'remove' : 'add';
                     try {
-                        await navigator.share({
-                            title: items[0].name,
-                            url: `/api/files/download?path=${encodeURIComponent(items[0].path)}`
+                        await api.post('/api/user/favorites', {
+                            fileId: item.type === 'file' ? item.id : undefined,
+                            folderId: item.type === 'folder' ? item.id : undefined,
+                            action: favoriteAction
                         });
+
+                        if (item.type === 'file') {
+                            setFiles(prev => prev.map(f =>
+                                f.path === item.path ? { ...f, isFavorited: !f.isFavorited } : f
+                            ));
+                        } else {
+                            setFolders(prev => prev.map(f =>
+                                f.path === item.path ? { ...f, isFavorited: !f.isFavorited } : f
+                            ));
+                        }
+
+                        refreshContent();
                     } catch (error) {
-                        console.log('Share cancelled or failed');
+                        console.error('Error updating favorite status:', error);
+                        alert('Failed to update favorite status');
                     }
                 } else {
-                    const shareUrl = `${window.location.origin}/api/files/download?path=${encodeURIComponent(items[0].path)}`;
-                    navigator.clipboard.writeText(shareUrl);
-                    alert('Share link copied to clipboard');
+                    const confirmed = confirm(`Add ${items.length} items to favorites?`);
+                    if (confirmed) {
+                        for (const item of items) {
+                            if (!item.isFavorited) {
+                                try {
+                                    await api.post('/api/user/favorites', {
+                                        fileId: item.type === 'file' ? item.id : undefined,
+                                        folderId: item.type === 'folder' ? item.id : undefined,
+                                        action: 'add'
+                                    });
+
+                                    if (item.type === 'file') {
+                                        setFiles(prev => prev.map(f =>
+                                            f.path === item.path ? { ...f, isFavorited: true } : f
+                                        ));
+                                    } else {
+                                        setFolders(prev => prev.map(f =>
+                                            f.path === item.path ? { ...f, isFavorited: true } : f
+                                        ));
+                                    }
+                                } catch (error) {
+                                    console.error('Error updating favorite status:', error);
+                                }
+                            }
+                        }
+                        refreshContent();
+                    }
                 }
                 break;
 
-            case 'favorite':
-                console.log('Add to favorites:', items);
+            case 'add-favorite':
+                for (const item of items) {
+                    if (!item.isFavorited) {
+                        try {
+                            await api.post('/api/user/favorites', {
+                                fileId: item.type === 'file' ? item.id : undefined,
+                                folderId: item.type === 'folder' ? item.id : undefined,
+                                action: 'add'
+                            });
+
+                            if (item.type === 'file') {
+                                setFiles(prev => prev.map(f =>
+                                    f.path === item.path ? { ...f, isFavorited: true } : f
+                                ));
+                            } else {
+                                setFolders(prev => prev.map(f =>
+                                    f.path === item.path ? { ...f, isFavorited: true } : f
+                                ));
+                            }
+                        } catch (error) {
+                            console.error('Error adding to favorites:', error);
+                        }
+                    }
+                }
+                refreshContent();
+                break;
+
+            case 'remove-favorite':
+                const removeConfirmed = confirm(`Remove ${items.length === 1 ? `"${items[0].name}"` : `${items.length} items`} from favorites?`);
+                if (removeConfirmed) {
+                    try {
+                        if (currentPath === 'favorites') {
+                            const response = await api.post('/api/user/favorites', {
+                                action: 'remove',
+                                items: items.map(item => ({
+                                    name: item.name,
+                                    path: item.path, // Use the current path as-is for favorites
+                                    isFolder: item.isFolder || item.type === 'folder'
+                                }))
+                            });
+
+                            if (response.success) {
+                                setFiles(prev => prev.filter(f => !items.some(item => item.name === f.name)));
+                                setFolders(prev => prev.filter(f => !items.some(item => item.name === f.name)));
+                                setSelectedItems(new Set());
+                                setLastSelectedItem(null);
+
+                                refreshContent();
+                                alert(`${items.length === 1 ? 'Item' : 'Items'} removed from favorites`);
+                            } else {
+                                alert(response.message || 'Failed to remove from favorites');
+                            }
+                        } else {
+                            for (const item of items) {
+                                if (item.isFavorited) {
+                                    try {
+                                        await api.post('/api/user/favorites', {
+                                            fileId: item.type === 'file' ? item.id : undefined,
+                                            folderId: item.type === 'folder' ? item.id : undefined,
+                                            action: 'remove'
+                                        });
+
+                                        if (item.type === 'file') {
+                                            setFiles(prev => prev.map(f =>
+                                                f.path === item.path ? { ...f, isFavorited: false } : f
+                                            ));
+                                        } else {
+                                            setFolders(prev => prev.map(f =>
+                                                f.path === item.path ? { ...f, isFavorited: false } : f
+                                            ));
+                                        }
+                                    } catch (error) {
+                                        console.error('Error removing from favorites:', error);
+                                    }
+                                }
+                            }
+                            refreshContent();
+                            alert(`${items.length === 1 ? 'Item' : 'Items'} removed from favorites`);
+                        }
+                    } catch (error) {
+                        console.error('Error removing from favorites:', error);
+                        alert('Error removing from favorites: ' + error.message);
+                    }
+                }
                 break;
 
             case 'properties':
@@ -390,149 +753,277 @@ export function FileList({ socket, currentPath, onFolderDoubleClick }) {
                 break;
 
             default:
-                console.log('Unhandled action:', action);
+                break;
+        }
+    };
+    const handleDragOver = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (currentPath !== 'favorites') setIsDragOver(true);
+    };
+
+    const handleDragLeave = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!e.currentTarget.contains(e.relatedTarget)) {
+            setIsDragOver(false);
+        }
+    };
+
+    const handleDrop = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragOver(false);
+
+        if (currentPath === 'favorites') return;
+
+        const files = Array.from(e.dataTransfer.files);
+        if (files.length > 0 && onFilesUpload) {
+            onFilesUpload(files);
         }
     };
 
     const formatFileSize = (bytes) => {
-        if (bytes === 0) return '0 B';
+        if (!bytes || bytes === 0) return '0 B';
         const k = 1024;
         const sizes = ['B', 'KB', 'MB', 'GB'];
         const i = Math.floor(Math.log(bytes) / Math.log(k));
         return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
     };
-
-    const formatDate = (date) => {
-        return new Date(date).toLocaleDateString() + ' ' + new Date(date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    };
-
-    const getFileIcon = (filename) => {
-        const ext = filename.split('.').pop()?.toLowerCase();
-        switch (ext) {
-            case 'jpg':
-            case 'jpeg':
-            case 'png':
-            case 'gif':
-            case 'bmp':
-            case 'svg':
-                return '🖼️';
-            case 'pdf':
-                return '📄';
-            case 'doc':
-            case 'docx':
-                return '📝';
-            case 'xls':
-            case 'xlsx':
-                return '📊';
-            case 'txt':
-                return '📃';
-            case 'zip':
-            case 'rar':
-            case '7z':
-                return '🗜️';
-            case 'mp3':
-            case 'wav':
-            case 'flac':
-                return '🎵';
-            case 'mp4':
-            case 'avi':
-            case 'mkv':
-                return '🎬';
-            default:
-                return '📄';
+    useEffect(() => {
+        if (onSelectionChange) {
+            const selectedPaths = Array.from(selectedItems);
+            const allItems = [...folders, ...files];
+            const selectedItemsData = allItems.filter(item => selectedPaths.includes(item.path));
+            onSelectionChange(selectedItemsData);
         }
+    }, [selectedItems, folders, files, onSelectionChange]);
+    const sortItems = (items, sortBy) => {
+        return [...items].sort((a, b) => {
+            switch (sortBy) {
+                case 'name':
+                    return a.name.localeCompare(b.name);
+                case 'date':
+                    return new Date(b.modified || 0) - new Date(a.modified || 0);
+                case 'type':
+                    if (a.type === 'folder' && b.type !== 'folder') return -1;
+                    if (a.type !== 'folder' && b.type === 'folder') return 1;
+                    return a.name.localeCompare(b.name);
+                case 'size':
+                    if (a.type === 'folder' && b.type !== 'folder') return -1;
+                    if (a.type !== 'folder' && b.type === 'folder') return 1;
+                    return (b.size || 0) - (a.size || 0);
+                default:
+                    return a.name.localeCompare(b.name);
+            }
+        });
     };
 
     if (loading) {
         return <SoftLoading />;
     }
+    const sortedFolders = sortItems(folders, sortBy);
+    const sortedFiles = sortItems(files, sortBy);
 
     return (
-        <div className={styles.fileList}>
-            <div className={styles.header}>
-                <div className={styles.headerCell} style={{ width: '40%' }}>Name</div>
-                <div className={styles.headerCell} style={{ width: '20%' }}>Date modified</div>
-                <div className={styles.headerCell} style={{ width: '15%' }}>Type</div>
-                <div className={styles.headerCell} style={{ width: '15%' }}>Size</div>
+        <div
+            className={`${styles.fileList} ${isDragOver ? styles.dragOver : ''}`}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+        >
+            {/* Header - only show in list and details view */}
+            {viewMode === 'details' && (
+                <div className={styles.header}>
+                    <div className={styles.headerCell} style={{ width: '35%' }}>Name</div>
+                    <div className={styles.headerCell} style={{ width: '20%' }}>Date modified</div>
+                    <div className={styles.headerCell} style={{ width: '15%' }}>Type</div>
+                    <div className={styles.headerCell} style={{ width: '15%' }}>Size</div>
+                </div>
+            )}
+
+            <div className={`${styles.content} ${styles[viewMode]}`}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+            >
+                {sortedFolders.map(folder => {
+                    const isIconView = ['extraLargeIcons', 'largeIcons', 'mediumIcons', 'smallIcons'].includes(viewMode);
+                    const isTilesView = viewMode === 'tiles';
+                    const isListOrDetailsView = ['list', 'details'].includes(viewMode);
+
+                    return (
+                        <div
+                            key={`folder-${folder.path}`}
+                            className={`${styles.item} ${selectedItems.has(folder.path) ? styles.selected : ''}`}
+                            onClick={(e) => handleItemClick(folder, e)}
+                            onDoubleClick={() => handleFolderDoubleClick(folder)}
+                            onContextMenu={(e) => handleItemRightClick(folder, e)}
+                            style={{
+                                cursor: 'pointer',
+                                opacity: 1
+                            }}
+                        >
+                            {isIconView ? (
+                                <>
+                                    <div className={styles.itemIcon}>📁</div>
+                                    <div className={styles.itemName}>
+                                        {folder.name}
+                                        {folder.isFavorited && <span className={styles.favoriteIcon}>⭐</span>}
+                                    </div>
+                                </>
+                            ) : isTilesView ? (
+                                <>
+                                    <div className={styles.itemIcon}>📁</div>
+                                    <div className={styles.itemContent}>
+                                        <div className={styles.itemName}>
+                                            {folder.name}
+                                            {folder.isFavorited && <span className={styles.favoriteIcon}>⭐</span>}
+                                        </div>
+                                        <div className={styles.itemDetails}>
+                                            File folder
+                                        </div>
+                                    </div>
+                                </>
+                            ) : isListOrDetailsView ? (
+                                <>
+                                    <div className={styles.cell} style={{ width: viewMode === 'details' ? '40%' : 'auto' }}>
+                                        <span className={styles.itemIcon}>📁</span>
+                                        <span className={styles.itemName} style={{
+                                            fontWeight: 'bold',
+                                            color: 'inherit'
+                                        }}>
+                                            {folder.name}
+                                        </span>
+                                        {folder.isFavorited && <span className={styles.favoriteIcon}>⭐</span>}
+                                    </div>
+                                    {viewMode === 'details' && (
+                                        <>
+                                            <div className={styles.cell} style={{ width: '20%' }}>
+                                                {formatDate(folder.modified || folder.updatedAt || folder.modifiedAt || folder.createdAt)}
+                                            </div>
+                                            <div className={styles.cell} style={{ width: '15%' }}>
+                                                File folder
+                                            </div>
+                                            <div className={styles.cell} style={{ width: '15%' }}>
+                                                —
+                                            </div>
+                                        </>
+                                    )}
+                                </>
+                            ) : null}
+                        </div>
+                    );
+                })}
+
+                {sortedFiles.map(file => {
+                    const isIconView = ['extraLargeIcons', 'largeIcons', 'mediumIcons', 'smallIcons'].includes(viewMode);
+                    const isTilesView = viewMode === 'tiles';
+                    const isListOrDetailsView = ['list', 'details'].includes(viewMode);
+
+                    return (
+                        <div
+                            key={`file-${file.path}`}
+                            className={`${styles.item} ${selectedItems.has(file.path) ? styles.selected : ''}`}
+                            onClick={(e) => handleItemClick(file, e)}
+                            onDoubleClick={() => handleFileDoubleClick(file)}
+                            onContextMenu={(e) => handleItemRightClick(file, e)}
+                        >
+                            {isIconView ? (
+                                <>
+                                    <div className={styles.itemIcon}>
+                                        {getFileIcon(file.name)}
+                                    </div>
+                                    <div className={styles.itemName}>
+                                        {file.name}
+                                        {file.isFavorited && <span className={styles.favoriteIcon}>⭐</span>}
+                                    </div>
+                                </>
+                            ) : isTilesView ? (
+                                <>
+                                    <div className={styles.itemIcon}>
+                                        {getFileIcon(file.name)}
+                                    </div>
+                                    <div className={styles.itemContent}>
+                                        <div className={styles.itemName}>
+                                            {file.name}
+                                            {file.isFavorited && <span className={styles.favoriteIcon}>⭐</span>}
+                                        </div>
+                                        <div className={styles.itemDetails}>
+                                            {getFileType(file.name)}<br />
+                                            {formatFileSize(file.size)}
+                                        </div>
+                                    </div>
+                                </>
+                            ) : isListOrDetailsView ? (
+                                <>
+                                    <div className={styles.cell} style={{ width: viewMode === 'details' ? '40%' : 'auto' }}>
+                                        <span className={styles.itemIcon}>
+                                            {getFileIcon(file.name)}
+                                        </span>
+                                        <span className={styles.itemName}>
+                                            {file.name}
+                                        </span>
+                                        {file.isFavorited && <span className={styles.favoriteIcon}>⭐</span>}
+                                    </div>
+                                    {viewMode === 'details' && (
+                                        <>
+                                            <div className={styles.cell} style={{ width: '20%' }}>
+                                                {formatDate(file.modified || file.modifiedAt || file.createdAt)}
+                                            </div>
+                                            <div className={styles.cell} style={{ width: '15%' }}>
+                                                {getFileType(file.name)}
+                                            </div>
+                                            <div className={styles.cell} style={{ width: '15%' }}>
+                                                {formatFileSize(file.size)}
+                                            </div>
+                                        </>
+                                    )}
+                                </>
+                            ) : null}
+                        </div>
+                    );
+                })}
             </div>
 
-            <div className={styles.content}>
-                {folders.map(folder => (
-                    <div
-                        key={folder.path}
-                        className={`${styles.item} ${selectedItems.has(folder.path) ? styles.selected : ''}`}
-                        onClick={(e) => handleItemClick(folder, e)}
-                        onDoubleClick={() => handleFolderDoubleClick(folder)}
-                        onContextMenu={(e) => handleItemRightClick(folder, e)}
-                    >
-                        <div className={styles.cell} style={{ width: '40%' }}>
-                            <span className={styles.icon}>📁</span>
-                            <span className={styles.name}>{folder.name}</span>
-                        </div>
-                        <div className={styles.cell} style={{ width: '20%' }}>
-                            {formatDate(folder.modified)}
-                        </div>
-                        <div className={styles.cell} style={{ width: '15%' }}>
-                            File folder
-                        </div>
-                        <div className={styles.cell} style={{ width: '15%' }}>
-                            —
-                        </div>
+            {loading && (
+                <div className={styles.loadingOverlay}>
+                    <div className={styles.spinner}></div>
+                </div>
+            )}
+
+            {isDragOver && (
+                <div className={styles.dragOverlay}>
+                    <div className={styles.dragMessage}>
+                        Drop files here to upload
                     </div>
-                ))}
+                </div>
+            )}
 
-                {files.map(file => (
-                    <div
-                        key={file.path}
-                        className={`${styles.item} ${selectedItems.has(file.path) ? styles.selected : ''}`}
-                        onClick={(e) => handleItemClick(file, e)}
-                        onDoubleClick={() => {
-                            if (isImageFile(file.name)) {
-                                openImageViewer(file);
-                            }
-                        }}
-                        onContextMenu={(e) => handleItemRightClick(file, e)}
-                    >
-                        <div className={styles.cell} style={{ width: '40%' }}>
-                            <span className={styles.icon}>{getFileIcon(file.name)}</span>
-                            <span className={styles.name}>{file.name}</span>
-                        </div>
-                        <div className={styles.cell} style={{ width: '20%' }}>
-                            {formatDate(file.modified)}
-                        </div>
-                        <div className={styles.cell} style={{ width: '15%' }}>
-                            {file.name.split('.').pop()?.toUpperCase() || 'File'}
-                        </div>
-                        <div className={styles.cell} style={{ width: '15%' }}>
-                            {formatFileSize(file.size)}
-                        </div>
-                    </div>
-                ))}
+            {contextMenu.visible && (
+                <ContextMenu
+                    x={contextMenu.x}
+                    y={contextMenu.y}
+                    isVisible={contextMenu.visible}
+                    selectedItems={contextMenu.items}
+                    onAction={handleContextMenuAction}
+                    currentPath={currentPath}
+                    onClose={() => setContextMenu(prev => ({ ...prev, visible: false }))}
+                />
+            )}
 
-                {folders.length === 0 && files.length === 0 && (
-                    <div className={styles.empty}>
-                        This folder is empty
-                    </div>
-                )}
-            </div>
-
-            <ContextMenu
-                x={contextMenu.x}
-                y={contextMenu.y}
-                isVisible={contextMenu.visible}
-                onClose={() => setContextMenu(prev => ({ ...prev, visible: false }))}
-                selectedItems={contextMenu.items}
-                onAction={handleContextMenuAction}
-            />
-
-            <ImageViewer
-                isOpen={imageViewer.isOpen}
-                currentImageIndex={imageViewer.currentIndex}
-                images={imageViewer.images}
-                onClose={() => setImageViewer(prev => ({ ...prev, isOpen: false }))}
-                onNavigate={(newIndex) => setImageViewer(prev => ({ ...prev, currentIndex: newIndex }))}
-                onAction={handleImageViewerAction}
-            />
+            {fileViewer.isOpen && (
+                <FileViewer
+                    isOpen={fileViewer.isOpen}
+                    currentFileIndex={fileViewer.currentIndex}
+                    files={fileViewer.files}
+                    onClose={() => setFileViewer(prev => ({ ...prev, isOpen: false }))}
+                    onNavigate={(newIndex) => setFileViewer(prev => ({ ...prev, currentIndex: newIndex }))}
+                    onAction={handleFileViewerAction}
+                />
+            )}
         </div>
     );
-}
+});
+
+export default FileList;

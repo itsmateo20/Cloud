@@ -1,4 +1,4 @@
-/* /components/navigation/Navigation.module.css */
+/* components/navigation/Navigation.module.css */
 
 .navigation {
     position: fixed;
@@ -12,6 +12,7 @@
     background-color: var(--nav-background);
     padding: 0 15px;
     transition: filter 0.5s ease, background-color 0.5s ease;
+    z-index: 1000;
 }
 
 .logo {
@@ -31,4 +32,5 @@
     font-size: 24px;
     margin: 0 auto 0 15px;
     color: var(--text);
+    font-family: var(--font-rubik);
 }

@@ -1,0 +1,660 @@
+/* components/app/DownloadManager.module.css */
+
+.downloadManager {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 9999;
+}
+
+.floatingButton {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: var(--accent-color);
+    border: none;
+    color: var(--text-color);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+.floatingButton:hover {
+    background: var(--accent-color-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+}
+
+.floatingButton.expanded {
+    background: var(--accent-color-hover);
+}
+
+.floatingButton.hasActiveDownloads {
+    position: relative;
+}
+
+.floatingButton.hasActiveDownloads.expanded {
+    animation: none;
+}
+
+.circularProgress {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.progressCircle {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.progressTrack {
+    opacity: 0.3;
+}
+
+.progressBar {
+    transition: stroke-dashoffset 0.5s ease;
+}
+
+.verticalFill {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: var(--fill-height, 0%);
+    background: linear-gradient(0deg,
+            rgba(255, 255, 255, 0.1) 0%,
+            rgba(255, 255, 255, 0.05) 100%);
+    border-radius: 50%;
+    transition: height 0.5s ease;
+    clip-path: circle(26px at center);
+}
+
+.buttonContent {
+    position: relative;
+    z-index: 1;
+}
+
+.downloadingIcon {
+    position: relative;
+    animation: pulse 2s infinite;
+}
+
+.downloadingIcon svg {
+    animation: bounce 1s infinite alternate;
+}
+
+.downloadCount {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background: #ff4444;
+    color: white;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: bold;
+    border: 2px solid white;
+}
+
+.downloadPanel {
+    width: 100%;
+    background: var(--background);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.resizableContainer {
+    animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.panelContainer {
+    position: fixed;
+    bottom: 90px;
+    right: 20px;
+    z-index: 9998;
+}
+
+.panelHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    background: var(--background);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.panelHeader h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-color);
+}
+
+.clearButton {
+    background: none;
+    border: none;
+    color: var(--text-color-muted);
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.clearButton:hover {
+    background: var(--hover-background);
+    color: var(--text-color);
+}
+
+.downloadList {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    overflow-y: auto;
+    min-height: 0;
+}
+
+.historyList {
+    max-height: 220px;
+    overflow-y: auto;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.sectionHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 16px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-color-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.sectionTitle {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 200px;
+}
+
+.sectionCount {
+    background: #0078d4;
+    color: white;
+    min-width: 12px;
+    min-height: 12px;
+    border-radius: 10px;
+    font-size: 10px;
+    min-width: 18px;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+.downloadItem {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border-color);
+    transition: background-color 0.2s ease;
+}
+
+.downloadItem:hover {
+    background: var(--hover-background);
+}
+
+.downloadItem:last-child {
+    border-bottom: none;
+}
+
+.historyItem {
+    opacity: 0.85;
+    padding: 10px 16px;
+}
+
+.downloadHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+
+.fileInfo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    min-width: 0;
+}
+
+.fileIcon {
+    color: var(--text-color-muted);
+    flex-shrink: 0;
+}
+
+.fileIcon.completed {
+    color: #4ade80;
+}
+
+.fileIcon.error {
+    color: #ef4444;
+}
+
+.fileName {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-color);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.folderBadge {
+    background: #0078d4;
+    color: white;
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.cancelButton,
+.retryButton {
+    background: none;
+    border: none;
+    color: var(--text-color-muted);
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.cancelButton:hover {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+}
+
+.retryButton:hover {
+    background: rgba(34, 197, 94, 0.1);
+    color: #22c55e;
+}
+
+.progressContainer {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 6px;
+}
+
+.progressBar {
+    flex: 1;
+    height: 6px;
+    background: var(--btn-background);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.progressFill {
+    height: 100%;
+    background: linear-gradient(90deg, #0078d4, #106ebe);
+    border-radius: 3px;
+    transition: width 0.3s ease;
+    position: relative;
+}
+
+.progressFill::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    animation: shimmer 2s ease-out infinite;
+    transform: translateX(-100%);
+}
+
+.progressText {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-color-muted);
+    min-width: 35px;
+    text-align: right;
+}
+
+.downloadStats {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    color: var(--text-color-muted);
+    flex-wrap: wrap;
+    overflow: hidden;
+}
+
+.downloadedSize {
+    font-weight: 500;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.speed {
+    color: #0078d4;
+    font-weight: 500;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.timeRemaining {
+    color: var(--text-color-muted);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.historySeparator {
+    background: var(--background);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.historySeparator .sectionHeader {
+    padding: 12px 20px;
+    background: var(--background);
+    border-bottom: none;
+}
+
+.historyStats {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 12px;
+}
+
+.completedText {
+    color: #4ade80;
+    font-weight: 500;
+}
+
+.errorText {
+    color: #ef4444;
+    font-weight: 500;
+}
+
+.downloadTime {
+    color: var(--text-color-muted);
+}
+
+.resizableContainer :global(.react-resizable-handle) {
+    opacity: 0.6;
+    transition: opacity 0.2s ease;
+}
+
+.resizableContainer:hover :global(.react-resizable-handle) {
+    opacity: 1;
+}
+
+.resizableContainer :global(.react-resizable-handle-se) {
+    background: var(--accent-color);
+    border: 2px solid var(--background);
+    border-radius: 4px;
+    width: 12px !important;
+    height: 12px !important;
+    right: 4px !important;
+    bottom: 4px !important;
+}
+
+.resizableContainer :global(.react-resizable-handle-e) {
+    background: var(--accent-color);
+    border-radius: 2px;
+    width: 4px !important;
+    right: 0 !important;
+}
+
+.resizableContainer :global(.react-resizable-handle-s) {
+    background: var(--accent-color);
+    border-radius: 2px;
+    height: 4px !important;
+    bottom: 0 !important;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.05);
+    }
+}
+
+@keyframes bounce {
+    from {
+        transform: translateY(0);
+    }
+
+    to {
+        transform: translateY(-2px);
+    }
+}
+
+@keyframes shimmer {
+    0% {
+        transform: translateX(-100%);
+        opacity: 0;
+    }
+
+    50% {
+        opacity: 1;
+    }
+
+    100% {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+}
+
+@keyframes waveFloat {
+
+    0%,
+    100% {
+        transform: translateX(-50%) rotate(0deg) scale(1);
+        border-radius: 40% 60% 70% 30%;
+    }
+
+    25% {
+        transform: translateX(-45%) rotate(90deg) scale(1.1);
+        border-radius: 30% 70% 40% 60%;
+    }
+
+    50% {
+        transform: translateX(-50%) rotate(180deg) scale(1);
+        border-radius: 60% 40% 30% 70%;
+    }
+
+    75% {
+        transform: translateX(-55%) rotate(270deg) scale(1.1);
+        border-radius: 70% 30% 60% 40%;
+    }
+}
+
+@keyframes subtlePulse {
+
+    0%,
+    100% {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    50% {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15), 0 0 0 4px rgba(var(--accent-color-rgb, 0, 120, 212), 0.3);
+    }
+}
+
+.downloadList::-webkit-scrollbar {
+    width: 6px;
+}
+
+.downloadList::-webkit-scrollbar-track {
+    background: var(--background-tertiary, #2d2d2d);
+}
+
+.downloadList::-webkit-scrollbar-thumb {
+    background: var(--border-color, #333);
+    border-radius: 3px;
+}
+
+.downloadList::-webkit-scrollbar-thumb:hover {
+    background: var(--text-color-muted);
+}
+
+.historyList::-webkit-scrollbar {
+    width: 4px;
+}
+
+.historyList::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.historyList::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 2px;
+}
+
+.historyList::-webkit-scrollbar-thumb:hover {
+    background: var(--text-color-muted);
+}
+
+@media (prefers-color-scheme: light) {
+    .downloadPanel {
+        background: white;
+        border-color: #e5e7eb;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    }
+
+    .panelHeader {
+        background: #f9fafb;
+        border-bottom-color: #e5e7eb;
+    }
+
+    .downloadItem {
+        border-bottom-color: #f3f4f6;
+    }
+
+    .downloadItem:hover {
+        background: rgba(0, 0, 0, 0.02);
+    }
+
+    .progressBar {
+        background: #f3f4f6;
+    }
+
+    .historySeparator {
+        border-top-color: #f3f4f6;
+    }
+}
+
+@media (max-width: 480px) {
+    .resizableContainer {
+        width: calc(100vw - 40px) !important;
+        right: 20px;
+        left: 20px;
+        max-width: none !important;
+    }
+
+    .sectionTitle {
+        max-width: 150px;
+    }
+
+    .downloadStats {
+        font-size: 10px;
+        gap: 6px;
+    }
+
+    .fileName {
+        font-size: 13px;
+    }
+}
+
+.resizableContainer :global(.react-resizable-handle) {
+    opacity: 0.6;
+    transition: opacity 0.2s ease;
+}
+
+.resizableContainer:hover :global(.react-resizable-handle) {
+    opacity: 1;
+}
+
+.resizableContainer :global(.react-resizable-handle-se) {
+    background: var(--accent-color);
+    border: 2px solid var(--background);
+    border-radius: 4px;
+    width: 12px !important;
+    height: 12px !important;
+    right: 4px !important;
+    bottom: 4px !important;
+}
+
+.resizableContainer :global(.react-resizable-handle-e) {
+    background: var(--accent-color);
+    border-radius: 2px;
+    width: 4px !important;
+    right: 0 !important;
+}
+
+.resizableContainer :global(.react-resizable-handle-s) {
+    background: var(--accent-color);
+    border-radius: 2px;
+    height: 4px !important;
+    bottom: 0 !important;
+}
+
+.resizableContainer :global(.react-resizable-handle-n) {
+    background: var(--accent-color);
+    border-radius: 2px;
+    height: 4px !important;
+    top: 0 !important;
+}
+
+.resizableContainer :global(.react-resizable-handle-w) {
+    background: var(--accent-color);
+    border-radius: 2px;
+    width: 4px !important;
+    left: 0 !important;
+}

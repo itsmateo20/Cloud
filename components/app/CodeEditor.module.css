@@ -1,0 +1,331 @@
+.codeEditorOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--background);
+    z-index: 10000;
+    padding: 0;
+    margin: 0;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+}
+
+.codeEditorContainer {
+    width: 100vw;
+    height: 100vh;
+    background: var(--background);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 10000;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 16px;
+    background: var(--nav-background);
+    border-bottom: 2px solid var(--border-color);
+    color: var(--text);
+    min-height: 48px;
+    flex-shrink: 0;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.fileInfo {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1;
+    min-width: 0;
+}
+
+.fileName {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--text);
+    font-family: var(--font-rubik);
+}
+
+.fileIcon {
+    font-size: 16px;
+    flex-shrink: 0;
+}
+
+.unsavedIndicator {
+    color: #f85149;
+    font-weight: bold;
+    margin-left: 4px;
+    flex-shrink: 0;
+}
+
+.filePath {
+    font-size: 11px;
+    color: var(--alt-text-2);
+    opacity: 0.8;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-family: var(--font-rubik);
+}
+
+.headerControls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+}
+
+.markdownControls {
+    display: flex;
+    gap: 2px;
+    background: var(--btn-background);
+    border: 2px solid var(--border-color);
+    border-radius: 6px;
+    padding: 2px;
+}
+
+.tabButton {
+    padding: 6px 12px;
+    background: transparent;
+    border: none;
+    color: var(--alt-text-2);
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-family: var(--font-rubik);
+    transition: all 0.2s ease;
+}
+
+.tabButton.active {
+    background: var(--border-color-hover);
+    color: var(--text);
+}
+
+.tabButton:hover:not(.active) {
+    background: var(--btn-disabled-background);
+    color: var(--text);
+}
+
+.saveButton {
+    padding: 6px 12px;
+    background: #238636;
+    border: none;
+    color: #f0f6fc;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 500;
+    font-family: var(--font-rubik);
+    transition: all 0.2s ease;
+    opacity: 0.6;
+}
+
+.saveButton.hasChanges {
+    opacity: 1;
+    background: #238636;
+}
+
+.saveButton:hover:not(:disabled) {
+    background: #2ea043;
+}
+
+.saveButton:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.closeButton {
+    padding: 6px 8px;
+    background: transparent;
+    border: none;
+    color: var(--alt-text-2);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+}
+
+.closeButton:hover {
+    background: var(--btn-disabled-background);
+    color: var(--text);
+}
+
+.editorContent {
+    flex: 1;
+    overflow: hidden;
+    width: 100%;
+    height: 100%;
+    position: relative;
+}
+
+.markdownPreview {
+    height: 100%;
+    overflow-y: auto;
+    background: var(--background);
+}
+
+.markdownContent {
+    padding: 24px;
+    color: var(--text);
+    line-height: 1.6;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.markdownContent h1 {
+    color: var(--text);
+    border-bottom: 2px solid var(--border-color);
+    padding-bottom: 8px;
+    margin-bottom: 16px;
+}
+
+.markdownContent h2 {
+    color: var(--text);
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 4px;
+    margin-bottom: 12px;
+}
+
+.markdownContent h3 {
+    color: var(--text);
+    margin-bottom: 8px;
+}
+
+.markdownContent ul,
+.markdownContent ol {
+    margin-left: 20px;
+    margin-bottom: 16px;
+}
+
+.markdownContent li {
+    margin-bottom: 4px;
+    list-style-type: disc;
+}
+
+.markdownContent strong {
+    color: var(--text);
+    font-weight: bold;
+}
+
+.markdownContent em {
+    font-style: italic;
+}
+
+.markdownContent code {
+    background: var(--btn-background);
+    padding: 2px 4px;
+    border-radius: 4px;
+    font-family: 'Monaco', 'Cascadia Code', 'Fira Code', Consolas, monospace;
+    color: #f97316;
+}
+
+.markdownContent pre {
+    background: var(--btn-background);
+    border: 2px solid var(--border-color);
+    padding: 16px;
+    border-radius: 8px;
+    overflow-x: auto;
+    margin-bottom: 16px;
+}
+
+.markdownContent blockquote {
+    border-left: 4px solid var(--border-color-hover);
+    padding-left: 16px;
+    margin: 16px 0;
+    color: var(--alt-text-2);
+    font-style: italic;
+}
+
+.statusBar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 16px;
+    background: var(--border-color-hover);
+    color: var(--background);
+    font-size: 11px;
+    min-height: 22px;
+    font-weight: 500;
+}
+
+.statusLeft {
+    display: flex;
+    gap: 16px;
+}
+
+.language {
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.encoding {
+    opacity: 0.9;
+}
+
+.statusRight {
+    display: flex;
+    gap: 16px;
+}
+
+.statusMessage {
+    color: var(--background);
+    font-weight: 500;
+}
+
+@media (max-width: 768px) {
+    .header {
+        padding: 4px 8px;
+        min-height: 40px;
+    }
+
+    .headerControls {
+        gap: 4px;
+    }
+
+    .fileName {
+        font-size: 12px;
+    }
+
+    .filePath {
+        font-size: 10px;
+    }
+
+    .saveButton,
+    .closeButton {
+        padding: 4px 8px;
+        font-size: 11px;
+    }
+
+    .closeButton {
+        width: 28px;
+        height: 28px;
+    }
+
+    .statusBar {
+        padding: 2px 8px;
+        min-height: 20px;
+        font-size: 10px;
+    }
+
+    .statusLeft,
+    .statusRight {
+        gap: 8px;
+    }
+}

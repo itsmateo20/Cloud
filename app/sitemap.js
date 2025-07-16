@@ -1,4 +1,4 @@
-// /sitemap.js
+// app/sitemap.js
 
 import { getSiteUrl } from "@/lib/getSiteUrl"
 

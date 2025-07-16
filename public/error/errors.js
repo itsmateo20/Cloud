@@ -1,4 +1,3 @@
-// errors.js
 import en from "./locales/en.json";
 import pl from "./locales/pl.json";
 
@@ -14,7 +13,7 @@ export function getError(code, options = { detailed: false, lang: "en" }) {
 
     if (!selectedLanguage[code]) {
         return {
-            message: selectedLanguage.unknown_error[detailed ? "long" : "short"],
+            message: selectedLanguage.unknown_failed[detailed ? "long" : "short"],
             code
         };
     }

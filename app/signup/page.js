@@ -1,43 +1,31 @@
 // app/signup/page.js
 "use client";
 
+import style from "@/public/styles/signup.module.css";
+
 import { useAuth } from "@/context/AuthProvider";
-import Layout from "@/components/Layout";
-import signupStyle from "@/public/styles/signup.module.css";
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { GoogleAuth } from "@/components/authentication/GoogleAuth";
-import { getError } from "@/public/error/errors";
 
+import { GoogleAuth } from "@/components/authentication/GoogleAuth";
+import Layout from "@/components/Layout";
 import SoftLoading from "@/components/SoftLoading";
 
-import { IoClose } from "react-icons/io5";
-import { BsCheck } from "react-icons/bs";
+import { X, Check } from "lucide-react";
+
+import { getError } from "@/public/error/errors";
 
 export default function Page() {
     const { loading, softLoading, user, signup, authWithGoogle } = useAuth();
 
-    const [isMobile, setIsMobile] = useState(null);
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [repeatPassword, setRepeatPassword] = useState("");
     const [error, setError] = useState("");
 
     const [isVisible, setIsVisible] = useState(false);
-
-    useEffect(() => {
-        if (typeof window !== "undefined") {
-            let mobile = window.matchMedia("(max-width: 1023px)");
-            setIsMobile(mobile.matches);
-
-            const handleResize = () => setIsMobile(window.matchMedia("(max-width: 1023px)").matches);
-            window.addEventListener("resize", handleResize);
-
-            return () => window.removeEventListener("resize", handleResize);
-        }
-    }, []);
 
     useEffect(() => {
         if (error) {
@@ -92,10 +80,10 @@ export default function Page() {
     }, [password, repeatPassword]);
 
     return (
-        <Layout mainStyle={signupStyle.main} loading={loading} mobile={isMobile} user={user}>
-            <h1 className={signupStyle.title}>Signup</h1>
-            <h2 className={signupStyle.subtitle}>Make an account for your cloud storage</h2>
-            <fieldset className={signupStyle.inputWithText}>
+        <Layout mainStyle={style.main} loading={loading} user={user}>
+            <h1 className={style.title}>Signup</h1>
+            <h2 className={style.subtitle}>Make an account for your cloud storage</h2>
+            <fieldset className={style.inputWithText}>
                 <legend>Email</legend>
                 <input
                     type="email"
@@ -104,7 +92,7 @@ export default function Page() {
                     onChange={(e) => setEmail(e.target.value)}
                     required />
             </fieldset>
-            <fieldset className={signupStyle.inputWithText}>
+            <fieldset className={style.inputWithText}>
                 <legend>Password</legend>
                 <input
                     name="password"
@@ -133,7 +121,7 @@ export default function Page() {
                 </button>
             </fieldset>
 
-            <fieldset className={signupStyle.inputWithText}>
+            <fieldset className={style.inputWithText}>
                 <legend>Repeat Password</legend>
                 <input
                     name="repeatPassword"
@@ -162,20 +150,19 @@ export default function Page() {
                 </button>
             </fieldset>
 
-            <div className={signupStyle.passwordRequirements}>
-                <h1>{passwordRequirements.uppercase ? <BsCheck size={20} /> : <IoClose size={20} />} Uppercase letter</h1>
-                <h1>{passwordRequirements.lowercase ? <BsCheck size={20} /> : <IoClose size={20} />} Lowercase letter</h1>
-                <h1>{passwordRequirements.number ? <BsCheck size={20} /> : <IoClose size={20} />} Number</h1>
-                <h1>{passwordRequirements.special ? <BsCheck size={20} /> : <IoClose size={20} />} Special character</h1>
-                <h1>{passwordRequirements.minLength ? <BsCheck size={20} /> : <IoClose size={20} />} 8 characters</h1>
-                <h1>{passwordRequirements.matching ? <BsCheck size={20} /> : <IoClose size={20} />} Match passwords</h1>
+            <div className={style.passwordRequirements}>
+                <h1>{passwordRequirements.uppercase ? <Check size={20} /> : <X size={20} />} Uppercase letter</h1>
+                <h1>{passwordRequirements.lowercase ? <Check size={20} /> : <X size={20} />} Lowercase letter</h1>
+                <h1>{passwordRequirements.number ? <Check size={20} /> : <X size={20} />} Number</h1>
+                <h1>{passwordRequirements.special ? <Check size={20} /> : <X size={20} />} Special character</h1>
+                <h1>{passwordRequirements.minLength ? <Check size={20} /> : <X size={20} />} 8 characters</h1>
+                <h1>{passwordRequirements.matching ? <Check size={20} /> : <X size={20} />} Match passwords</h1>
             </div>
 
             <GoogleAuth auth={authWithGoogle} type="signup" />
 
-            <button onClick={handleSignup} type="button" className={signupStyle.signupButton} disabled={softLoading}>{softLoading ? <SoftLoading /> : "Sign Up"}</button>
-            <Link href="/login" className={signupStyle.loginLink}>Already have an account? Log In</Link>
-
+            <button onClick={handleSignup} type="button" className={style.signupButton} disabled={softLoading}>{softLoading ? <SoftLoading /> : "Sign Up"}</button>
+            <Link href="/login" className={style.loginLink}>Already have an account? Log In</Link>
 
             {error && <p className="error">{error}</p>}
         </Layout>

@@ -12,7 +12,7 @@ import SoftLoading from "@/components/SoftLoading";
 import Image from "next/image";
 
 import nav from "@/components/navigation/UserProfileDropdown.module.css";
-import { TbLogout } from "react-icons/tb";
+import { LogOut } from "lucide-react";
 
 export default function UserProfileDropdown({ user, mobile }) {
     const { signout } = useAuth();
@@ -114,7 +114,7 @@ export default function UserProfileDropdown({ user, mobile }) {
                 }}
             >
                 <ul>
-                    <li onClick={() => signout()}><span>Logout</span><TbLogout size={22} /></li>
+                    <li onClick={() => signout()}><span>Logout</span><LogOut size={22} /></li>
                 </ul>
             </div>
         </div>

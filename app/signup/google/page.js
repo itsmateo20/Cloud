@@ -1,24 +1,25 @@
 // app/signup/google/page.js
 "use client";
 
+import style from "@/public/styles/googleAuth.module.css";
+
 import { useAuth } from "@/context/AuthProvider";
-import Layout from "@/components/Layout";
-import googleSignupStyle from "@/public/styles/googleAuth.module.css";
+import { api } from "@/utils/api";
 
 import { use, useEffect, useState } from "react";
 import Image from "next/image";
 import { redirect } from "next/navigation";
-import { getError } from "@/public/error/errors";
 
+import Layout from "@/components/Layout";
 import SoftLoading from "@/components/SoftLoading";
 
-import { IoClose } from "react-icons/io5";
-import { BsCheck } from "react-icons/bs";
+import { X, Check } from "lucide-react";
+
+import { getError } from "@/public/error/errors";
 
 export default function Page({ searchParams }) {
     const { loading, softLoading, user, signupwiththirdparty } = useAuth();
 
-    const [isMobile, setIsMobile] = useState(null);
     const { email, signature } = use(searchParams) || {};
     const [password, setPassword] = useState("");
     const [repeatPassword, setRepeatPassword] = useState("");
@@ -27,35 +28,17 @@ export default function Page({ searchParams }) {
     const [isVisible, setIsVisible] = useState(false);
 
     useEffect(() => {
-        if (typeof window !== "undefined") {
-            let mobile = window.matchMedia("(max-width: 1023px)");
-            setIsMobile(mobile.matches);
-
-            const handleResize = () => setIsMobile(window.matchMedia("(max-width: 1023px)").matches);
-            window.addEventListener("resize", handleResize);
-
-            return () => window.removeEventListener("resize", handleResize);
-        }
-    }, []);
-
-    useEffect(() => {
         if (email && signature) {
-            fetch("/api/auth/validate", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email, signature }),
-            })
-                .then(response => response.json())
+            api.post("/api/auth/validate", { email, signature })
                 .then(data => {
                     if (!data.success) {
                         console.error(data.error);
-                        console.log("invalid-signature-redirect")
+                        console.log("invalid-signature-redirect");
                         return redirect("/signup");
                     }
-                })
-                .catch(error => {
+                }).catch(error => {
                     console.error(error);
-                    console.log("invalid-signature-redirect")
+                    console.log("invalid-signature-redirect");
                     return redirect("/signup");
                 });
         }
@@ -117,10 +100,10 @@ export default function Page({ searchParams }) {
     }, [password, repeatPassword]);
 
     return (
-        <Layout mainStyle={googleSignupStyle.main} loading={loading} mobile={isMobile} user={user}>
-            <h1 className={googleSignupStyle.title}>Google Signup</h1>
-            <h2 className={googleSignupStyle.subtitle}>Create a password for your account.</h2>
-            <fieldset className={googleSignupStyle.inputWithText}>
+        <Layout mainStyle={style.main} loading={loading} user={user}>
+            <h1 className={style.title}>Google Signup</h1>
+            <h2 className={style.subtitle}>Create a password for your account.</h2>
+            <fieldset className={style.inputWithText}>
                 <legend>Email</legend>
                 <input
                     type="email"
@@ -130,7 +113,7 @@ export default function Page({ searchParams }) {
                 />
             </fieldset>
 
-            <fieldset className={googleSignupStyle.inputWithText}>
+            <fieldset className={style.inputWithText}>
                 <legend>Password</legend>
                 <input
                     name="password"
@@ -160,7 +143,7 @@ export default function Page({ searchParams }) {
                 </button>
             </fieldset>
 
-            <fieldset className={googleSignupStyle.inputWithText}>
+            <fieldset className={style.inputWithText}>
                 <legend>Repeat Password</legend>
                 <input
                     name="repeatPassword"
@@ -189,16 +172,16 @@ export default function Page({ searchParams }) {
                 </button>
             </fieldset>
 
-            <div className={googleSignupStyle.passwordRequirements}>
-                <h1>{passwordRequirements.uppercase ? <BsCheck size={20} /> : <IoClose size={20} />} Uppercase letter</h1>
-                <h1>{passwordRequirements.lowercase ? <BsCheck size={20} /> : <IoClose size={20} />} Lowercase letter</h1>
-                <h1>{passwordRequirements.number ? <BsCheck size={20} /> : <IoClose size={20} />} Number</h1>
-                <h1>{passwordRequirements.special ? <BsCheck size={20} /> : <IoClose size={20} />} Special character</h1>
-                <h1>{passwordRequirements.minLength ? <BsCheck size={20} /> : <IoClose size={20} />} 8 characters</h1>
-                <h1>{passwordRequirements.matching ? <BsCheck size={20} /> : <IoClose size={20} />} Match passwords</h1>
+            <div className={style.passwordRequirements}>
+                <h1>{passwordRequirements.uppercase ? <Check size={20} /> : <X size={20} />} Uppercase letter</h1>
+                <h1>{passwordRequirements.lowercase ? <Check size={20} /> : <X size={20} />} Lowercase letter</h1>
+                <h1>{passwordRequirements.number ? <Check size={20} /> : <X size={20} />} Number</h1>
+                <h1>{passwordRequirements.special ? <Check size={20} /> : <X size={20} />} Special character</h1>
+                <h1>{passwordRequirements.minLength ? <Check size={20} /> : <X size={20} />} 8 characters</h1>
+                <h1>{passwordRequirements.matching ? <Check size={20} /> : <X size={20} />} Match passwords</h1>
             </div>
 
-            <button onClick={handleSignup} type="button" className={googleSignupStyle.signupButton} disabled={softLoading}>{softLoading ? <SoftLoading /> : "Sign up"}</button>
+            <button onClick={handleSignup} type="button" className={style.signupButton} disabled={softLoading}>{softLoading ? <SoftLoading /> : "Sign up"}</button>
 
             {error && <p className="error">{error}</p>}
         </Layout>

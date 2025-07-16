@@ -16,6 +16,6 @@ export async function POST(req) {
         await createSession({ id: response.user.id, email, googleEmail, provider: response.user.provider });
         return NextResponse.json({ success: true, code: "account_linked", user: response.user }, { status: 200 });
     } catch (error) {
-        return NextResponse.json({ success: false, code: "account_linking_error", error }, { status: 500 });
+        return NextResponse.json({ success: false, code: "account_linking_failed", error }, { status: 500 });
     }
 }

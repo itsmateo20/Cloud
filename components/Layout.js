@@ -3,11 +3,12 @@
 import { Navigation } from "./navigation/Navigation";
 import Loading from "./Loading";
 
-export default function Layout({ children, mainStyle, loading, mobile, user }) {
+export default function Layout({ children, mainStyle, loading, user = null }) {
     if (loading) return Loading();
+
     return (
         <main className={mainStyle}>
-            <Navigation user={user} mobile={mobile} />
+            <Navigation user={user} />
             {children}
         </main>
     );

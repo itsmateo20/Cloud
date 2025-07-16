@@ -1,38 +1,28 @@
 // app/login/page.js
 "use client";
 
+import style from "@/public/styles/login.module.css";
+
 import { useAuth } from "@/context/AuthProvider";
-import Layout from "@/components/Layout";
-import loginStyle from "@/public/styles/login.module.css";
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+
+import Layout from "@/components/Layout";
 import { GoogleAuth } from "@/components/authentication/GoogleAuth";
-import { getError } from "@/public/error/errors";
 import SoftLoading from "@/components/SoftLoading";
+
+import { getError } from "@/public/error/errors";
 
 export default function Page() {
     const { loading, softLoading, user, login, authWithGoogle, clearDatabase } = useAuth();
 
-    const [isMobile, setIsMobile] = useState(null);
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [error, setError] = useState("");
 
     const [isVisible, setIsVisible] = useState(false);
-
-    useEffect(() => {
-        if (typeof window !== "undefined") {
-            let mobile = window.matchMedia("(max-width: 1023px)");
-            setIsMobile(mobile.matches);
-
-            const handleResize = () => setIsMobile(window.matchMedia("(max-width: 1023px)").matches);
-            window.addEventListener("resize", handleResize);
-
-            return () => window.removeEventListener("resize", handleResize);
-        }
-    }, []);
 
     useEffect(() => {
         if (error) {
@@ -82,10 +72,10 @@ export default function Page() {
     }, [password]);
 
     return (
-        <Layout mainStyle={loginStyle.main} loading={loading} mobile={isMobile} user={user}>
-            <h1 className={loginStyle.title}>Login</h1>
-            <h2 className={loginStyle.subtitle}>Login into your cloud storage account</h2>
-            <fieldset className={loginStyle.inputWithText}>
+        <Layout mainStyle={style.main} loading={loading} user={user}>
+            <h1 className={style.title}>Login</h1>
+            <h2 className={style.subtitle}>Login into your cloud storage account</h2>
+            <fieldset className={style.inputWithText}>
                 <legend>Email</legend>
                 <input
                     type="email"
@@ -96,7 +86,7 @@ export default function Page() {
                 />
             </fieldset>
 
-            <fieldset className={loginStyle.inputWithText}>
+            <fieldset className={style.inputWithText}>
                 <legend>Password</legend>
                 <input
                     name="password"
@@ -127,8 +117,8 @@ export default function Page() {
 
             <GoogleAuth auth={authWithGoogle} type="login" />
 
-            <button onClick={handleLogin} type="button" className={loginStyle.loginButton} disabled={softLoading}>{softLoading ? <SoftLoading /> : "Log In"}</button>
-            <Link href="/signup" className={loginStyle.signupLink}>Don't have an account yet? Sign Up</Link>
+            <button onClick={handleLogin} type="button" className={style.loginButton} disabled={softLoading}>{softLoading ? <SoftLoading /> : "Log In"}</button>
+            <Link href="/signup" className={style.signupLink}>Don't have an account yet? Sign Up</Link>
 
             <button type="button" onClick={() => clearDatabase()}><span>clear</span></button>
 

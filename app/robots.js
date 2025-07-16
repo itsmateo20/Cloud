@@ -1,4 +1,4 @@
-// /robots.js
+// app/robots.js
 
 import { getSiteUrl } from "@/lib/getSiteUrl";
 

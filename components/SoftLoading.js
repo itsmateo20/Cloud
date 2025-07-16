@@ -1,13 +1,13 @@
 // components/SoftLoading.js
 
-import loading from "@/public/styles/loading.module.css";
+import style from "@/public/styles/loading.module.css";
 
-import { AiOutlineLoading3Quarters } from "react-icons/ai";
+import { Loader2 } from "lucide-react";
 
-export default function SoftLoading({ style }) {
+export default function SoftLoading({ styleOverride }) {
     return (
-        <div className={style ? style.softLoading : loading.softLoading}>
-            <AiOutlineLoading3Quarters size={23} />
+        <div className={styleOverride ? styleOverride.softLoading : style.softLoading}>
+            <Loader2 size={23} />
         </div>
     );
 }

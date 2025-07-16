@@ -46,7 +46,42 @@
     margin: 4px 0;
 }
 
-/* Dark mode support */
+.hasSubmenu {
+    position: relative;
+    justify-content: space-between;
+}
+
+.arrow {
+    margin-left: auto;
+    font-size: 12px;
+    color: #666;
+}
+
+.submenu {
+    position: absolute;
+    left: 100%;
+    top: 0;
+    background: white;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    min-width: 180px;
+    padding: 4px 0;
+    z-index: 1001;
+}
+
+.submenuItem {
+    display: flex;
+    align-items: center;
+    padding: 8px 16px;
+    cursor: pointer;
+    transition: background-color 0.1s ease;
+}
+
+.submenuItem:hover {
+    background-color: #f0f0f0;
+}
+
 @media (prefers-color-scheme: dark) {
     .contextMenu {
         background: #2d2d2d;
@@ -68,5 +103,19 @@
 
     .separator {
         background-color: #555;
+    }
+
+    .arrow {
+        color: #aaa;
+    }
+
+    .submenu {
+        background: #2d2d2d;
+        border-color: #555;
+        color: white;
+    }
+
+    .submenuItem:hover {
+        background-color: #404040;
     }
 }

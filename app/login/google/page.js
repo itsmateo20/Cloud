@@ -1,21 +1,23 @@
 // app/login/google/page.js
 "use client";
 
+import style from "@/public/styles/googleAuth.module.css";
+
 import { useAuth } from "@/context/AuthProvider";
-import Layout from "@/components/Layout";
-import googleLoginStyle from "@/public/styles/googleAuth.module.css";
+import { api } from "@/utils/api";
 
 import { use, useEffect, useState } from "react";
-import Image from "next/image";
 import { redirect } from "next/navigation";
-import { getError } from "@/public/error/errors";
+import Image from "next/image";
 
+import Layout from "@/components/Layout";
 import SoftLoading from "@/components/SoftLoading";
+
+import { getError } from "@/public/error/errors";
 
 export default function Page({ searchParams }) {
     const { loading, softLoading, user, linkAccount } = useAuth();
 
-    const [isMobile, setIsMobile] = useState(null);
     const { email, signature } = use(searchParams) || {};
     const [emailLink, setEmail] = useState(email);
     const [password, setPassword] = useState("");
@@ -24,35 +26,17 @@ export default function Page({ searchParams }) {
     const [isVisible, setIsVisible] = useState(false);
 
     useEffect(() => {
-        if (typeof window !== "undefined") {
-            let mobile = window.matchMedia("(max-width: 1023px)");
-            setIsMobile(mobile.matches);
-
-            const handleResize = () => setIsMobile(window.matchMedia("(max-width: 1023px)").matches);
-            window.addEventListener("resize", handleResize);
-
-            return () => window.removeEventListener("resize", handleResize);
-        }
-    }, []);
-
-    useEffect(() => {
         if (email && signature) {
-            fetch("/api/auth/validate", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email, signature }),
-            })
-                .then(response => response.json())
+            api.post("/api/auth/validate", { email, signature })
                 .then(data => {
                     if (!data.success) {
                         console.error(data.error);
-                        console.log("invalid-signature-redirect")
+                        console.log("invalid-signature-redirect");
                         return redirect("/login");
                     }
-                })
-                .catch(error => {
-                    console.error(error);
-                    console.log("invalid-signature-redirect")
+                }).catch(err => {
+                    console.error(err);
+                    console.log("invalid-signature-redirect");
                     return redirect("/login");
                 });
         }
@@ -83,10 +67,10 @@ export default function Page({ searchParams }) {
     }
 
     return (
-        <Layout mainStyle={googleLoginStyle.main} loading={loading} mobile={isMobile} user={user}>
-            <h1 className={googleLoginStyle.title}>Google Login Issue</h1>
-            <h2 className={googleLoginStyle.subtitle}>The Google account you"re trying to use isn't linked to any registered account. Please enter your credentials to link it.</h2>
-            <fieldset className={googleLoginStyle.inputWithText}>
+        <Layout mainStyle={style.main} loading={loading} user={user}>
+            <h1 className={style.title}>Google Login Issue</h1>
+            <h2 className={style.subtitle}>The Google account you"re trying to use isn't linked to any registered account. Please enter your credentials to link it.</h2>
+            <fieldset className={style.inputWithText}>
                 <legend>Email</legend>
                 <input
                     type="email"
@@ -97,7 +81,7 @@ export default function Page({ searchParams }) {
                 />
             </fieldset>
 
-            <fieldset className={googleLoginStyle.inputWithText}>
+            <fieldset className={style.inputWithText}>
                 <legend>Password</legend>
                 <input
                     name="password"
@@ -127,7 +111,7 @@ export default function Page({ searchParams }) {
                 </button>
             </fieldset>
 
-            <button onClick={handleLogin} type="button" className={googleLoginStyle.loginButton} disabled={softLoading}>{softLoading ? <SoftLoading /> : "Link Account"}</button>
+            <button onClick={handleLogin} type="button" className={style.loginButton} disabled={softLoading}>{softLoading ? <SoftLoading /> : "Link Account"}</button>
 
             {error && <p className="error">{error}</p>}
         </Layout>

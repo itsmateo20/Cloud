@@ -7,10 +7,10 @@ export async function POST() {
     try {
         const response = await clear()
 
-        if (!response.success) return NextResponse.json({ success: false, code: "database_error" })
+        if (!response.success) return NextResponse.json({ success: false, code: "database_failed" })
 
         return NextResponse.json({ success: true, code: "database_cleared" })
     } catch (error) {
-        return NextResponse.json({ success: false, code: "database_error", error });
+        return NextResponse.json({ success: false, code: "database_failed", error });
     }
 }

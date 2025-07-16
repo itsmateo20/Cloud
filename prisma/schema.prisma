@@ -8,12 +8,21 @@ datasource db {
 }
 
 model User {
-  id          Int            @id @default(autoincrement())
-  email       String?        @unique
-  googleEmail String?        @unique
-  password    String?
-  provider    String         @default("credentials")
-  settings    UserSettings[]
+  id          Int      @id @default(autoincrement())
+  email       String?  @unique
+  googleEmail String?  @unique
+  password    String
+  provider    String   @default("credentials")
+  folderToken String?  @unique
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
+
+  files    File[]        @relation("OwnedFiles")
+  folders  Folder[]
+  settings UserSettings?
+
+  favoritedFiles   File[]   @relation("UserFileFavorites")
+  favoritedFolders Folder[] @relation("UserFolderFavorites")
 }
 
 model UserSettings {
@@ -21,5 +30,46 @@ model UserSettings {
   userId   Int    @unique
   theme    String @default("light")
   language String @default("en_US")
-  user     User   @relation(fields: [userId], references: [id])
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model File {
+  id        Int       @id @default(autoincrement())
+  name      String?
+  path      String?
+  size      BigInt?
+  type      String?
+  createdAt DateTime? @default(now())
+  updatedAt DateTime? @default(now()) @updatedAt
+
+  ownerId Int
+  owner   User @relation("OwnedFiles", fields: [ownerId], references: [id], onDelete: Cascade)
+
+  folderId Int?
+  folder   Folder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
+
+  favoritedBy User[] @relation("UserFileFavorites")
+
+  @@unique([ownerId, path], name: "ownerId_path")
+}
+
+model Folder {
+  id        Int       @id @default(autoincrement())
+  name      String?
+  path      String?
+  createdAt DateTime? @default(now())
+  updatedAt DateTime? @default(now()) @updatedAt
+
+  ownerId Int
+  owner   User @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  files       File[]
+  favoritedBy User[] @relation("UserFolderFavorites")
+
+  parentId   Int?
+  parent     Folder?  @relation("FolderHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  subfolders Folder[] @relation("FolderHierarchy")
+
+  @@unique([ownerId, path], name: "ownerId_path")
 }

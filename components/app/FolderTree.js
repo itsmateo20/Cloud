@@ -1,15 +1,29 @@
 // components/app/FolderTree.js
-
 import { useEffect, useState } from "react";
 import styles from "./FolderTree.module.css";
+import { api } from "@/utils/api";
+import SoftLoading from "../SoftLoading";
 
-export function FolderTree({ socket, onFolderSelect, selectedPath }) {
+export default function FolderTree({
+    socket,
+    onFolderSelect,
+    selectedPath,
+}) {
     const [rootFolders, setRootFolders] = useState([]);
     const [expandedFolders, setExpandedFolders] = useState(new Set());
     const [folderContents, setFolderContents] = useState(new Map());
+    const [loading, setLoading] = useState(true);
+
+    const [tabVisibility, setTabVisibility] = useState({
+        favorites: false,
+    });
 
     useEffect(() => {
-        loadFolderContents("");
+        if (!socket) return;
+
+        const handleContentChange = () => {
+            checkTabVisibility();
+        };
 
         socket.on("folder-structure-updated", (payload) => {
             handleFolderStructureUpdate(payload);
@@ -21,6 +35,53 @@ export function FolderTree({ socket, onFolderSelect, selectedPath }) {
                 if (deletedFolders.length > 0) handleFolderDeletion(payload.path, deletedFolders);
             }
         });
+
+        socket?.on('file-favorited', handleContentChange);
+
+        return () => {
+            socket?.off('file-favorited', handleContentChange);
+        };
+    }, [socket]);
+
+    useEffect(() => {
+        const autoExpandToPath = async () => {
+            if (selectedPath === 'favorites') {
+                return;
+            }
+
+            const pathParts = selectedPath.split('/').filter(part => part.length > 0);
+            const foldersToExpand = [];
+            for (let i = 0; i < pathParts.length; i++) {
+                const folderPath = pathParts.slice(0, i + 1).join('/');
+                foldersToExpand.push(folderPath);
+            }
+
+            const newExpanded = new Set(expandedFolders);
+            let hasChanges = false;
+
+            for (const folderPath of foldersToExpand) {
+                if (!newExpanded.has(folderPath)) {
+                    newExpanded.add(folderPath);
+                    hasChanges = true;
+                    if (!folderContents.has(folderPath)) {
+                        try {
+                            await loadFolderContents(folderPath);
+                        } catch (error) {
+                            console.error(`Error loading contents for folder ${folderPath}:`, error);
+                        }
+                    }
+                }
+            }
+            if (hasChanges) {
+                setExpandedFolders(newExpanded);
+            }
+        };
+
+        autoExpandToPath();
+    }, [selectedPath]);
+
+    useEffect(() => {
+        loadFolderContents("");
     }, []);
 
     const handleFolderStructureUpdate = (payload) => {
@@ -100,13 +161,22 @@ export function FolderTree({ socket, onFolderSelect, selectedPath }) {
 
     const loadFolderContents = async (folderPath) => {
         try {
-            const response = await fetch(`/api/files?path=${encodeURIComponent(folderPath)}`);
-            const data = await response.json();
+            const data = await api.get(`/api/files?path=${encodeURIComponent(folderPath)}`);
 
-            if (folderPath === "") setRootFolders(data.folders || []);
-            else setFolderContents(prev => new Map(prev).set(folderPath, data.folders || []));
+            if (folderPath === "") {
+                console.log("API response for root folder:", data);
+                setRootFolders(data.folders || []);
+                setLoading(false);
+                console.log("Loading state set to false");
+            } else {
+                setFolderContents(prev => new Map(prev).set(folderPath, data.folders || []));
+            }
         } catch (error) {
             console.error("Error loading folder contents:", error);
+            if (folderPath === "") {
+                setLoading(false);
+                console.log("Loading state set to false");
+            }
         }
     };
 
@@ -128,6 +198,25 @@ export function FolderTree({ socket, onFolderSelect, selectedPath }) {
 
     const handleFolderClick = (folder) => {
         onFolderSelect(folder.path);
+    };
+
+    const checkTabVisibility = async () => {
+        try {
+            const favoritesData = await api.get("/api/user/favorites");
+            const hasFavorites = favoritesData.success && (
+                (favoritesData.files && favoritesData.files.length > 0) ||
+                (favoritesData.folders && favoritesData.folders.length > 0)
+            );
+
+            setTabVisibility({
+                favorites: hasFavorites,
+            });
+        } catch (error) {
+            console.error('Error checking tab visibility:', error);
+            setTabVisibility({
+                favorites: false,
+            });
+        }
     };
 
     const renderFolder = (folder, level = 0) => {
@@ -187,6 +276,12 @@ export function FolderTree({ socket, onFolderSelect, selectedPath }) {
         );
     };
 
+    if (loading) return (
+        <div className={styles.folderTree}>
+            <SoftLoading />
+        </div>
+    );
+
     return (
         <div className={styles.folderTree}>
             <div className={styles.header}>
@@ -194,10 +289,23 @@ export function FolderTree({ socket, onFolderSelect, selectedPath }) {
                     className={`${styles.rootFolder} ${selectedPath === "" ? styles.selected : ""}`}
                     onClick={() => onFolderSelect("")}
                 >
-                    <div className={styles.folderIcon}>💾</div>
+                    <div className={styles.folderIcon}>
+                        💾
+                    </div>
                     <span>This Disk</span>
                 </div>
+
+                {tabVisibility.favorites && (
+                    <div
+                        className={`${styles.specialItem} ${selectedPath === 'favorites' ? styles.selected : ''}`}
+                        onClick={() => onFolderSelect('favorites')}
+                    >
+                        <span className={styles.folderIcon}>⭐</span>
+                        <span>Favorites</span>
+                    </div>
+                )}
             </div>
+
             <div className={styles.folders}>
                 {rootFolders.map(folder => renderFolder(folder))}
             </div>

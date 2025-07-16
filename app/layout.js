@@ -5,6 +5,7 @@ import "@/public/styles/globals.css";
 
 import { AuthProvider } from "@/context/AuthProvider";
 import { getSiteUrl } from "@/lib/getSiteUrl";
+import { DownloadManager } from "@/components/app/DownloadManager";
 
 export async function generateMetadata() {
   const siteUrl = await getSiteUrl();
@@ -76,6 +77,7 @@ export default function RootLayout({ children }) {
       <body className={fonts.join(" ")}>
         <AuthProvider>
           {children}
+          <DownloadManager />
         </AuthProvider>
       </body>
     </html>
