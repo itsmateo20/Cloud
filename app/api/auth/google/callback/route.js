@@ -18,11 +18,32 @@ function signEmail(email) {
 export async function GET(req) {
     const { searchParams } = new URL(req.url);
     const code = searchParams.get("code");
+    const error = searchParams.get("error");
+    const state = searchParams.get("state");
+
+    // Handle OAuth errors
+    if (error) {
+        console.error('Google OAuth error:', error);
+        return NextResponse.redirect(`${await getSiteUrl()}/login?error=oauth_error`);
+    }
+
+    if (!code) {
+        console.error('No authorization code received from Google');
+        return NextResponse.redirect(`${await getSiteUrl()}/login?error=no_code`);
+    }
 
     const cookieStore = await cookies();
     const type = cookieStore.get("auth_type")?.value || "login";
+    const storedState = cookieStore.get("oauth_state")?.value;
+
+    // Verify state parameter
+    if (!state || state !== storedState) {
+        console.error('State parameter mismatch or missing');
+        return NextResponse.redirect(`${await getSiteUrl()}/login?error=invalid_state`);
+    }
 
     const siteUrl = await getSiteUrl();
+    console.log('Using site URL for OAuth callback:', siteUrl);
 
     try {
         const oauth2Client = new google.auth.OAuth2(
@@ -68,8 +89,18 @@ export async function GET(req) {
             provider: response.user.provider
         });
 
+        // Clean up the oauth_state cookie
+        const finalCookieStore = await cookies();
+        finalCookieStore.delete("oauth_state");
+
         return new NextResponse(JSON.stringify({ success: true, code: "authentication_success" }), { status: 301, headers: { Location: "/" } });
     } catch (error) {
-        return NextResponse.json({ success: false, code: "authentication_failed", error }, { status: 500 });
+        console.error('Google OAuth callback error:', error);
+        console.error('Error details:', {
+            message: error.message,
+            stack: error.stack,
+            siteUrl: siteUrl
+        });
+        return NextResponse.redirect(`${await getSiteUrl()}/login?error=oauth_callback_failed`);
     }
 }

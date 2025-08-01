@@ -73,3 +73,12 @@ model Folder {
 
   @@unique([ownerId, path], name: "ownerId_path")
 }
+
+model QrToken {
+  id        Int      @id @default(autoincrement())
+  token     String   @unique
+  type      String // 'download' or 'upload'
+  data      String // JSON string with token data
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}

@@ -400,6 +400,7 @@ export default function Page() {
             onFilesUpload={handleFilesUpload}
             sortBy={sortBy}
             viewMode={viewMode}
+            user={user}
           />
         </div>
       </div>

@@ -14,6 +14,7 @@ export function ContextMenu({
 }) {
     const menuRef = useRef(null);
     const [showFavoriteSubmenu, setShowFavoriteSubmenu] = useState(false);
+    const [showQrSubmenu, setShowQrSubmenu] = useState(false);
     const selectedArray = Array.isArray(selectedItems)
         ? selectedItems
         : Array.from(selectedItems || []);
@@ -75,6 +76,11 @@ export function ContextMenu({
         onClose();
     };
 
+    const handleSubmenuAction = (action) => {
+        onAction(action, selectedArray);
+        onClose();
+    };
+
     return (
         <div
             ref={menuRef}
@@ -92,6 +98,27 @@ export function ContextMenu({
                         <div className={styles.menuItem} onClick={() => handleAction("download")}>
                             <span className={styles.icon}>⬇️</span>
                             Download{isMultipleSelected ? ` (${selectedItems.length})` : ""}
+                        </div>
+                    )}
+
+                    {!isFolder && (
+                        <div
+                            className={`${styles.menuItem} ${styles.hasSubmenu}`}
+                            onMouseEnter={() => setShowQrSubmenu(true)}
+                            onMouseLeave={() => setShowQrSubmenu(false)}
+                        >
+                            <span className={styles.icon}>📱</span>
+                            QR Code
+                            <span className={styles.arrow}>▶</span>
+
+                            {showQrSubmenu && (
+                                <div className={styles.submenu}>
+                                    <div className={styles.submenuItem} onClick={() => handleSubmenuAction("download-qr")}>
+                                        <span className={styles.icon}>📱</span>
+                                        Download file{isMultipleSelected ? `s` : ""} on Mobile device{isMultipleSelected ? ` (${selectedItems.length})` : ""}
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     )}
 
@@ -127,6 +154,29 @@ export function ContextMenu({
                         {isFolder ? "Download as ZIP" : "Download"}{isMultipleSelected ? ` (${selectedItems.length})` : ""}
                     </div>
 
+                    <div
+                        className={`${styles.menuItem} ${styles.hasSubmenu}`}
+                        onMouseEnter={() => setShowQrSubmenu(true)}
+                        onMouseLeave={() => setShowQrSubmenu(false)}
+                    >
+                        <span className={styles.icon}>📱</span>
+                        QR Code
+                        <span className={styles.arrow}>▶</span>
+
+                        {showQrSubmenu && (
+                            <div className={styles.submenu}>
+                                <div className={styles.submenuItem} onClick={() => handleSubmenuAction("download-qr")}>
+                                    <span className={styles.icon}>📱</span>
+                                    Download file{isMultipleSelected ? `s` : ""} on Mobile device{isMultipleSelected ? ` (${selectedItems.length})` : ""}
+                                </div>
+                                <div className={styles.submenuItem} onClick={() => handleSubmenuAction("upload-qr")}>
+                                    <span className={styles.icon}>📲</span>
+                                    Upload files from Mobile device
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
                     <div className={styles.separator}></div>
 
                     <div className={styles.menuItem} onClick={() => handleAction("rename")}>
@@ -146,15 +196,15 @@ export function ContextMenu({
 
                             {showFavoriteSubmenu && (
                                 <div className={styles.submenu}>
-                                    <div className={styles.submenuItem} onClick={() => handleAction("add-favorite")}>
+                                    <div className={styles.submenuItem} onClick={() => handleSubmenuAction("add-favorite")}>
                                         <span className={styles.icon}>☆</span>
                                         Add Favorite
                                     </div>
-                                    <div className={styles.submenuItem} onClick={() => handleAction("remove-favorite")}>
+                                    <div className={styles.submenuItem} onClick={() => handleSubmenuAction("remove-favorite")}>
                                         <span className={styles.icon}>⭐</span>
                                         Remove Favorite
                                     </div>
-                                    <div className={styles.submenuItem} onClick={() => handleAction("toggle-favorite")}>
+                                    <div className={styles.submenuItem} onClick={() => handleSubmenuAction("toggle-favorite")}>
                                         <span className={styles.icon}>🔄</span>
                                         Toggle Favorite
                                     </div>

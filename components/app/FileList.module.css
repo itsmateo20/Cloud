@@ -703,3 +703,133 @@
     overflow-x: hidden;
     height: 100%;
 }
+
+/* QR Modal Styles */
+.qrModalOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+}
+
+.qrModal {
+    background-color: var(--background);
+    border-radius: 12px;
+    padding: 0;
+    max-width: 500px;
+    max-height: 90vh;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--border-color);
+}
+
+.qrModalHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border-color);
+    background-color: var(--surface);
+}
+
+.qrModalHeader h3 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.qrModalClose {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: var(--alt-text-2);
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.qrModalClose:hover {
+    background-color: var(--explorer-hover);
+    color: var(--text);
+}
+
+.qrModalContent {
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+}
+
+.qrCodeContainer {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    background-color: #ffffff;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+}
+
+.qrCodeImage {
+    max-width: 200px;
+    max-height: 200px;
+    width: auto;
+    height: auto;
+}
+
+.qrInstructions {
+    text-align: center;
+    color: var(--text);
+    max-width: 400px;
+}
+
+.qrInstructions p {
+    margin: 0 0 12px 0;
+    line-height: 1.5;
+}
+
+.qrInstructions p:last-child {
+    margin-bottom: 0;
+}
+
+.qrFileList {
+    margin-top: 16px;
+    padding: 16px;
+    background-color: var(--surface);
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    text-align: left;
+    width: 100%;
+}
+
+.qrFileList p {
+    margin: 0 0 8px 0;
+    font-weight: 600;
+}
+
+.qrFileList ul {
+    margin: 0;
+    padding-left: 20px;
+    max-height: 100px;
+    overflow-y: auto;
+}
+
+.qrFileList li {
+    margin: 4px 0;
+    font-size: 13px;
+    color: var(--alt-text-2);
+}

@@ -150,5 +150,72 @@ export const api = {
                 error: error.name
             };
         }
+    },
+
+    upload: async (url, formData) => {
+        try {
+            const baseUrl = await getBaseUrl();
+            const fullUrl = url.startsWith('http') ? url : `${baseUrl}${url}`;
+
+            const response = await fetch(fullUrl, {
+                method: "POST",
+                credentials: "same-origin",
+                body: formData, // Don't set Content-Type for FormData, let browser set it
+            });
+
+            return await handleResponse(response);
+        } catch (error) {
+            console.error('API UPLOAD request failed:', error);
+            return {
+                success: false,
+                code: 'network_error',
+                message: error.message || 'Network request failed',
+                error: error.name
+            };
+        }
+    },
+
+    downloadBlob: async (url, body = null) => {
+        try {
+            const baseUrl = await getBaseUrl();
+            const fullUrl = url.startsWith('http') ? url : `${baseUrl}${url}`;
+
+            const fetchOptions = {
+                method: body ? "POST" : "GET",
+                credentials: "same-origin",
+            };
+
+            if (body) {
+                fetchOptions.headers = { "Content-Type": "application/json" };
+                fetchOptions.body = JSON.stringify(body);
+            }
+
+            const response = await fetch(fullUrl, fetchOptions);
+
+            if (!response.ok) {
+                // Try to parse error response
+                try {
+                    const errorData = await safeJsonParse(response);
+                    return { success: false, ...errorData };
+                } catch {
+                    return {
+                        success: false,
+                        code: `http_${response.status}`,
+                        message: `HTTP ${response.status}: ${response.statusText}`
+                    };
+                }
+            }
+
+            const blob = await response.blob();
+            return { success: true, blob };
+        } catch (error) {
+            console.error('API DOWNLOAD request failed:', error);
+            return {
+                success: false,
+                code: 'network_error',
+                message: error.message || 'Network request failed',
+                error: error.name
+            };
+        }
     }
 };

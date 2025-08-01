@@ -1,6 +1,6 @@
 // components/app/FileList.js
 
-import { useState, useEffect, forwardRef, useImperativeHandle, useCallback } from "react";
+import { useRef, useState, useEffect, forwardRef, useImperativeHandle, useCallback } from "react";
 import { api } from "@/utils/api";
 import { downloadFile, downloadFolder } from "@/utils/downloadUtils";
 
@@ -91,6 +91,7 @@ const FileList = forwardRef(({
     onFilesUpload,
     sortBy = 'name',
     viewMode = 'list',
+    user,
 }, ref) => {
     const [folders, setFolders] = useState([]);
     const [files, setFiles] = useState([]);
@@ -112,6 +113,124 @@ const FileList = forwardRef(({
     });
 
     const [isDragOver, setIsDragOver] = useState(false);
+    const [renaming, setRenaming] = useState({ active: false, items: [], value: "" });
+    const [qrModal, setQrModal] = useState({ visible: false, type: '', qrCode: '', items: [] });
+    const renameInputRef = useRef(null);
+
+    // Rename functions
+    const handleRenameInput = (e) => {
+        setRenaming(prev => ({ ...prev, value: e.target.value }));
+    };
+
+    const submitRename = async () => {
+        if (!renaming.active || renaming.items.length === 0 || !renaming.value.trim()) {
+            return cancelRename();
+        }
+
+        const items = renaming.items;
+        const newName = renaming.value.trim();
+
+        try {
+            if (items.length === 1) {
+                const item = items[0];
+                if (newName === item.name) {
+                    return cancelRename();
+                }
+
+                const requestData = {
+                    oldPath: item.path,
+                    newName: newName
+                };
+
+                const response = await api.post('/api/files/rename', requestData);
+
+                if (response.success) {
+                    if (item.isFavorited) {
+                        const newPath = item.path.replace(item.name, newName);
+                        await api.post('/api/user/favorites', {
+                            action: 'update-path',
+                            items: [{
+                                oldPath: item.path,
+                                newPath: newPath,
+                                newName: newName,
+                                isFolder: item.type === 'folder'
+                            }]
+                        });
+                    }
+                    refreshContent();
+                } else {
+                    alert('Failed to rename file/folder');
+                }
+            } else {
+                // Multi-rename logic
+                const baseName = newName;
+                for (let i = 0; i < items.length; i++) {
+                    const item = items[i];
+                    const originalExt = item.name.includes('.') ? '.' + item.name.split('.').pop() : '';
+                    const finalName = i === 0 ? baseName + originalExt : `${baseName} (${i})${originalExt}`;
+
+                    const requestData = {
+                        oldPath: item.path,
+                        newName: finalName
+                    };
+
+                    const response = await api.post('/api/files/rename', requestData);
+                    if (response.success && item.isFavorited) {
+                        const newPath = item.path.replace(item.name, finalName);
+                        await api.post('/api/user/favorites', {
+                            action: 'update-path',
+                            items: [{
+                                oldPath: item.path,
+                                newPath: newPath,
+                                newName: finalName,
+                                isFolder: item.type === 'folder'
+                            }]
+                        });
+                    }
+                }
+                refreshContent();
+            }
+        } catch (error) {
+            console.error('Error renaming:', error);
+            alert('Error renaming file/folder');
+        }
+
+        cancelRename();
+    };
+
+    const cancelRename = () => {
+        setRenaming({ active: false, items: [], value: "" });
+    };
+
+    // QR Code functions
+    const generateQRCode = async (type, items) => {
+        try {
+            const response = await api.post('/api/qr/generate', {
+                type,
+                items: items.map(item => ({
+                    path: item.path,
+                    name: item.name,
+                    type: item.type
+                })),
+                currentPath
+            });
+
+            if (response.success) {
+                setQrModal({
+                    visible: true,
+                    type,
+                    qrCode: response.qrCode,
+                    items
+                });
+            } else {
+                alert('Failed to generate QR code');
+            }
+        } catch (error) {
+            console.error('Error generating QR code:', error);
+            alert('Error generating QR code');
+        }
+    };
+
     const loadContents = useCallback(async () => {
         setLoading(true);
         try {
@@ -187,10 +306,20 @@ const FileList = forwardRef(({
             }
         });
 
+        socket?.on("fileUploadedViaQR", (payload) => {
+            // Check if the upload is for the current user and path
+            if (payload.userId === user?.id && payload.path === currentPath) {
+                console.log('Files uploaded via QR, refreshing folder:', payload.files);
+                // Refresh the contents to show the new files
+                loadContents();
+            }
+        });
+
         return () => {
             socket?.off("file-updated");
+            socket?.off("fileUploadedViaQR");
         };
-    }, [socket, currentPath]);
+    }, [socket, currentPath, user?.id]);
 
     const handleFileUpdate = (payload) => {
         switch (payload.action) {
@@ -399,28 +528,9 @@ const FileList = forwardRef(({
     const handleFileViewerAction = async (action, file) => {
         switch (action) {
             case 'rename':
-                const newName = prompt('Enter new name:', file.name);
-                if (newName && newName !== file.name) {
-                    try {
-                        const requestData = {
-                            oldPath: file.path,
-                            newName: newName
-                        };
-
-
-                        const response = await api.post('/api/files/rename', requestData);
-
-                        if (response.success) {
-                            setFileViewer(prev => ({ ...prev, isOpen: false }));
-                            refreshContent();
-                        } else {
-                            alert('Failed to rename file');
-                        }
-                    } catch (error) {
-                        console.error('Error renaming:', error);
-                        alert('Error renaming file');
-                    }
-                }
+                // Trigger inline rename for the file in the viewer
+                setRenaming({ active: true, items: [file], value: file.name });
+                setFileViewer(prev => ({ ...prev, isOpen: false }));
                 break;
 
             case 'delete':
@@ -491,95 +601,34 @@ const FileList = forwardRef(({
                 break;
 
             case 'download':
-                items.forEach(item => {
-                    if (item.type === 'file') {
-                        downloadFile(item.path, item.name);
-                    } else if (item.type === 'folder') {
-                        downloadFolder(item.path, item.name);
-                    } else {
-                    }
-                });
+                // Show download options: Direct download or QR code
+                const downloadChoice = confirm('Download directly to this device?\n\nOK = Download to this device\nCancel = Generate QR code for mobile download');
+                if (downloadChoice) {
+                    // Direct download
+                    items.forEach(item => {
+                        if (item.type === 'file') {
+                            downloadFile(item.path, item.name);
+                        } else if (item.type === 'folder') {
+                            downloadFolder(item.path, item.name);
+                        }
+                    });
+                } else {
+                    // Generate QR code for download
+                    generateQRCode('download', items);
+                }
+                break;
+
+            case 'download-qr':
+                generateQRCode('download', items);
+                break;
+
+            case 'upload-qr':
+                generateQRCode('upload', []);
                 break;
 
             case 'rename':
-                if (items.length === 1) {
-                    const newName = prompt('Enter new name:', items[0].name);
-                    if (newName && newName !== items[0].name) {
-                        try {
-                            const oldPath = items[0].path;
-                            const requestData = {
-                                oldPath: oldPath,
-                                newName: newName
-                            };
-
-                            const response = await api.post('/api/files/rename', requestData);
-
-                            if (response.success) {
-                                if (items[0].isFavorited) {
-                                    const newPath = oldPath.replace(items[0].name, newName);
-                                    await api.post('/api/user/favorites', {
-                                        action: 'update-path',
-                                        items: [{
-                                            oldPath: oldPath,
-                                            newPath: newPath,
-                                            newName: newName,
-                                            isFolder: items[0].type === 'folder'
-                                        }]
-                                    });
-                                }
-                                refreshContent();
-                            } else {
-                                alert('Failed to rename file/folder');
-                            }
-                        } catch (error) {
-                            console.error('Error renaming:', error);
-                            alert('Error renaming file/folder');
-                        }
-                    }
-                } else {
-                    const baseName = prompt(`What do you want to rename the ${items.length} files to?`, 'file');
-                    if (baseName) {
-                        const renamePromises = [];
-
-                        for (let i = 0; i < items.length; i++) {
-                            const item = items[i];
-                            const originalExt = item.name.includes('.') ? '.' + item.name.split('.').pop() : '';
-                            const newName = i === 0
-                                ? baseName + originalExt
-                                : `${baseName} (${i})${originalExt}`;
-
-                            const oldPath = item.path;
-                            const newPath = oldPath.replace(item.name, newName);
-
-                            try {
-                                const requestData = {
-                                    oldPath: oldPath,
-                                    newName: newName
-                                };
-
-                                const response = await api.post('/api/files/rename', requestData);
-                                if (response.success && item.isFavorited) {
-                                    renamePromises.push(api.post('/api/user/favorites', {
-                                        action: 'update-path',
-                                        items: [{
-                                            oldPath: oldPath,
-                                            newPath: newPath,
-                                            newName: newName,
-                                            isFolder: item.type === 'folder'
-                                        }]
-                                    }));
-                                }
-                            } catch (error) {
-                                console.error('Error renaming:', error);
-                                alert(`Failed to rename "${item.name}" to "${newName}"`);
-                            }
-                        }
-                        if (renamePromises.length > 0) {
-                            await Promise.all(renamePromises);
-                        }
-                        refreshContent();
-                    }
-                }
+                // Trigger inline rename for selected items
+                setRenaming({ active: true, items, value: items[0].name });
                 break;
 
             case 'delete':
@@ -868,7 +917,22 @@ const FileList = forwardRef(({
                                 <>
                                     <div className={styles.itemIcon}>📁</div>
                                     <div className={styles.itemName}>
-                                        {folder.name}
+                                        {renaming.active && renaming.items.length > 0 && renaming.items[0].path === folder.path ? (
+                                            <input
+                                                ref={renameInputRef}
+                                                className={styles.renameInput}
+                                                value={renaming.value}
+                                                autoFocus
+                                                onChange={handleRenameInput}
+                                                onBlur={cancelRename}
+                                                onKeyDown={e => {
+                                                    if (e.key === "Enter") submitRename();
+                                                    if (e.key === "Escape") cancelRename();
+                                                }}
+                                            />
+                                        ) : (
+                                            folder.name
+                                        )}
                                         {folder.isFavorited && <span className={styles.favoriteIcon}>⭐</span>}
                                     </div>
                                 </>
@@ -877,7 +941,22 @@ const FileList = forwardRef(({
                                     <div className={styles.itemIcon}>📁</div>
                                     <div className={styles.itemContent}>
                                         <div className={styles.itemName}>
-                                            {folder.name}
+                                            {renaming.active && renaming.items.length > 0 && renaming.items[0].path === folder.path ? (
+                                                <input
+                                                    ref={renameInputRef}
+                                                    className={styles.renameInput}
+                                                    value={renaming.value}
+                                                    autoFocus
+                                                    onChange={handleRenameInput}
+                                                    onBlur={cancelRename}
+                                                    onKeyDown={e => {
+                                                        if (e.key === "Enter") submitRename();
+                                                        if (e.key === "Escape") cancelRename();
+                                                    }}
+                                                />
+                                            ) : (
+                                                folder.name
+                                            )}
                                             {folder.isFavorited && <span className={styles.favoriteIcon}>⭐</span>}
                                         </div>
                                         <div className={styles.itemDetails}>
@@ -889,12 +968,27 @@ const FileList = forwardRef(({
                                 <>
                                     <div className={styles.cell} style={{ width: viewMode === 'details' ? '40%' : 'auto' }}>
                                         <span className={styles.itemIcon}>📁</span>
-                                        <span className={styles.itemName} style={{
-                                            fontWeight: 'bold',
-                                            color: 'inherit'
-                                        }}>
-                                            {folder.name}
-                                        </span>
+                                        {renaming.active && renaming.items.length > 0 && renaming.items[0].path === folder.path ? (
+                                            <input
+                                                ref={renameInputRef}
+                                                className={styles.renameInput}
+                                                value={renaming.value}
+                                                autoFocus
+                                                onChange={handleRenameInput}
+                                                onBlur={cancelRename}
+                                                onKeyDown={e => {
+                                                    if (e.key === "Enter") submitRename();
+                                                    if (e.key === "Escape") cancelRename();
+                                                }}
+                                            />
+                                        ) : (
+                                            <span className={styles.itemName} style={{
+                                                fontWeight: 'bold',
+                                                color: 'inherit'
+                                            }}>
+                                                {folder.name}
+                                            </span>
+                                        )}
                                         {folder.isFavorited && <span className={styles.favoriteIcon}>⭐</span>}
                                     </div>
                                     {viewMode === 'details' && (
@@ -935,7 +1029,22 @@ const FileList = forwardRef(({
                                         {getFileIcon(file.name)}
                                     </div>
                                     <div className={styles.itemName}>
-                                        {file.name}
+                                        {renaming.active && renaming.items.length > 0 && renaming.items[0].path === file.path ? (
+                                            <input
+                                                ref={renameInputRef}
+                                                className={styles.renameInput}
+                                                value={renaming.value}
+                                                autoFocus
+                                                onChange={handleRenameInput}
+                                                onBlur={cancelRename}
+                                                onKeyDown={e => {
+                                                    if (e.key === "Enter") submitRename();
+                                                    if (e.key === "Escape") cancelRename();
+                                                }}
+                                            />
+                                        ) : (
+                                            file.name
+                                        )}
                                         {file.isFavorited && <span className={styles.favoriteIcon}>⭐</span>}
                                     </div>
                                 </>
@@ -946,7 +1055,22 @@ const FileList = forwardRef(({
                                     </div>
                                     <div className={styles.itemContent}>
                                         <div className={styles.itemName}>
-                                            {file.name}
+                                            {renaming.active && renaming.items.length > 0 && renaming.items[0].path === file.path ? (
+                                                <input
+                                                    ref={renameInputRef}
+                                                    className={styles.renameInput}
+                                                    value={renaming.value}
+                                                    autoFocus
+                                                    onChange={handleRenameInput}
+                                                    onBlur={cancelRename}
+                                                    onKeyDown={e => {
+                                                        if (e.key === "Enter") submitRename();
+                                                        if (e.key === "Escape") cancelRename();
+                                                    }}
+                                                />
+                                            ) : (
+                                                file.name
+                                            )}
                                             {file.isFavorited && <span className={styles.favoriteIcon}>⭐</span>}
                                         </div>
                                         <div className={styles.itemDetails}>
@@ -961,9 +1085,24 @@ const FileList = forwardRef(({
                                         <span className={styles.itemIcon}>
                                             {getFileIcon(file.name)}
                                         </span>
-                                        <span className={styles.itemName}>
-                                            {file.name}
-                                        </span>
+                                        {renaming.active && renaming.items.length > 0 && renaming.items[0].path === file.path ? (
+                                            <input
+                                                ref={renameInputRef}
+                                                className={styles.renameInput}
+                                                value={renaming.value}
+                                                autoFocus
+                                                onChange={handleRenameInput}
+                                                onBlur={cancelRename}
+                                                onKeyDown={e => {
+                                                    if (e.key === "Enter") submitRename();
+                                                    if (e.key === "Escape") cancelRename();
+                                                }}
+                                            />
+                                        ) : (
+                                            <span className={styles.itemName}>
+                                                {file.name}
+                                            </span>
+                                        )}
                                         {file.isFavorited && <span className={styles.favoriteIcon}>⭐</span>}
                                     </div>
                                     {viewMode === 'details' && (
@@ -1021,6 +1160,49 @@ const FileList = forwardRef(({
                     onNavigate={(newIndex) => setFileViewer(prev => ({ ...prev, currentIndex: newIndex }))}
                     onAction={handleFileViewerAction}
                 />
+            )}
+
+            {qrModal.visible && (
+                <div className={styles.qrModalOverlay}>
+                    <div className={styles.qrModal}>
+                        <div className={styles.qrModalHeader}>
+                            <h3>
+                                {qrModal.type === 'download' ? 'Download Files via QR Code' : 'Upload Files via QR Code'}
+                            </h3>
+                            <button
+                                className={styles.qrModalClose}
+                                onClick={() => setQrModal({ visible: false, type: '', qrCode: '', items: [] })}
+                            >
+                                ×
+                            </button>
+                        </div>
+                        <div className={styles.qrModalContent}>
+                            <div className={styles.qrCodeContainer}>
+                                <img src={qrModal.qrCode} alt="QR Code" className={styles.qrCodeImage} />
+                            </div>
+                            <div className={styles.qrInstructions}>
+                                <p>
+                                    {qrModal.type === 'download'
+                                        ? 'Scan this QR code with your mobile device to download the selected files.'
+                                        : 'Scan this QR code with your mobile device to upload files to this folder.'
+                                    }
+                                </p>
+                                <p><strong>This QR code expires in 1 hour.</strong></p>
+                                <p>No login required on mobile device.</p>
+                                {qrModal.type === 'download' && qrModal.items.length > 0 && (
+                                    <div className={styles.qrFileList}>
+                                        <p><strong>Files to download:</strong></p>
+                                        <ul>
+                                            {qrModal.items.map((item, index) => (
+                                                <li key={index}>{item.name}</li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );

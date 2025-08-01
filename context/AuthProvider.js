@@ -22,6 +22,21 @@ export const AuthProvider = ({ children, locked = true }) => {
         "/signup/google",
     ];
 
+    // Function to check if current path is a public route (including dynamic routes)
+    const isPublicRoute = (currentPath) => {
+        // Check static routes
+        if (staticPublicRoutes.includes(currentPath)) {
+            return true;
+        }
+
+        // Check dynamic QR routes
+        if (currentPath.startsWith('/qr/') && currentPath.split('/').length === 3) {
+            return true;
+        }
+
+        return false;
+    };
+
     useEffect(() => {
         const checkAuthAndRoute = async () => {
             try {
@@ -41,7 +56,7 @@ export const AuthProvider = ({ children, locked = true }) => {
                 if (isAuthenticated) {
                     setUser(sessionRes.user);
 
-                    if (staticPublicRoutes.includes(pathname)) {
+                    if (isPublicRoute(pathname)) {
                         router.push("/");
                         return;
                     }
@@ -50,7 +65,7 @@ export const AuthProvider = ({ children, locked = true }) => {
                 }
 
 
-                if (staticPublicRoutes.includes(pathname)) {
+                if (isPublicRoute(pathname)) {
                     return;
                 } else {
 

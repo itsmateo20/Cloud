@@ -1,0 +1,265 @@
+/* components/qr/QRHandler.module.css */
+
+/* Error page styles */
+.errorContainer {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--background);
+}
+
+.errorCard {
+    background-color: var(--background-color);
+    padding: 2rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    text-align: center;
+}
+
+.errorTitle {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: var(--message-error-text);
+    margin-bottom: 1rem;
+}
+
+.errorMessage {
+    color: var(--text-color-muted);
+}
+
+/* Main component styles */
+.container {
+    min-height: 100vh;
+    background-color: var(--background);
+    padding: 2rem 0;
+}
+
+.wrapper {
+    max-width: 48rem;
+    margin: 0 auto;
+    padding: 0 1rem;
+}
+
+.card {
+    background-color: var(--background-color);
+    border-radius: 0.5rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    padding: 1.5rem;
+}
+
+.title {
+    font-size: 1.875rem;
+    font-weight: bold;
+    color: var(--text-color);
+    margin-bottom: 1.5rem;
+    text-align: center;
+}
+
+.message {
+    padding: 1rem;
+    border-radius: 0.375rem;
+    margin-bottom: 1.5rem;
+    border: 1px solid;
+}
+
+.messageSuccess {
+    background-color: var(--message-success-bg);
+    color: var(--message-success-text);
+    border-color: var(--message-success-border);
+}
+
+.messageError {
+    background-color: var(--message-error-bg);
+    color: var(--message-error-text);
+    border-color: var(--message-error-border);
+}
+
+.uploadSection {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.inputGroup {
+    display: flex;
+    flex-direction: column;
+}
+
+.label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-color);
+    margin-bottom: 0.5rem;
+}
+
+.targetPath {
+    font-family: monospace;
+    color: var(--button-primary);
+    font-weight: 600;
+}
+
+.fileInput {
+    display: block;
+    width: 100%;
+    font-size: 0.875rem;
+    color: var(--text-color-muted);
+    border: 1px solid var(--input-border);
+    border-radius: 0.375rem;
+    padding: 0.5rem;
+    background-color: var(--input-background);
+}
+
+.fileInput::-webkit-file-upload-button {
+    margin-right: 1rem;
+    padding: 0.5rem 1rem;
+    border-radius: 0.375rem;
+    border: none;
+    font-size: 0.875rem;
+    font-weight: 600;
+    background-color: var(--file-input-button-bg);
+    color: var(--file-input-button-text);
+    cursor: pointer;
+}
+
+.fileInput::-webkit-file-upload-button:hover {
+    background-color: var(--file-input-button-hover);
+}
+
+.selectedFiles {
+    margin-top: 1rem;
+}
+
+.selectedFilesTitle {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-color);
+    margin-bottom: 0.5rem;
+}
+
+.filesList {
+    font-size: 0.875rem;
+    color: var(--text-color-muted);
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.fileItem {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.fileSize {
+    color: var(--alt-text-2);
+}
+
+.uploadButton {
+    width: 100%;
+    background-color: var(--button-primary);
+    color: var(--button-text-color);
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.375rem;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.uploadButton:hover:not(:disabled) {
+    background-color: var(--button-primary-hover);
+}
+
+.uploadButton:disabled {
+    background-color: var(--button-disabled);
+    cursor: not-allowed;
+}
+
+.downloadSection {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.sectionTitle {
+    font-size: 1.125rem;
+    font-weight: 500;
+    color: var(--text-color);
+    margin-bottom: 1rem;
+}
+
+.itemsList {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.downloadItem {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem;
+    background-color: var(--hover-background);
+    border-radius: 0.375rem;
+}
+
+.itemInfo {
+    display: flex;
+    flex-direction: column;
+}
+
+.itemName {
+    font-weight: 500;
+    color: var(--text-color);
+}
+
+.itemType {
+    color: var(--text-color-muted);
+    font-size: 0.875rem;
+    margin-left: 0.5rem;
+}
+
+.downloadButton {
+    background-color: var(--button-success);
+    color: var(--button-text-color);
+    padding: 0.5rem 1rem;
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.downloadButton:hover:not(:disabled) {
+    background-color: var(--button-success-hover);
+}
+
+.downloadButton:disabled {
+    background-color: var(--button-disabled);
+    cursor: not-allowed;
+}
+
+.downloadAllButton {
+    width: 100%;
+    background-color: var(--button-primary);
+    color: var(--button-text-color);
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.375rem;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    margin-top: 1rem;
+}
+
+.downloadAllButton:hover:not(:disabled) {
+    background-color: var(--button-primary-hover);
+}
+
+.downloadAllButton:disabled {
+    background-color: var(--button-disabled);
+    cursor: not-allowed;
+}

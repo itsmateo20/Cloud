@@ -31,6 +31,29 @@
   --folder-arrow-color: #606060;
   --explorer-hover: #dfdfdf;
   --explorer-selected: #c7c7c7;
+
+  /* Button colors */
+  --button-text-color: #ffffff;
+  --button-primary: #2563eb;
+  --button-primary-hover: #1d4ed8;
+  --button-success: #059669;
+  --button-success-hover: #047857;
+  --button-disabled: #d1d5db;
+
+  /* Message colors */
+  --message-success-bg: #f0f9ff;
+  --message-success-text: #1e40af;
+  --message-success-border: #dbeafe;
+  --message-error-bg: #fef2f2;
+  --message-error-text: #dc2626;
+  --message-error-border: #fecaca;
+
+  /* Input colors */
+  --input-border: #d1d5db;
+  --input-background: #ffffff;
+  --file-input-button-bg: #dbeafe;
+  --file-input-button-hover: #bfdbfe;
+  --file-input-button-text: #1e40af;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -67,6 +90,29 @@
     --folder-arrow-color: #c1c1c1;
     --explorer-hover: #2c2c2c;
     --explorer-selected: #3c3c3c;
+
+    /* Button colors */
+    --button-text-color: #ffffff;
+    --button-primary: #2563eb;
+    --button-primary-hover: #1d4ed8;
+    --button-success: #059669;
+    --button-success-hover: #047857;
+    --button-disabled: #3c3c3c;
+
+    /* Message colors */
+    --message-success-bg: rgba(59, 130, 246, 0.1);
+    --message-success-text: #60a5fa;
+    --message-success-border: #1e40af;
+    --message-error-bg: rgba(239, 68, 68, 0.1);
+    --message-error-text: #f87171;
+    --message-error-border: #dc2626;
+
+    /* Input colors */
+    --input-border: #575757;
+    --input-background: #1a1a1a;
+    --file-input-button-bg: rgba(37, 99, 235, 0.2);
+    --file-input-button-hover: rgba(37, 99, 235, 0.3);
+    --file-input-button-text: #60a5fa;
   }
 }
 
