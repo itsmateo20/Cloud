@@ -21,7 +21,6 @@ export async function GET(req) {
     const error = searchParams.get("error");
     const state = searchParams.get("state");
 
-    // Handle OAuth errors
     if (error) {
         console.error('Google OAuth error:', error);
         return NextResponse.redirect(`${await getSiteUrl()}/login?error=oauth_error`);
@@ -36,7 +35,6 @@ export async function GET(req) {
     const type = cookieStore.get("auth_type")?.value || "login";
     const storedState = cookieStore.get("oauth_state")?.value;
 
-    // Verify state parameter
     if (!state || state !== storedState) {
         console.error('State parameter mismatch or missing');
         return NextResponse.redirect(`${await getSiteUrl()}/login?error=invalid_state`);
@@ -89,7 +87,6 @@ export async function GET(req) {
             provider: response.user.provider
         });
 
-        // Clean up the oauth_state cookie
         const finalCookieStore = await cookies();
         finalCookieStore.delete("oauth_state");
 

@@ -2,6 +2,32 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import styles from './Controls.module.css';
+import {
+    Plus,
+    FolderPlus,
+    FileText,
+    Edit3,
+    Upload,
+    Download,
+    Trash2,
+    ArrowUpDown,
+    Eye,
+    MoreHorizontal,
+    Star,
+    Settings,
+    ChevronDown,
+    Check,
+    Calendar,
+    FileIcon,
+    Ruler,
+    Image,
+    Square,
+    SquareDot,
+    Grid3x3,
+    List,
+    BarChart3,
+    LayoutGrid
+} from 'lucide-react';
 
 const Controls = ({
     currentPath,
@@ -34,18 +60,10 @@ const Controls = ({
     const moreDropdownRef = useRef(null);
     useEffect(() => {
         const handleClickOutside = (event) => {
-            if (newDropdownRef.current && !newDropdownRef.current.contains(event.target)) {
-                setShowNewDropdown(false);
-            }
-            if (sortDropdownRef.current && !sortDropdownRef.current.contains(event.target)) {
-                setShowSortDropdown(false);
-            }
-            if (viewDropdownRef.current && !viewDropdownRef.current.contains(event.target)) {
-                setShowViewDropdown(false);
-            }
-            if (moreDropdownRef.current && !moreDropdownRef.current.contains(event.target)) {
-                setShowMoreDropdown(false);
-            }
+            if (newDropdownRef.current && !newDropdownRef.current.contains(event.target)) setShowNewDropdown(false);
+            if (sortDropdownRef.current && !sortDropdownRef.current.contains(event.target)) setShowSortDropdown(false);
+            if (viewDropdownRef.current && !viewDropdownRef.current.contains(event.target)) setShowViewDropdown(false);
+            if (moreDropdownRef.current && !moreDropdownRef.current.contains(event.target)) setShowMoreDropdown(false);
         };
 
         document.addEventListener('mousedown', handleClickOutside);
@@ -58,25 +76,24 @@ const Controls = ({
     const isSpecialPath = currentPath === 'favorites';
 
     const sortOptions = [
-        { value: 'name', label: 'Name', icon: '📝' },
-        { value: 'date', label: 'Date modified', icon: '📅' },
-        { value: 'type', label: 'Type', icon: '📄' },
-        { value: 'size', label: 'Size', icon: '📏' }
+        { value: 'name', label: 'Name', icon: <Edit3 size={16} /> },
+        { value: 'date', label: 'Date modified', icon: <Calendar size={16} /> },
+        { value: 'type', label: 'Type', icon: <FileIcon size={16} /> },
+        { value: 'size', label: 'Size', icon: <Ruler size={16} /> }
     ];
 
     const viewOptions = [
-        { value: 'extraLargeIcons', label: 'Extra Large Icons', icon: '🖼️' },
-        { value: 'largeIcons', label: 'Large Icons', icon: '⬜' },
-        { value: 'mediumIcons', label: 'Medium Icons', icon: '▫️' },
-        { value: 'smallIcons', label: 'Small Icons', icon: '🔳' },
-        { value: 'list', label: 'List', icon: '📋' },
-        { value: 'details', label: 'Details', icon: '📊' },
-        { value: 'tiles', label: 'Tiles', icon: '🧱' }
+        { value: 'extraLargeIcons', label: 'Extra Large Icons', icon: <Image size={16} /> },
+        { value: 'largeIcons', label: 'Large Icons', icon: <Square size={16} /> },
+        { value: 'mediumIcons', label: 'Medium Icons', icon: <SquareDot size={16} /> },
+        { value: 'smallIcons', label: 'Small Icons', icon: <Grid3x3 size={16} /> },
+        { value: 'list', label: 'List', icon: <List size={16} /> },
+        { value: 'details', label: 'Details', icon: <BarChart3 size={16} /> },
+        { value: 'tiles', label: 'Tiles', icon: <LayoutGrid size={16} /> }
     ];
 
     return (
         <div className={styles.controls}>
-            {/* New Section */}
             <div className={styles.section}>
                 <div className={styles.dropdown} ref={newDropdownRef}>
                     <button
@@ -85,9 +102,9 @@ const Controls = ({
                         disabled={isSpecialPath}
                         title="New"
                     >
-                        <span className={styles.icon}>➕</span>
+                        <span className={styles.icon}><Plus size={16} /></span>
                         <span className={styles.label}>New</span>
-                        <span className={styles.arrow}>▼</span>
+                        <span className={styles.arrow}><ChevronDown size={12} /></span>
                     </button>
                     {showNewDropdown && !isSpecialPath && (
                         <div className={styles.dropdownMenu}>
@@ -98,7 +115,7 @@ const Controls = ({
                                     setShowNewDropdown(false);
                                 }}
                             >
-                                <span className={styles.dropdownIcon}>📁</span>
+                                <span className={styles.dropdownIcon}><FolderPlus size={16} /></span>
                                 Folder
                             </button>
                             <button
@@ -108,7 +125,7 @@ const Controls = ({
                                     setShowNewDropdown(false);
                                 }}
                             >
-                                <span className={styles.dropdownIcon}>📄</span>
+                                <span className={styles.dropdownIcon}><FileIcon size={16} /></span>
                                 File
                             </button>
                             <button
@@ -118,7 +135,7 @@ const Controls = ({
                                     setShowNewDropdown(false);
                                 }}
                             >
-                                <span className={styles.dropdownIcon}>📝</span>
+                                <span className={styles.dropdownIcon}><FileText size={16} /></span>
                                 Text Document
                             </button>
                         </div>
@@ -131,7 +148,7 @@ const Controls = ({
                     disabled={isSpecialPath}
                     title="Upload"
                 >
-                    <span className={styles.icon}>📤</span>
+                    <span className={styles.icon}><Upload size={16} /></span>
                     <span className={styles.label}>Upload</span>
                 </button>
 
@@ -141,14 +158,13 @@ const Controls = ({
                     disabled={!hasSelection}
                     title="Download selected files and folders (folders as ZIP)"
                 >
-                    <span className={styles.icon}>📥</span>
+                    <span className={styles.icon}><Download size={16} /></span>
                     <span className={styles.label}>Download</span>
                 </button>
             </div>
 
             <div className={styles.separator}></div>
 
-            {/* File Operations Section */}
             <div className={styles.section}>
                 <button
                     className={`${styles.button} ${!hasSelection ? styles.disabled : ''}`}
@@ -156,7 +172,7 @@ const Controls = ({
                     disabled={!hasSelection || isSpecialPath}
                     title="Delete"
                 >
-                    <span className={styles.icon}>🗑️</span>
+                    <span className={styles.icon}><Trash2 size={16} /></span>
                     <span className={styles.label}>Delete</span>
                 </button>
 
@@ -166,14 +182,13 @@ const Controls = ({
                     disabled={!hasSelection || selectedArray.length !== 1}
                     title="Rename"
                 >
-                    <span className={styles.icon}>✏️</span>
+                    <span className={styles.icon}><Edit3 size={16} /></span>
                     <span className={styles.label}>Rename</span>
                 </button>
             </div>
 
             <div className={styles.separator}></div>
 
-            {/* View Section */}
             <div className={styles.section}>
                 <div className={styles.dropdown} ref={sortDropdownRef}>
                     <button
@@ -181,9 +196,9 @@ const Controls = ({
                         onClick={() => setShowSortDropdown(!showSortDropdown)}
                         title="Sort"
                     >
-                        <span className={styles.icon}>🔀</span>
+                        <span className={styles.icon}><ArrowUpDown size={16} /></span>
                         <span className={styles.label}>Sort</span>
-                        <span className={styles.arrow}>▼</span>
+                        <span className={styles.arrow}><ChevronDown size={12} /></span>
                     </button>
                     {showSortDropdown && (
                         <div className={styles.dropdownMenu}>
@@ -198,7 +213,7 @@ const Controls = ({
                                 >
                                     <span className={styles.dropdownIcon}>{option.icon}</span>
                                     {option.label}
-                                    {sortBy === option.value && <span className={styles.checkmark}>✓</span>}
+                                    {sortBy === option.value && <span className={styles.checkmark}><Check size={16} /></span>}
                                 </button>
                             ))}
                         </div>
@@ -211,9 +226,9 @@ const Controls = ({
                         onClick={() => setShowViewDropdown(!showViewDropdown)}
                         title="View"
                     >
-                        <span className={styles.icon}>👁️</span>
+                        <span className={styles.icon}><Eye size={16} /></span>
                         <span className={styles.label}>View</span>
-                        <span className={styles.arrow}>▼</span>
+                        <span className={styles.arrow}><ChevronDown size={12} /></span>
                     </button>
                     {showViewDropdown && (
                         <div className={styles.dropdownMenu}>
@@ -228,7 +243,7 @@ const Controls = ({
                                 >
                                     <span className={styles.dropdownIcon}>{option.icon}</span>
                                     {option.label}
-                                    {viewMode === option.value && <span className={styles.checkmark}>✓</span>}
+                                    {viewMode === option.value && <span className={styles.checkmark}><Check size={16} /></span>}
                                 </button>
                             ))}
                         </div>
@@ -238,7 +253,6 @@ const Controls = ({
 
             <div className={styles.separator}></div>
 
-            {/* More Section */}
             <div className={styles.section}>
                 <div className={styles.dropdown} ref={moreDropdownRef}>
                     <button
@@ -246,9 +260,9 @@ const Controls = ({
                         onClick={() => setShowMoreDropdown(!showMoreDropdown)}
                         title="More"
                     >
-                        <span className={styles.icon}>⋯</span>
+                        <span className={styles.icon}><MoreHorizontal size={16} /></span>
                         <span className={styles.label}>More</span>
-                        <span className={styles.arrow}>▼</span>
+                        <span className={styles.arrow}><ChevronDown size={12} /></span>
                     </button>
                     {showMoreDropdown && (
                         <div className={styles.dropdownMenu}>
@@ -260,7 +274,7 @@ const Controls = ({
                                 }}
                                 disabled={!hasSelection || isSpecialPath}
                             >
-                                <span className={styles.dropdownIcon}>⭐</span>
+                                <span className={styles.dropdownIcon}><Star size={16} /></span>
                                 Favorite
                             </button>
                             <button
@@ -271,7 +285,7 @@ const Controls = ({
                                 }}
                                 disabled={!hasSelection}
                             >
-                                <span className={styles.dropdownIcon}>⚙️</span>
+                                <span className={styles.dropdownIcon}><Settings size={16} /></span>
                                 Properties
                             </button>
                         </div>

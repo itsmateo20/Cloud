@@ -11,8 +11,6 @@ export async function GET(req) {
     const type = searchParams.get("type");
 
     const siteUrl = await getSiteUrl();
-    console.log('Google OAuth - Site URL:', siteUrl);
-    console.log('Google OAuth - Callback URL:', siteUrl + "/api/auth/google/callback");
 
     const oauth2Client = new google.auth.OAuth2(
         process.env.GOOGLE_CLIENT_ID,
@@ -25,9 +23,7 @@ export async function GET(req) {
     const authUrl = oauth2Client.generateAuthUrl({
         access_type: "offline",
         scope: ["email", "profile"],
-        // Force consent to avoid caching issues with private IPs
         prompt: 'consent',
-        // Add state parameter for security
         state: state
     });
 
@@ -39,7 +35,6 @@ export async function GET(req) {
         sameSite: "lax",
     });
 
-    // Store state for verification
     cookieStore.set("oauth_state", state, {
         maxAge: 60 * 60,
         secure: process.env.NODE_ENV === "production",

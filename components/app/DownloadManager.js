@@ -18,11 +18,11 @@ export function DownloadManager() {
                 const stalledDownloads = [];
                 const activeDownloads = prev.filter(download => {
                     const timeSinceUpdate = now - (download.lastUpdate || download.startTime);
-                    const isStalled = timeSinceUpdate > 30000; // 30 seconds
+                    const isStalled = timeSinceUpdate > 30000;
 
                     if (isStalled && download.progress > 0 && download.progress < 100) {
                         stalledDownloads.push(download);
-                        return false; // Remove from active downloads
+                        return false;
                     }
                     return true;
                 });
@@ -40,7 +40,7 @@ export function DownloadManager() {
 
                 return activeDownloads;
             });
-        }, 5000); // Check every 5 seconds
+        }, 5000);
 
         return () => clearInterval(interval);
     }, []);
@@ -51,7 +51,7 @@ export function DownloadManager() {
             setDownloads(prev => {
                 const existingIndex = prev.findIndex(d => d.id === id);
                 if (existingIndex !== -1) {
-                    return prev; // Prevent duplicate downloads
+                    return prev;
                 }
 
                 const newDownload = {
@@ -182,29 +182,23 @@ export function DownloadManager() {
     };
 
     const getDownloadIcon = (type, status) => {
-        if (status === 'completed') {
-            return (
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                    <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" strokeWidth="2" fill="none" />
-                </svg>
-            );
-        }
+        if (status === 'completed') return (
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" strokeWidth="2" fill="none" />
+            </svg>
+        );
 
-        if (status === 'error') {
-            return (
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                    <path d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" strokeWidth="2" fill="none" />
-                </svg>
-            );
-        }
+        if (status === 'error') return (
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <path d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" strokeWidth="2" fill="none" />
+            </svg>
+        );
 
-        if (type === 'folder') {
-            return (
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                    <path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" stroke="currentColor" strokeWidth="2" fill="none" />
-                </svg>
-            );
-        }
+        if (type === 'folder') return (
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" stroke="currentColor" strokeWidth="2" fill="none" />
+            </svg>
+        );
 
         return (
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
@@ -228,13 +222,11 @@ export function DownloadManager() {
 
     return (
         <div className={style.downloadManager}>
-            {/* Floating Button - Always visible and separate */}
             <button
                 className={`${style.floatingButton} ${isExpanded ? style.expanded : ''} ${hasActiveDownloads ? style.hasActiveDownloads : ''}`}
                 onClick={() => setIsExpanded(!isExpanded)}
                 title={hasActiveDownloads ? `${downloads.length} active download${downloads.length > 1 ? 's' : ''} - ${Math.round(overallProgress)}%` : 'Download history'}
             >
-                {/* Circular Progress Background (only when downloads are active and panel is closed) */}
                 {hasActiveDownloads && !isExpanded && (
                     <div className={style.circularProgress}>
                         <svg className={style.progressCircle} width="56" height="56" viewBox="0 0 56 56">
@@ -261,7 +253,6 @@ export function DownloadManager() {
                                 transform="rotate(-90 28 28)"
                             />
                         </svg>
-                        {/* Vertical fill effect */}
                         <div
                             className={style.verticalFill}
                             style={{ '--fill-height': `${overallProgress}%` }}
@@ -269,7 +260,6 @@ export function DownloadManager() {
                     </div>
                 )}
 
-                {/* Button Content */}
                 <div className={style.buttonContent}>
                     {hasActiveDownloads ? (
                         <div className={style.downloadingIcon}>
@@ -290,7 +280,6 @@ export function DownloadManager() {
                 </div>
             </button>
 
-            {/* Download Panel - Separate positioned container */}
             {isExpanded && (shouldShowButton) && (
                 <div className={style.panelContainer}>
                     <Resizable
@@ -326,7 +315,6 @@ export function DownloadManager() {
                             </div>
 
                             <div className={style.downloadList}>
-                                {/* Download History - Show at top */}
                                 {hasHistory && (
                                     <>
                                         <div className={style.sectionHeader}>
@@ -381,7 +369,6 @@ export function DownloadManager() {
                                     </>
                                 )}
 
-                                {/* Active Downloads - Show at bottom */}
                                 {downloads.length > 0 && (
                                     <>
                                         <div className={style.sectionHeader}>

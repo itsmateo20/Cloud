@@ -26,12 +26,11 @@ async function safeJsonParse(response) {
     try {
         return JSON.parse(text);
     } catch (error) {
-        console.error('Failed to parse JSON response:', text);
         return {
             success: false,
             code: 'invalid_json',
             message: 'Server returned invalid JSON',
-            rawResponse: text.substring(0, 200) // First 200 chars for debugging
+            rawResponse: text
         };
     }
 }
@@ -73,7 +72,6 @@ export const api = {
 
             return await handleResponse(response);
         } catch (error) {
-            console.error('API POST request failed:', error);
             return {
                 success: false,
                 code: 'network_error',
@@ -96,7 +94,6 @@ export const api = {
 
             return await handleResponse(response);
         } catch (error) {
-            console.error('API GET request failed:', error);
             return {
                 success: false,
                 code: 'network_error',
@@ -120,7 +117,6 @@ export const api = {
 
             return await handleResponse(response);
         } catch (error) {
-            console.error('API PUT request failed:', error);
             return {
                 success: false,
                 code: 'network_error',
@@ -142,7 +138,6 @@ export const api = {
 
             return await handleResponse(response);
         } catch (error) {
-            console.error('API DELETE request failed:', error);
             return {
                 success: false,
                 code: 'network_error',
@@ -160,12 +155,11 @@ export const api = {
             const response = await fetch(fullUrl, {
                 method: "POST",
                 credentials: "same-origin",
-                body: formData, // Don't set Content-Type for FormData, let browser set it
+                body: formData,
             });
 
             return await handleResponse(response);
         } catch (error) {
-            console.error('API UPLOAD request failed:', error);
             return {
                 success: false,
                 code: 'network_error',
@@ -193,7 +187,6 @@ export const api = {
             const response = await fetch(fullUrl, fetchOptions);
 
             if (!response.ok) {
-                // Try to parse error response
                 try {
                     const errorData = await safeJsonParse(response);
                     return { success: false, ...errorData };
@@ -209,7 +202,6 @@ export const api = {
             const blob = await response.blob();
             return { success: true, blob };
         } catch (error) {
-            console.error('API DOWNLOAD request failed:', error);
             return {
                 success: false,
                 code: 'network_error',

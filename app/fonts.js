@@ -1,4 +1,4 @@
-import { Poppins, Rubik } from "next/font/google"
+import { Poppins, Rubik, Courier_Prime } from "next/font/google"
 
 export const poppins = Poppins({
     weight: ["400", "500", "600", "700", "800"],
@@ -18,4 +18,13 @@ export const rubik = Rubik({
     display: "swap",
 })
 
-export default [poppins.variable, rubik.variable]
+export const courierprime = Courier_Prime({
+    weight: ["400"],
+    style: ["normal"],
+    subsets: ["latin"],
+    preload: true,
+    variable: "--font-courierprime",
+    display: "swap",
+})
+
+export default [poppins.variable, rubik.variable, courierprime.variable]

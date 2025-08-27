@@ -1,10 +1,12 @@
 // components/app/FileViewer.js
 
 import style from './FileViewer.module.css';
+import mainStyle from '@/public/styles/main.module.css';
 import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
 import SoftLoading from '@/components/SoftLoading';
 import { CodeEditor } from './CodeEditor';
 import { downloadFile } from '@/utils/downloadUtils';
+import { useIsMobile } from '@/utils/useIsMobile';
 import Prism from 'prismjs';
 import 'prismjs/themes/prism-tomorrow.css';
 import 'prismjs/components/prism-markup';
@@ -34,6 +36,30 @@ import 'prismjs/components/prism-scala';
 import 'prismjs/components/prism-lua';
 import 'prismjs/components/prism-perl';
 import 'prismjs/components/prism-powershell';
+import {
+    FastForward,
+    Pause,
+    Play,
+    Redo2,
+    Undo2,
+    X,
+    ChevronLeft,
+    ChevronRight,
+    Info,
+    Download,
+    Trash2,
+    Edit,
+    MoreVertical,
+    ZoomIn,
+    ZoomOut,
+    RotateCw,
+    Volume2,
+    VolumeX,
+    Maximize,
+    ArrowLeft,
+    ArrowRight,
+    Star
+} from 'lucide-react';
 
 export function FileViewer({
     isOpen,
@@ -41,8 +67,10 @@ export function FileViewer({
     files,
     onClose,
     onNavigate,
-    onAction
+    onAction,
+    mobile = false
 }) {
+    const isMobile = useIsMobile();
     const [isLoading, setIsLoading] = useState(true);
     const [showDropdown, setShowDropdown] = useState(false);
     const [fileError, setFileError] = useState(false);
@@ -52,14 +80,249 @@ export function FileViewer({
     const [isDragging, setIsDragging] = useState(false);
     const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
     const [showCodeEditor, setShowCodeEditor] = useState(false);
+    const [showControls, setShowControls] = useState(true);
+    const [isVideoPlaying, setIsVideoPlaying] = useState(false);
+    const [videoCurrentTime, setVideoCurrentTime] = useState(0);
+    const [videoDuration, setVideoDuration] = useState(0);
+    const [isVideoVertical, setIsVideoVertical] = useState(false);
+    const [isDraggingProgress, setIsDraggingProgress] = useState(false);
+    const [showFileInfoModal, setShowFileInfoModal] = useState(false);
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [fileInfoMenuSwipePosition, setFileInfoMenuSwipePosition] = useState(0);
+    const [fileInfoMenuInitialY, setFileInfoMenuInitialY] = useState(0);
+    const [deleteMenuSwipePosition, setDeleteMenuSwipePosition] = useState(0);
+    const [deleteMenuInitialY, setDeleteMenuInitialY] = useState(0);
+    const [isVideoMuted, setIsVideoMuted] = useState(false);
+    const [isVideoFullscreen, setIsVideoFullscreen] = useState(false);
     const imagePositionRef = useRef({ x: 0, y: 0 });
     const isDraggingRef = useRef(false);
     const dragStartRef = useRef({ x: 0, y: 0 });
     const animationFrameRef = useRef(null);
+    const videoRef = useRef(null);
+    const progressBarRef = useRef(null);
 
     const contentRef = useRef(null);
     const containerRef = useRef(null);
     const dropdownRef = useRef(null);
+
+    // Video control functions
+    const toggleVideoPlay = () => {
+        if (videoRef.current) {
+            if (isVideoPlaying) {
+                videoRef.current.pause();
+            } else {
+                videoRef.current.play();
+            }
+            setIsVideoPlaying(!isVideoPlaying);
+        }
+    };
+
+    const seekVideo = (seconds) => {
+        if (videoRef.current) {
+            videoRef.current.currentTime = Math.max(0, Math.min(videoRef.current.currentTime + seconds, videoDuration));
+        }
+    };
+
+    const restartVideo = () => {
+        if (videoRef.current) {
+            videoRef.current.currentTime = 0;
+        }
+    };
+
+    const goToNextVideo = () => {
+        if (currentFileIndex < files.length - 1) {
+            const nextIndex = currentFileIndex + 1;
+            // Find next video file
+            for (let i = nextIndex; i < files.length; i++) {
+                if (getFileType(files[i].name) === 'video') {
+                    onNavigate(i);
+                    return;
+                }
+            }
+        }
+    };
+
+    // File navigation functions
+    const goToPreviousFile = () => {
+        if (currentFileIndex > 0) {
+            onNavigate(currentFileIndex - 1);
+        }
+    };
+
+    const goToNextFile = () => {
+        if (currentFileIndex < files.length - 1) {
+            onNavigate(currentFileIndex + 1);
+        }
+    };
+
+    const handleVideoTimeUpdate = () => {
+        if (videoRef.current) {
+            setVideoCurrentTime(videoRef.current.currentTime);
+        }
+    };
+
+    const handleVideoLoadedMetadata = () => {
+        if (videoRef.current) {
+            setVideoDuration(videoRef.current.duration);
+        }
+    };
+
+    const handleProgressBarClick = (e) => {
+        e.stopPropagation();
+        if (videoRef.current && progressBarRef.current) {
+            const rect = progressBarRef.current.getBoundingClientRect();
+            const percent = (e.clientX - rect.left) / rect.width;
+            const newTime = percent * videoDuration;
+            videoRef.current.currentTime = newTime;
+        }
+    };
+
+    const handleProgressBarMouseDown = (e) => {
+        e.stopPropagation();
+        setIsDraggingProgress(true);
+        handleProgressBarClick(e);
+    };
+
+    const handleProgressBarMouseMove = (e) => {
+        if (isDraggingProgress && videoRef.current && progressBarRef.current) {
+            const rect = progressBarRef.current.getBoundingClientRect();
+            const percent = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+            const newTime = percent * videoDuration;
+            videoRef.current.currentTime = newTime;
+        }
+    };
+
+    const handleProgressBarMouseUp = () => {
+        setIsDraggingProgress(false);
+    };
+
+    // Add global mouse event listeners for progress bar dragging
+    useEffect(() => {
+        if (isDraggingProgress) {
+            const handleMouseMove = (e) => handleProgressBarMouseMove(e);
+            const handleMouseUp = () => handleProgressBarMouseUp();
+
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mouseup', handleMouseUp);
+
+            return () => {
+                document.removeEventListener('mousemove', handleMouseMove);
+                document.removeEventListener('mouseup', handleMouseUp);
+            };
+        }
+    }, [isDraggingProgress, videoDuration]);
+
+    const toggleVideoOrientation = () => {
+        setIsVideoVertical(!isVideoVertical);
+    };
+
+    const toggleVideoMute = () => {
+        if (videoRef.current) {
+            videoRef.current.muted = !videoRef.current.muted;
+            setIsVideoMuted(videoRef.current.muted);
+        }
+    };
+
+    const toggleVideoFullscreen = () => {
+        if (videoRef.current) {
+            if (!isVideoFullscreen) {
+                // Enter fullscreen with default video controls
+                videoRef.current.controls = true;
+                setIsVideoFullscreen(true);
+                setShowControls(false); // Hide custom controls
+                if (videoRef.current.requestFullscreen) {
+                    videoRef.current.requestFullscreen();
+                } else if (videoRef.current.webkitRequestFullscreen) {
+                    videoRef.current.webkitRequestFullscreen();
+                } else if (videoRef.current.msRequestFullscreen) {
+                    videoRef.current.msRequestFullscreen();
+                }
+            } else {
+                // Exit fullscreen
+                videoRef.current.controls = false;
+                setIsVideoFullscreen(false);
+                setShowControls(true); // Show custom controls
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                } else if (document.webkitExitFullscreen) {
+                    document.webkitExitFullscreen();
+                } else if (document.msExitFullscreen) {
+                    document.msExitFullscreen();
+                }
+            }
+        }
+    };
+
+    // Listen for fullscreen changes
+    useEffect(() => {
+        const handleFullscreenChange = () => {
+            const isFullscreen = !!(document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement);
+            if (!isFullscreen && isVideoFullscreen) {
+                // User exited fullscreen, reset our state
+                setIsVideoFullscreen(false);
+                setShowControls(true);
+                if (videoRef.current) {
+                    videoRef.current.controls = false;
+                }
+            }
+        };
+
+        document.addEventListener('fullscreenchange', handleFullscreenChange);
+        document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+        document.addEventListener('msfullscreenchange', handleFullscreenChange);
+
+        return () => {
+            document.removeEventListener('fullscreenchange', handleFullscreenChange);
+            document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+            document.removeEventListener('msfullscreenchange', handleFullscreenChange);
+        };
+    }, [isVideoFullscreen]);
+
+    const handleVideoClick = () => {
+        setShowControls(!showControls);
+    };
+
+    const formatTime = (time) => {
+        const minutes = Math.floor(time / 60);
+        const seconds = Math.floor(time % 60);
+        return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    };
+
+    const toggleControls = () => {
+        // Only toggle controls for images and videos
+        const fileType = getFileType(currentFile?.name);
+        if (fileType === 'image' || fileType === 'video') {
+            setShowControls(!showControls);
+        }
+    };
+
+    const handleFileInfo = () => {
+        setShowFileInfoModal(true);
+        setShowDropdown(false);
+    };
+
+    const handleDeleteConfirm = () => {
+        setShowDeleteModal(true);
+        setShowDropdown(false);
+    };
+
+    const confirmDelete = () => {
+        handleAction('delete');
+        setShowDeleteModal(false);
+    };
+
+    const formatFileSize = (bytes) => {
+        if (bytes === 0) return '0 B';
+        const k = 1024;
+        const sizes = ['B', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    };
+
+    const formatDate = (dateString) => {
+        const date = new Date(dateString);
+        return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+    };
 
     const currentFile = files[currentFileIndex];
     const getStreamUrl = (file) => {
@@ -117,22 +380,66 @@ export function FileViewer({
                         resetZoom();
                     }
                     break;
+                // Video/Image controls
+                case 'f':
+                case 'F':
+                    if (getFileType(currentFile?.name) === 'video') {
+                        toggleVideoFullscreen();
+                    }
+                    break;
+                case ' ':
+                    e.preventDefault(); // Prevent page scroll
+                    if (getFileType(currentFile?.name) === 'video') {
+                        toggleVideoPlay();
+                    }
+                    break;
+                case 'm':
+                case 'M':
+                    if (getFileType(currentFile?.name) === 'video') {
+                        toggleVideoMute();
+                    }
+                    break;
+                case 'r':
+                case 'R':
+                    if (getFileType(currentFile?.name) === 'video') {
+                        restartVideo();
+                    }
+                    break;
+                case 'ArrowUp':
+                    if (getFileType(currentFile?.name) === 'video' && videoRef.current) {
+                        e.preventDefault();
+                        videoRef.current.volume = Math.min(1, videoRef.current.volume + 0.1);
+                    }
+                    break;
+                case 'ArrowDown':
+                    if (getFileType(currentFile?.name) === 'video' && videoRef.current) {
+                        e.preventDefault();
+                        videoRef.current.volume = Math.max(0, videoRef.current.volume - 0.1);
+                    }
+                    break;
+                case 'j':
+                case 'J':
+                    if (getFileType(currentFile?.name) === 'video') {
+                        seekVideo(-10);
+                    }
+                    break;
+                case 'l':
+                case 'L':
+                    if (getFileType(currentFile?.name) === 'video') {
+                        seekVideo(10);
+                    }
+                    break;
             }
         };
         const handleWheel = (e) => {
             if (getFileType(currentFile?.name) === 'image') {
                 e.preventDefault();
-                if (e.deltaY < 0) {
-                    handleZoomIn();
-                } else {
-                    handleZoomOut();
-                }
+                if (e.deltaY < 0) handleZoomIn();
+                else handleZoomOut();
             }
         };
 
-        if (containerRef.current) {
-            containerRef.current.addEventListener('wheel', handleWheel, { passive: false });
-        }
+        if (containerRef.current) containerRef.current.addEventListener('wheel', handleWheel, { passive: false });
 
         document.addEventListener('keydown', handleKeyDown);
         document.body.style.overflow = 'hidden';
@@ -154,17 +461,13 @@ export function FileViewer({
             setFileContent('');
             resetZoom();
 
-            if (currentFile) {
-                loadFileContent(currentFile);
-            }
+            if (currentFile) loadFileContent(currentFile);
         }
     }, [currentFileIndex, isOpen]);
 
     useEffect(() => {
         const handleClickOutside = (event) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-                setShowDropdown(false);
-            }
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) setShowDropdown(false);
         };
 
         document.addEventListener('mousedown', handleClickOutside);
@@ -178,6 +481,97 @@ export function FileViewer({
             updateImageTransform(imageScale, imagePositionRef.current);
         }
     }, [imageScale]);
+
+    // File info menu touch handlers
+    const handleFileInfoMenuTouchStart = (e) => {
+        const touch = e.touches[0];
+        setFileInfoMenuInitialY(touch.clientY);
+    };
+
+    const handleFileInfoMenuTouchMove = (e) => {
+        const touch = e.touches[0];
+        const deltaY = touch.clientY - fileInfoMenuInitialY;
+        if (deltaY > 0) {
+            setFileInfoMenuSwipePosition(deltaY);
+        }
+    };
+
+    const handleFileInfoMenuTouchEnd = () => {
+        if (fileInfoMenuSwipePosition > 100) {
+            setShowFileInfoModal(false);
+        }
+        setFileInfoMenuSwipePosition(0);
+        setFileInfoMenuInitialY(0);
+    };
+
+    // Delete menu touch handlers
+    const handleDeleteMenuTouchStart = (e) => {
+        const touch = e.touches[0];
+        setDeleteMenuInitialY(touch.clientY);
+    };
+
+    const handleDeleteMenuTouchMove = (e) => {
+        const touch = e.touches[0];
+        const deltaY = touch.clientY - deleteMenuInitialY;
+        if (deltaY > 0) {
+            setDeleteMenuSwipePosition(deltaY);
+        }
+    };
+
+    const handleDeleteMenuTouchEnd = () => {
+        if (deleteMenuSwipePosition > 100) {
+            setShowDeleteModal(false);
+        }
+        setDeleteMenuSwipePosition(0);
+        setDeleteMenuInitialY(0);
+    };
+
+    // File navigation swipe handlers
+    const [swipeStartX, setSwipeStartX] = useState(0);
+    const [swipeStartY, setSwipeStartY] = useState(0);
+    const [isSwipingFile, setIsSwipingFile] = useState(false);
+
+    const handleFileSwipeStart = (e) => {
+        if (mobile) {
+            const touch = e.touches[0];
+            setSwipeStartX(touch.clientX);
+            setSwipeStartY(touch.clientY);
+            setIsSwipingFile(false);
+        }
+    };
+
+    const handleFileSwipeMove = (e) => {
+        if (mobile && swipeStartX) {
+            const touch = e.touches[0];
+            const deltaX = touch.clientX - swipeStartX;
+            const deltaY = touch.clientY - swipeStartY;
+
+            // Only consider horizontal swipes (not vertical)
+            if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 50) {
+                setIsSwipingFile(true);
+            }
+        }
+    };
+
+    const handleFileSwipeEnd = (e) => {
+        if (mobile && swipeStartX && isSwipingFile) {
+            const touch = e.changedTouches[0];
+            const deltaX = touch.clientX - swipeStartX;
+
+            // Swipe right to previous file
+            if (deltaX > 100 && currentFileIndex > 0) {
+                goToPreviousFile();
+            }
+            // Swipe left to next file
+            else if (deltaX < -100 && currentFileIndex < files.length - 1) {
+                goToNextFile();
+            }
+        }
+
+        setSwipeStartX(0);
+        setSwipeStartY(0);
+        setIsSwipingFile(false);
+    };
 
     const getFileType = (filename) => {
         if (!filename) return 'unknown';
@@ -209,12 +603,12 @@ export function FileViewer({
         const fileType = getFileType(file.name);
         const size = file.size;
         const limits = {
-            image: 50 * 1024 * 1024,      // 50MB for images
-            video: 500 * 1024 * 1024,     // 500MB for videos  
-            text: 10 * 1024 * 1024,       // 10MB for text files
-            code: 10 * 1024 * 1024,       // 10MB for code files
-            pdf: 100 * 1024 * 1024,       // 100MB for PDFs
-            unknown: 0                     // No preview for unknown types
+            image: 1000 * 1024 * 1024,
+            video: 5000 * 1024 * 1024,
+            text: 1000 * 1024 * 1024,
+            code: 1000 * 1024 * 1024,
+            pdf: 1000 * 1024 * 1024,
+            unknown: 0
         };
 
         return size > (limits[fileType] || 0);
@@ -267,7 +661,7 @@ export function FileViewer({
             'h': 'c',
             'hpp': 'cpp',
             'cs': 'csharp',
-            'php': 'text', // Fallback to text for PHP due to dependency issues
+            'php': 'text',
             'rb': 'ruby',
             'go': 'go',
             'rs': 'rust',
@@ -312,12 +706,6 @@ export function FileViewer({
         console.error('File loading error:', e);
         setIsLoading(false);
         setFileError(true);
-    };
-
-    const handleVideoLoad = () => {
-        console.log('Video loaded successfully');
-        setIsLoading(false);
-        setFileError(false);
     };
 
     const handleVideoError = (e) => {
@@ -415,61 +803,6 @@ export function FileViewer({
         setShowDropdown(false);
     };
 
-    const getLanguageFromExtension = (filename) => {
-        if (!filename) return 'text';
-
-        const ext = filename.split('.').pop()?.toLowerCase();
-        const languageMap = {
-            'js': 'javascript',
-            'jsx': 'jsx',
-            'ts': 'typescript',
-            'tsx': 'tsx',
-            'html': 'html',
-            'htm': 'htm',
-            'css': 'css',
-            'scss': 'scss',
-            'sass': 'sass',
-            'py': 'python',
-            'java': 'java',
-            'c': 'c',
-            'cpp': 'cpp',
-            'cc': 'cpp',
-            'cxx': 'cpp',
-            'h': 'h',
-            'hpp': 'hpp',
-            'cs': 'csharp',
-            'php': 'php',
-            'rb': 'ruby',
-            'go': 'go',
-            'rs': 'rust',
-            'swift': 'swift',
-            'kt': 'kotlin',
-            'scala': 'scala',
-            'sql': 'sql',
-            'sh': 'shell',
-            'bash': 'bash',
-            'ps1': 'powershell',
-            'yml': 'yaml',
-            'yaml': 'yaml',
-            'json': 'json',
-            'xml': 'xml',
-            'md': 'markdown',
-            'markdown': 'markdown',
-            'toml': 'toml',
-            'ini': 'ini',
-            'cfg': 'cfg',
-            'txt': 'text',
-            'log': 'log',
-            'dockerfile': 'dockerfile',
-            'lua': 'lua',
-            'perl': 'perl',
-            'pl': 'perl',
-            'vim': 'vim'
-        };
-
-        return languageMap[ext] || 'text';
-    };
-
     const isEditableFile = (filename) => {
         if (!filename) return false;
         const ext = filename.split('.').pop()?.toLowerCase();
@@ -559,25 +892,155 @@ export function FileViewer({
 
             case 'video':
                 return (
-                    <div className={style.contentContainer}>
-                        <video
-                            ref={contentRef}
-                            className={style.video}
-                            controls
-                            loop
-                            preload="metadata"
-                            onError={handleVideoError}
-                            onLoadStart={() => {
-                                console.log('Video load started for:', currentFile.name, 'Size:', currentFile.size ? `${(currentFile.size / (1024 * 1024)).toFixed(1)}MB` : 'Unknown');
-                            }}
-                        >
-                            <source
-                                src={getStreamUrl(currentFile)}
-                                type={getVideoMimeType(currentFile.name)}
-                            />
-                            Your browser does not support the video tag.
-                        </video>
-                    </div>
+                    <>
+                        <div className={style.contentContainer}>
+                            <video
+                                ref={videoRef}
+                                className={`${style.video} ${isVideoVertical ? style.videoVertical : ''}`}
+                                loop
+                                preload="metadata"
+                                onError={handleVideoError}
+                                onTimeUpdate={handleVideoTimeUpdate}
+                                onLoadedMetadata={handleVideoLoadedMetadata}
+                                onPlay={() => setIsVideoPlaying(true)}
+                                onPause={() => setIsVideoPlaying(false)}
+                                onLoadStart={() => {
+                                    console.log('Video load started for:', currentFile.name, 'Size:', currentFile.size ? `${(currentFile.size / (1024 * 1024)).toFixed(1)}MB` : 'Unknown');
+                                }}
+                                onClick={handleVideoClick}
+                            >
+                                <source
+                                    src={getStreamUrl(currentFile)}
+                                    type={getVideoMimeType(currentFile.name)}
+                                />
+                                Your browser does not support the video tag.
+                            </video>
+                        </div>
+
+                        {/* Custom Video Controls */}
+                        {getFileType(currentFile.name) === 'video' && showControls && (
+                            <div
+                                className={`${style.customVideoControls} ${isVideoVertical ? style.customVideoControlsVertical : ''}`}
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                <div className={style.videoProgressContainer}>
+                                    <div className={style.videoTimeDisplay}>
+                                        {formatTime(videoCurrentTime)}
+                                    </div>
+                                    <div
+                                        ref={progressBarRef}
+                                        className={style.videoProgressBar}
+                                        onMouseDown={handleProgressBarMouseDown}
+                                        onClick={handleProgressBarClick}
+                                    >
+                                        <div
+                                            className={style.videoProgressFill}
+                                            style={{ width: `${(videoCurrentTime / videoDuration) * 100}%` }}
+                                        />
+                                    </div>
+                                    <div className={style.videoTimeAndControls}>
+                                        <div className={style.videoTimeDisplay}>
+                                            {formatTime(videoDuration)}
+                                        </div>
+                                        {isMobile && (
+                                            <button
+                                                className={style.videoOrientationButton}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    toggleVideoOrientation();
+                                                }}
+                                                title="Toggle orientation"
+                                            >
+                                                <RotateCw size={16} />
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className={style.videoControlButtons}>
+                                    <button
+                                        className={style.videoControlButton}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            toggleVideoMute();
+                                        }}
+                                        title={isVideoMuted ? "Unmute" : "Mute"}
+                                    >
+                                        {isVideoMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
+                                    </button>
+
+                                    <div className={style.videoControlCenter}>
+                                        <button
+                                            className={style.videoControlButton}
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                seekVideo(-10);
+                                            }}
+                                            title="-10s"
+                                        >
+                                            10s <Redo2 size={14} strokeWidth={3} />
+                                        </button>
+
+                                        <button
+                                            className={style.videoControlButton}
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                restartVideo();
+                                            }}
+                                            title="Restart"
+                                            style={{ rotate: '180deg' }}
+                                        >
+                                            <FastForward fill='currentColor' size={14} strokeWidth={2} />
+                                        </button>
+
+                                        <button
+                                            className={style.videoControlButton}
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                toggleVideoPlay();
+                                            }}
+                                            title={isVideoPlaying ? "Pause" : "Play"}
+                                        >
+                                            {isVideoPlaying ? <Pause fill='currentColor' size={14} strokeWidth={2} /> : <Play fill='currentColor' size={13} strokeWidth={4} />}
+                                        </button>
+
+                                        <button
+                                            className={style.videoControlButton}
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                goToNextVideo();
+                                            }}
+                                            title="Next video"
+                                        >
+                                            <FastForward fill='currentColor' size={14} strokeWidth={2} />
+                                        </button>
+
+                                        <button
+                                            className={style.videoControlButton}
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                seekVideo(10);
+                                            }}
+                                            title="+10s"
+                                        >
+                                            <Undo2 size={14} strokeWidth={3} /> 10s
+                                        </button>
+                                    </div>
+
+                                    <button
+                                        className={style.videoControlButton}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            toggleVideoFullscreen();
+                                        }}
+                                        title={isVideoFullscreen ? "Exit fullscreen" : "Fullscreen"}
+                                    >
+                                        <Maximize size={16} />
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </>
                 );
 
             case 'text':
@@ -671,135 +1134,231 @@ export function FileViewer({
     return (
         <>
             {/* Main FileViewer */}
-            <div className={style.overlay} style={{ display: showCodeEditor ? 'none' : 'flex' }}>
-                <div className={style.container} ref={containerRef}>
+            <div className={`${style.overlay} ${mobile ? style.mobileOverlay : ''}`} style={{ display: showCodeEditor ? 'none' : 'flex' }}>
+                <div className={`${style.container} ${mobile ? style.mobileContainer : ''}`} ref={containerRef}>
                     {/* Header */}
-                    <div className={style.header}>
-                        <div className={style.fileInfo}>
-                            <h3 className={style.fileName}>{currentFile.name}</h3>
-                            <span className={style.fileCounter}>
-                                {currentFileIndex + 1} of {files.length}
-                            </span>
-                        </div>
+                    {showControls && (
+                        <div className={`${style.header} ${mobile ? style.mobileHeader : ''}`}>
+                            {mobile ? (
+                                // Mobile header layout: back button on left, actions on right
+                                <>
+                                    <button
+                                        className={style.mobileBackButton}
+                                        onClick={onClose}
+                                        title="Back"
+                                    >
+                                        <ArrowLeft size={24} />
+                                    </button>
 
-                        <div className={style.headerControls}>
-                            {isEditableFile(currentFile?.name) && (
-                                <button
-                                    className={style.editButton}
-                                    onClick={openCodeEditor}
-                                    title="Edit file"
-                                >
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke="currentColor" strokeWidth="2" fill="none" />
-                                        <path d="m18.5 2.5 a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" strokeWidth="2" fill="none" />
-                                    </svg>
-                                </button>
-                            )}
+                                    <div className={style.mobileActions}>
+                                        <button
+                                            className={style.mobileActionButton}
+                                            onClick={() => handleAction('favorite')}
+                                            title="Favorite"
+                                        >
+                                            <Star size={20} fill={currentFile.isFavorited ? "currentColor" : "none"} />
+                                        </button>
 
-                            <button
-                                className={style.controlButton}
-                                onClick={handleDownload}
-                                title="Download"
-                            >
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                                    <path d="M12 16L7 11h3V3h4v8h3l-5 5z" fill="currentColor" />
-                                    <path d="M20 18H4v-7H2v9h20v-9h-2v7z" fill="currentColor" />
-                                </svg>
-                            </button>
-
-                            <div className={style.dropdown} ref={dropdownRef}>
-                                <button
-                                    className={style.controlButton}
-                                    onClick={() => setShowDropdown(!showDropdown)}
-                                    title="More options"
-                                >
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                                        <circle cx="12" cy="12" r="2" fill="currentColor" />
-                                        <circle cx="12" cy="5" r="2" fill="currentColor" />
-                                        <circle cx="12" cy="19" r="2" fill="currentColor" />
-                                    </svg>
-                                </button>
-
-                                {showDropdown && (
-                                    <div className={style.dropdownMenu}>
-                                        {/* Only show rename if user owns the file or has rename permission */}
-                                        {(currentFile.canRename) && (
+                                        <div className={style.dropdown} ref={dropdownRef}>
                                             <button
-                                                className={style.dropdownItem}
-                                                onClick={() => handleAction('rename')}
+                                                className={style.mobileActionButton}
+                                                onClick={() => setShowDropdown(!showDropdown)}
+                                                title="More options"
                                             >
-                                                <span className={style.dropdownIcon}>✏️</span>
-                                                Rename
+                                                <MoreVertical size={20} />
+                                            </button>
+
+                                            {showDropdown && (
+                                                <div className={`${style.dropdownMenu} ${style.mobileDropdownMenu}`}>
+                                                    <button
+                                                        className={style.dropdownItem}
+                                                        onClick={handleDownload}
+                                                    >
+                                                        Download
+                                                    </button>
+
+                                                    <button
+                                                        className={style.dropdownItem}
+                                                        onClick={handleFileInfo}
+                                                    >
+                                                        File Info
+                                                    </button>
+
+                                                    {getFileType(currentFile.name) === 'image' && (
+                                                        <button
+                                                            className={style.dropdownItem}
+                                                            onClick={() => {
+                                                                const printWindow = window.open('', '_blank');
+                                                                const imageUrl = getDownloadUrl(currentFile);
+                                                                printWindow.document.write(`
+                                                                <html>
+                                                                    <head><title>Print ${currentFile.name}</title></head>
+                                                                    <body style="margin: 0; text-align: center;">
+                                                                        <img src="${imageUrl}" style="max-width: 100%; height: auto;" onload="window.print(); window.close();" />
+                                                                    </body>
+                                                                </html>
+                                                            `);
+                                                            }}
+                                                        >
+                                                            Print
+                                                        </button>
+                                                    )}
+
+                                                    <button
+                                                        className={style.dropdownItem}
+                                                        onClick={handleDeleteConfirm}
+                                                    >
+                                                        Delete
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </>
+                            ) : (
+                                // Desktop header layout (existing)
+                                <>
+                                    <div className={style.fileInfo}>
+                                        <h3 className={style.fileName}>{currentFile.name}</h3>
+                                        <span className={style.fileCounter}>
+                                            {currentFileIndex + 1} of {files.length}
+                                        </span>
+                                    </div>
+
+                                    <div className={style.headerControls}>
+                                        {isEditableFile(currentFile?.name) && (
+                                            <button
+                                                className={style.editButton}
+                                                onClick={openCodeEditor}
+                                                title="Edit file"
+                                            >
+                                                <Edit size={20} />
                                             </button>
                                         )}
 
-                                        <div className={style.dropdownSeparator}></div>
+                                        <button
+                                            className={style.controlButton}
+                                            onClick={handleDownload}
+                                            title="Download"
+                                        >
+                                            <Download size={20} />
+                                        </button>
+
+                                        <div className={style.dropdown} ref={dropdownRef}>
+                                            <button
+                                                className={style.controlButton}
+                                                onClick={() => setShowDropdown(!showDropdown)}
+                                                title="More options"
+                                            >
+                                                <MoreVertical size={20} />
+                                            </button>
+
+                                            {showDropdown && (
+                                                <div className={style.dropdownMenu}>
+                                                    {/* Only show rename if user owns the file or has rename permission */}
+                                                    {(currentFile.canRename) && (
+                                                        <>
+                                                            <button
+                                                                className={style.dropdownItem}
+                                                                onClick={() => handleAction('rename')}
+                                                            >
+                                                                Rename
+                                                            </button>
+
+                                                            <div className={style.dropdownSeparator}></div>
+                                                        </>
+                                                    )}
+
+                                                    <button
+                                                        className={style.dropdownItem}
+                                                        onClick={handleFileInfo}
+                                                    >
+                                                        Properties
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
 
                                         <button
-                                            className={style.dropdownItem}
-                                            onClick={() => handleAction('properties')}
+                                            className={style.controlButton}
+                                            onClick={onClose}
+                                            title="Close (Esc)"
                                         >
-                                            <span className={style.dropdownIcon}>ℹ️</span>
-                                            Properties
+                                            <X size={20} />
                                         </button>
                                     </div>
-                                )}
-                            </div>
-
-                            <button
-                                className={style.controlButton}
-                                onClick={onClose}
-                                title="Close (Esc)"
-                            >
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                                    <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" />
-                                </svg>
-                            </button>
+                                </>
+                            )}
                         </div>
-                    </div>
+                    )}
 
-                    {/* Navigation */}
-                    {currentFileIndex > 0 && (
+                    {/* Navigation - only show on desktop */}
+                    {!mobile && showControls && currentFileIndex > 0 && (
                         <button
                             className={`${style.navButton} ${style.navLeft}`}
                             onClick={() => onNavigate(currentFileIndex - 1)}
                             title="Previous file"
                         >
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                                <path d="M15 18L9 12l6-6" stroke="currentColor" strokeWidth="2" />
-                            </svg>
+                            <ChevronLeft size={24} />
                         </button>
                     )}
 
-                    {currentFileIndex < files.length - 1 && (
+                    {!mobile && showControls && currentFileIndex < files.length - 1 && (
                         <button
                             className={`${style.navButton} ${style.navRight}`}
                             onClick={() => onNavigate(currentFileIndex + 1)}
                             title="Next file"
                         >
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                                <path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" />
-                            </svg>
+                            <ChevronRight size={24} />
                         </button>
                     )}
 
                     {/* Content Container */}
-                    <div className={style.fileContainer}>
+                    <div
+                        className={style.fileContainer}
+                        onClick={toggleControls}
+                        onTouchStart={handleFileSwipeStart}
+                        onTouchMove={handleFileSwipeMove}
+                        onTouchEnd={handleFileSwipeEnd}
+                    >
                         {isLoading && (<SoftLoading />)}
                         {!isLoading && renderFileContent()}
                     </div>
 
+                    {/* Mobile Navigation - only show on mobile */}
+                    {mobile && showControls && (
+                        <>
+                            {currentFileIndex > 0 && (
+                                <button
+                                    className={`${style.navButton} ${style.navLeft} ${style.mobileNav}`}
+                                    onClick={goToPreviousFile}
+                                    title="Previous file"
+                                >
+                                    <ChevronLeft size={20} />
+                                </button>
+                            )}
+
+                            {currentFileIndex < files.length - 1 && (
+                                <button
+                                    className={`${style.navButton} ${style.navRight} ${style.mobileNav}`}
+                                    onClick={goToNextFile}
+                                    title="Next file"
+                                >
+                                    <ChevronRight size={20} />
+                                </button>
+                            )}
+                        </>
+                    )}
+
                     {/* Zoom Controls - Only for images */}
-                    {supportsZoom && !isLoading && !fileError && (
+                    {supportsZoom && !isLoading && !fileError && showControls && (
                         <div className={style.zoomControls}>
                             <button
                                 className={style.zoomButton}
                                 onClick={handleZoomOut}
                                 title="Zoom out (-)"
                             >
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                                    <path d="M19 13H5v-2h14v2z" fill="currentColor" />
-                                </svg>
+                                <ZoomOut size={16} />
                             </button>
 
                             <span className={style.zoomLevel}>
@@ -811,9 +1370,7 @@ export function FileViewer({
                                 onClick={handleZoomIn}
                                 title="Zoom in (+)"
                             >
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                                    <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" fill="currentColor" />
-                                </svg>
+                                <ZoomIn size={16} />
                             </button>
 
                             <button
@@ -821,15 +1378,124 @@ export function FileViewer({
                                 onClick={resetZoom}
                                 title="Reset zoom (0)"
                             >
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" fill="currentColor" />
-                                    <path d="M8 12h8v-2H8v2z" fill="currentColor" />
-                                </svg>
+                                <RotateCw size={16} />
                             </button>
                         </div>
                     )}
                 </div>
             </div>
+
+            {/* File Info Modal */}
+            {showFileInfoModal && (
+                <div className={mainStyle.popupModalMenuOverlay} onClick={() => {
+                    setShowFileInfoModal(false);
+                    setFileInfoMenuSwipePosition(0);
+                    setFileInfoMenuInitialY(0);
+                }}>
+                    <div
+                        className={mainStyle.popupModalMenu}
+                        style={{
+                            transform: `translateY(${fileInfoMenuSwipePosition}%)`
+                        }}
+                        onTouchStart={handleFileInfoMenuTouchStart}
+                        onTouchMove={handleFileInfoMenuTouchMove}
+                        onTouchEnd={handleFileInfoMenuTouchEnd}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className={mainStyle.popupModalMenuHeader}>
+                            <div className={mainStyle.dragHandle}></div>
+                            <div>
+                                <h3>File Information</h3>
+                                <button onClick={() => {
+                                    setShowFileInfoModal(false);
+                                    setFileInfoMenuSwipePosition(0);
+                                    setFileInfoMenuInitialY(0);
+                                }}><X /></button>
+                            </div>
+                        </div>
+                        <div className={mainStyle.popupModalMenuOptions}>
+                            <div className={style.fileInfoItem}>
+                                <span>Name:</span>
+                                <span>{currentFile.name}</span>
+                            </div>
+                            <div className={style.fileInfoItem}>
+                                <span>Size:</span>
+                                <span>{formatFileSize(currentFile.size)}</span>
+                            </div>
+                            <div className={style.fileInfoItem}>
+                                <span>Type:</span>
+                                <span>{getFileType(currentFile.name)}</span>
+                            </div>
+                            <div className={style.fileInfoItem}>
+                                <span>Path:</span>
+                                <span>{currentFile.path}</span>
+                            </div>
+                            {currentFile.modified && (
+                                <div className={style.fileInfoItem}>
+                                    <span>Modified:</span>
+                                    <span>{formatDate(currentFile.modified)}</span>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Delete Confirmation Modal */}
+            {showDeleteModal && (
+                <div className={mainStyle.popupModalMenuOverlay} onClick={() => {
+                    setShowDeleteModal(false);
+                    setDeleteMenuSwipePosition(0);
+                    setDeleteMenuInitialY(0);
+                }}>
+                    <div
+                        className={mainStyle.popupModalMenu}
+                        style={{
+                            transform: `translateY(${deleteMenuSwipePosition}%)`
+                        }}
+                        onTouchStart={handleDeleteMenuTouchStart}
+                        onTouchMove={handleDeleteMenuTouchMove}
+                        onTouchEnd={handleDeleteMenuTouchEnd}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className={mainStyle.popupModalMenuHeader}>
+                            <div className={mainStyle.dragHandle}></div>
+                            <div>
+                                <h3>Delete File</h3>
+                                <button onClick={() => {
+                                    setShowDeleteModal(false);
+                                    setDeleteMenuSwipePosition(0);
+                                    setDeleteMenuInitialY(0);
+                                }}><X /></button>
+                            </div>
+                        </div>
+                        <div className={mainStyle.popupModalMenuOptions}>
+                            <div style={{ padding: '0 20px' }}>
+                                <p style={{ margin: '16px 0 8px 0', fontSize: '16px', textAlign: 'center' }}>Are you sure you want to delete "{currentFile.name}"?</p>
+                                <p className={style.deleteWarning}>This action cannot be undone.</p>
+                            </div>
+                            <div style={{ display: 'flex', gap: '10px', padding: '16px 20px' }}>
+                                <button
+                                    className={style.modalCancelButton}
+                                    onClick={() => {
+                                        setShowDeleteModal(false);
+                                        setDeleteMenuSwipePosition(0);
+                                        setDeleteMenuInitialY(0);
+                                    }}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    className={style.modalDeleteButton}
+                                    onClick={confirmDelete}
+                                >
+                                    Delete
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Code Editor */}
             {showCodeEditor && isEditableFile(currentFile?.name) && (

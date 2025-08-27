@@ -8,28 +8,22 @@ import { verifyFolderOwnership } from "@/lib/folderAuth";
 
 export async function POST(req) {
     const session = await getSession();
-    if (!session) {
-        return NextResponse.json({ success: false, code: "unauthorized" }, { status: 401 });
-    }
+    if (!session) return NextResponse.json({ success: false, code: "unauthorized" }, { status: 401 });
 
     const { id } = session.user;
     const folderVerification = await verifyFolderOwnership(id);
-    if (!folderVerification.isValid) {
-        return NextResponse.json({
-            success: false,
-            code: "folder_auth_failed",
-            message: "Folder authentication failed: " + folderVerification.error
-        }, { status: 403 });
-    }
+    if (!folderVerification.isValid) return NextResponse.json({
+        success: false,
+        code: "folder_auth_failed",
+        message: "Folder authentication failed: " + folderVerification.error
+    }, { status: 403 });
 
     try {
         const formData = await req.formData();
         const targetPath = formData.get("path") || "";
         const files = formData.getAll("files");
 
-        if (!files || files.length === 0) {
-            return NextResponse.json({ success: false, code: "no_files" }, { status: 400 });
-        }
+        if (!files || files.length === 0) return NextResponse.json({ success: false, code: "no_files" }, { status: 400 });
 
         const userFolder = path.join(process.cwd(), "uploads", String(id));
         const targetFolder = path.join(userFolder, targetPath);
@@ -42,9 +36,7 @@ export async function POST(req) {
 
             const fileName = file.name;
             const filePath = path.join(targetFolder, fileName);
-            if (!filePath.startsWith(userFolder)) {
-                return NextResponse.json({ success: false, code: "explorer_invalid_path" }, { status: 400 });
-            }
+            if (!filePath.startsWith(userFolder)) return NextResponse.json({ success: false, code: "explorer_invalid_path" }, { status: 400 });
             let finalPath = filePath;
             let counter = 1;
             while (true) {
@@ -81,7 +73,6 @@ export async function POST(req) {
         });
 
     } catch (error) {
-        console.error("Upload error:", error);
         return NextResponse.json({
             success: false,
             code: "upload_failed",

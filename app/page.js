@@ -9,12 +9,18 @@ import { io } from "socket.io-client";
 import { useEffect, useState, useRef, useCallback } from "react";
 import Image from "next/image";
 
-import { Resizable } from "re-resizable";
 import Layout from "@/components/Layout";
 import FolderTree from "@/components/app/FolderTree";
 import FileList from "@/components/app/FileList";
 import Controls from "@/components/app/Controls";
+import SoftLoading from "@/components/SoftLoading";
+
 import { downloadFile, downloadFolder } from "@/utils/downloadUtils";
+import { api } from "@/utils/api";
+import { useIsMobile } from "@/utils/useIsMobile";
+
+import { Resizable } from "re-resizable";
+import { ArrowLeft, Check, EllipsisVertical, LayoutGrid, List, Plus, X, HardDrive, Star } from "lucide-react";
 
 let socket;
 
@@ -22,21 +28,258 @@ export default function Page() {
   const { user, loading } = useAuth();
   const fileListRef = useRef(null);
 
-  const [currentPath, setCurrentPath] = useState("");
+  const [currentPath, setCurrentPath] = useState(undefined);
   const [selectedItems, setSelectedItems] = useState([]);
   const [sortBy, setSortBy] = useState("name");
   const [viewMode, setViewMode] = useState("list");
+  const [favorites, setFavorites] = useState({ files: [], folders: [] });
+  const [storageInfo, setStorageInfo] = useState({ totalSize: 0, totalFiles: 0 });
+  const [storageLoading, setStorageLoading] = useState(false);
+  const [showSortMenu, setShowSortMenu] = useState(false);
+  const [showSortOptionsMenu, setShowSortOptionsMenu] = useState(false);
+  const [sortMenuSwipePosition, setSortMenuSwipePosition] = useState(0);
+  const [isSwipingSort, setIsSwipingSort] = useState(false);
+  const [sortMenuInitialY, setSortMenuInitialY] = useState(0);
+  const [showNewFolderPopup, setShowNewFolderPopup] = useState(false);
+  const [newFolderName, setNewFolderName] = useState('');
+
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     if (!socket) socket = io();
-    setCurrentPath('');
+
+    if (isMobile) setCurrentPath(undefined);
+    else setCurrentPath('');
+
+    if (isMobile && user) {
+      loadFavorites();
+      loadStorageInfo();
+    }
 
     return () => {
       socket?.off("folder-structure-updated");
       socket?.off("file-updated");
       socket = null;
     };
-  }, []);
+  }, [isMobile, user]);
+
+  const loadFavorites = async () => {
+    try {
+      const response = await api.get('/api/user/favorites');
+      if (response.success) {
+        setFavorites({
+          files: response.files || [],
+          folders: response.folders || []
+        });
+      }
+    } catch (error) {
+      console.error('Failed to load favorites:', error);
+    }
+  };
+
+  const loadStorageInfo = async () => {
+    try {
+      setStorageLoading(true);
+      const response = await api.get('/api/user/storage-info');
+      if (response.success) {
+        setStorageInfo({
+          totalSize: response.totalSize || 0,
+          totalFiles: response.totalFiles || 0
+        });
+      }
+    } catch (error) {
+      console.error('Failed to load storage info:', error);
+      setStorageInfo({
+        totalSize: 0,
+        totalFiles: 0
+      });
+    } finally {
+      setStorageLoading(false);
+    }
+  };
+
+  const handleFavoriteClick = (item) => {
+    if (item.type === 'folder') {
+      const pathParts = item.path.split('/');
+      const parentPath = pathParts.slice(0, -1).join('/');
+      setCurrentPath(parentPath);
+    } else {
+      const pathParts = item.path.split('/');
+      const parentPath = pathParts.slice(0, -1).join('/');
+      setCurrentPath(parentPath);
+    }
+  };
+
+  const FavoriteFileItem = ({ file, onFavoriteClick }) => {
+    const [imageLoading, setImageLoading] = useState(false);
+    const thumbnail = getFileThumbnail(file);
+    const ext = file.name.split('.').pop()?.toLowerCase();
+    const isVideo = ['mp4', 'avi', 'mov', 'webm', 'mkv', 'wmv'].includes(ext);
+    const isGif = ext === 'gif';
+
+    useEffect(() => {
+      if (thumbnail) {
+        setImageLoading(true);
+      }
+    }, [thumbnail]);
+
+    return (
+      <div
+        className={style.favouriteItem}
+        onClick={() => onFavoriteClick(file)}
+      >
+        <div className={style.favouriteMediaContainer}>
+          {imageLoading && thumbnail && (
+            <div className={style.thumbnailLoading}>
+              <SoftLoading />
+            </div>
+          )}
+          {thumbnail ? (
+            isVideo ? (
+              <video
+                src={thumbnail}
+                className={style.favouriteThumbnail}
+                muted
+                playsInline
+                preload="metadata"
+                onLoadedData={(e) => {
+                  e.target.currentTime = 0;
+                  setImageLoading(false);
+                }}
+                onError={(e) => {
+                  e.target.style.display = 'none';
+                  e.target.nextSibling.style.display = 'flex';
+                  setImageLoading(false);
+                }}
+              />
+            ) : isGif ? (
+              <img
+                src={thumbnail}
+                alt={file.name}
+                className={`${style.favouriteThumbnail} ${style.animatedThumbnail}`}
+                onLoad={() => setImageLoading(false)}
+                onError={(e) => {
+                  e.target.style.display = 'none';
+                  e.target.nextSibling.style.display = 'flex';
+                  setImageLoading(false);
+                }}
+              />
+            ) : (
+              <img
+                src={thumbnail}
+                alt={file.name}
+                className={style.favouriteThumbnail}
+                onLoad={() => setImageLoading(false)}
+                onError={(e) => {
+                  e.target.style.display = 'none';
+                  e.target.nextSibling.style.display = 'flex';
+                  setImageLoading(false);
+                }}
+              />
+            )
+          ) : null}
+          <div
+            className={style.favouriteIcon}
+            style={{ display: thumbnail ? 'none' : 'flex' }}
+          >
+            {getFileIcon(file.name)}
+          </div>
+          <div className={style.favouriteInfo}>
+            <span className={style.favouriteName}>{file.name}</span>
+            <span className={style.favouriteFolderName}>
+              {file.path.split('/').slice(0, -1).join('/') || 'Root'}
+            </span>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const formatFileSize = (bytes) => {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
+  const getFileIcon = (filename) => {
+    const ext = filename.split('.').pop()?.toLowerCase();
+    switch (ext) {
+      case 'jpg':
+      case 'jpeg':
+      case 'png':
+      case 'gif':
+      case 'bmp':
+      case 'webp':
+        return '🖼️';
+      case 'pdf':
+        return '📄';
+      case 'doc':
+      case 'docx':
+        return '📝';
+      case 'xls':
+      case 'xlsx':
+        return '📊';
+      case 'txt':
+        return '📃';
+      case 'zip':
+      case 'rar':
+        return '📦';
+      case 'mp4':
+      case 'avi':
+      case 'mov':
+      case 'webm':
+      case 'mkv':
+        return '🎬';
+      case 'mp3':
+      case 'wav':
+      case 'flac':
+        return '🎵';
+      default:
+        return '📎';
+    }
+  };
+
+  const getFileThumbnail = (file) => {
+    if (!file || !file.name) return null;
+
+    const ext = file.name.split('.').pop()?.toLowerCase();
+    const isImage = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'].includes(ext);
+    const isVideo = ['mp4', 'avi', 'mov', 'webm', 'mkv', 'wmv'].includes(ext);
+
+    if (isImage || isVideo) {
+      // Use thumbnail API endpoint instead of full file download
+      const thumbnailUrl = `/api/files/thumbnail?path=${encodeURIComponent(file.path)}`;
+      return thumbnailUrl;
+    }
+
+    return null;
+  };
+
+  const getBreadcrumbs = () => {
+    if (currentPath === 'favorites') return [{ name: 'Favourites', path: 'favorites' }];
+    if (currentPath === '' || currentPath === undefined) return [{ name: 'Main Storage', path: '' }];
+
+    const parts = currentPath.split('/').filter(Boolean);
+    const breadcrumbs = [{ name: 'Main Storage', path: '' }];
+
+    let currentBreadcrumbPath = '';
+    for (const part of parts) {
+      currentBreadcrumbPath += (currentBreadcrumbPath ? '/' : '') + part;
+      breadcrumbs.push({ name: part, path: currentBreadcrumbPath });
+    }
+
+    if (breadcrumbs.length > 5) {
+      return breadcrumbs.slice(-5);
+    }
+
+    return breadcrumbs;
+  };
+
+  const navigateToBreadcrumb = (breadcrumbPath) => {
+    setCurrentPath(breadcrumbPath);
+  };
 
   const navigateToFolder = (folderPath) => {
     if (folderPath === currentPath) return;
@@ -51,64 +294,113 @@ export default function Page() {
     navigateToFolder(folderPath);
   };
   const handleNewFolder = async () => {
-    const folderName = prompt('Enter folder name:', 'New Folder');
+    setShowNewFolderPopup(true);
+  };
 
-    if (!folderName) return;
+  const createNewFolder = async () => {
+    if (!newFolderName.trim()) return;
 
     try {
-      const response = await fetch('/api/files', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          action: 'create_folder',
-          path: currentPath,
-          name: folderName
-        })
-      });
-
-      const result = await response.json();
+      const result = await api.post('/api/files', JSON.stringify({
+        action: 'create_folder',
+        path: currentPath === 'favorites' ? '' : currentPath, // Create in root if on favorites page
+        name: newFolderName
+      }));
 
       if (result.success) {
-        console.log('Folder created successfully');
+        setShowNewFolderPopup(false);
+        setNewFolderName('');
+        // Refresh the file list
+        if (fileListRef.current) {
+          fileListRef.current.refresh();
+        }
+        return;
       } else {
-        console.error('Folder creation failed:', result.message);
         alert(`Folder creation failed: ${result.message}`);
       }
+
     } catch (error) {
       console.error('Folder creation error:', error);
       alert('Folder creation failed: Network error');
     }
   };
 
-  const handleNewFile = async () => {
+  const cancelNewFolder = () => {
+    setShowNewFolderPopup(false);
+    setNewFolderName('');
+  };
+
+  const handleSelectAll = () => {
+    if (fileListRef.current) {
+      fileListRef.current.selectAll();
+    }
+  };
+
+  const toggleViewMode = () => {
+    setViewMode(prevMode => prevMode === 'list' ? 'grid' : 'list');
+  };
+
+  const handleSortByOption = (sortOption) => {
+    setSortBy(sortOption);
+    setShowSortOptionsMenu(false);
+    setSortMenuSwipePosition(0);
+    if (fileListRef.current) {
+      fileListRef.current.refresh();
+    }
+  };
+
+  const handleSortMenuTouchStart = (e) => {
+    const touch = e.touches[0];
+    setSortMenuInitialY(touch.clientY);
+    setIsSwipingSort(true);
+    setSortMenuSwipePosition(0);
+  };
+
+  const handleSortMenuTouchMove = (e) => {
+    if (!isSwipingSort) return;
+    const touch = e.touches[0];
+    const currentY = touch.clientY;
+    const deltaY = currentY - sortMenuInitialY;
+
+    // Only allow downward swipes (positive deltaY)
+    if (deltaY > 0) {
+      const containerHeight = window.innerHeight;
+      const maxSwipe = containerHeight * 0.3; // Max 30% of screen height
+      const normalizedPosition = Math.min(deltaY / maxSwipe, 1) * 100;
+      setSortMenuSwipePosition(normalizedPosition);
+    } else {
+      setSortMenuSwipePosition(0);
+    }
+  };
+
+  const handleSortMenuTouchEnd = (e) => {
+    setIsSwipingSort(false);
+
+    // If swiped down more than 25%, close the menu
+    if (sortMenuSwipePosition > 25) {
+      setShowSortOptionsMenu(false);
+      setSortMenuSwipePosition(0);
+      setSortMenuInitialY(0);
+    } else {
+      // Snap back to original position
+      setSortMenuSwipePosition(0);
+    }
+  }; const handleNewFile = async () => {
     const fileName = prompt('Enter file name:', 'New File.txt');
 
     if (!fileName) return;
 
     try {
-      const response = await fetch('/api/files', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          action: 'create_file',
-          path: currentPath,
-          name: fileName,
-          content: ''
-        })
-      });
+      const result = await api.post('/api/files', JSON.stringify({
+        action: 'create_file',
+        path: currentPath,
+        name: fileName,
+        content: ''
+      }));
 
-      const result = await response.json();
+      if (result.success) return
+      else alert(`File creation failed: ${result.message}`);
 
-      if (result.success) {
-        console.log('File created successfully');
-      } else {
-        console.error('File creation failed:', result.message);
-        alert(`File creation failed: ${result.message}`);
-      }
     } catch (error) {
       console.error('File creation error:', error);
       alert('File creation failed: Network error');
@@ -122,29 +414,17 @@ export default function Page() {
     const finalName = fileName.endsWith('.txt') ? fileName : fileName + '.txt';
 
     try {
-      const response = await fetch('/api/files', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          action: 'create_file',
-          path: currentPath,
-          name: finalName,
-          content: ''
-        })
-      });
+      const result = await api.post('/api/files', JSON.stringify({
+        action: 'create_file',
+        path: currentPath,
+        name: finalName,
+        content: ''
+      }));
 
-      const result = await response.json();
+      if (result.success) return
+      else alert(`Text file creation failed: ${result.message}`);
 
-      if (result.success) {
-        console.log('Text file created successfully');
-      } else {
-        console.error('Text file creation failed:', result.message);
-        alert(`Text file creation failed: ${result.message}`);
-      }
     } catch (error) {
-      console.error('Text file creation error:', error);
       alert('Text file creation failed: Network error');
     }
   };
@@ -155,9 +435,7 @@ export default function Page() {
     input.multiple = true;
     input.onchange = (e) => {
       const files = Array.from(e.target.files);
-      if (files.length > 0) {
-        uploadFiles(files);
-      }
+      if (files.length > 0) uploadFiles(files);
     };
     input.click();
   };
@@ -173,39 +451,25 @@ export default function Page() {
         formData.append('files', file);
       }
 
-      const response = await fetch('/api/files/upload', {
-        method: 'POST',
-        body: formData
-      });
+      const result = await api.post('/api/files/upload', formData);
 
-      const result = await response.json();
+      if (result.success && fileListRef.current) fileListRef.current.refresh();
+      else alert(`Upload failed: ${result.message}`);
 
-      if (result.success) {
-        console.log('Upload successful:', result.message);
-        if (fileListRef.current) {
-          fileListRef.current.refresh();
-        }
-      } else {
-        console.error('Upload failed:', result.message);
-        alert(`Upload failed: ${result.message}`);
-      }
     } catch (error) {
-      console.error('Upload error:', error);
       alert('Upload failed: Network error');
     }
   };
 
   const handleDownload = () => {
+    console.log(selectedItems)
     if (!selectedItems || selectedItems.length === 0) return;
 
     selectedItems.forEach(item => {
-      if (item.type === 'file') {
-        downloadFile(item.path, item.name);
-      } else if (item.type === 'folder') {
-        downloadFolder(item.path, item.name);
-      } else {
-        console.log('Unknown item type for download:', item);
-      }
+      console.log(item)
+      if (item.type === 'file') downloadFile(item.path, item.name);
+      else if (item.type === 'folder') downloadFolder(item.path, item.name);
+      else return
     });
   };
 
@@ -220,25 +484,12 @@ export default function Page() {
     try {
       const paths = selectedItems.map(item => item.path);
 
-      const response = await fetch('/api/files/delete', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ paths })
-      });
+      const result = await api.post('/api/files/delete', { paths });
 
-      const result = await response.json();
+      if (result.success) setSelectedItems([]);
+      else alert(`Delete failed: ${result.message}`);
 
-      if (result.success) {
-        console.log('Delete successful');
-        setSelectedItems([]);
-      } else {
-        console.error('Delete failed:', result.message);
-        alert(`Delete failed: ${result.message}`);
-      }
     } catch (error) {
-      console.error('Delete error:', error);
       alert('Delete failed: Network error');
     }
   };
@@ -252,37 +503,22 @@ export default function Page() {
     if (!newName || newName === item.name) return;
 
     try {
-      const response = await fetch('/api/files/rename', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          oldPath: item.path,
-          newName: newName
-        })
-      });
+      const result = await api.post('/api/files/rename', JSON.stringify({
+        oldPath: item.path,
+        newName: newName
+      }));
 
-      const result = await response.json();
+      if (result.success) setSelectedItems([]);
+      else alert(`Rename failed: ${result.message}`);
 
-      if (result.success) {
-        console.log('Rename successful');
-        setSelectedItems([]);
-      } else {
-        console.error('Rename failed:', result.message);
-        alert(`Rename failed: ${result.message}`);
-      }
     } catch (error) {
-      console.error('Rename error:', error);
       alert('Rename failed: Network error');
     }
   };
 
   const handleFavorite = () => {
     if (!selectedItems || selectedItems.length === 0) return;
-    if (fileListRef.current) {
-      fileListRef.current.triggerFavorite(selectedItems);
-    }
+    if (fileListRef.current) fileListRef.current.triggerFavorite(selectedItems);
   };
 
   const handleProperties = () => {
@@ -302,29 +538,21 @@ export default function Page() {
       info += `Size: ${sizeStr}\n`;
     }
 
-    if (item.modified) {
-      info += `Modified: ${new Date(item.modified).toLocaleString()}\n`;
-    }
+    if (item.modified) info += `Modified: ${new Date(item.modified).toLocaleString()}\n`;
 
-    if (item.isFavorited !== undefined) {
-      info += `Favorited: ${item.isFavorited ? 'Yes' : 'No'}\n`;
-    }
+    if (item.isFavorited !== undefined) info += `Favorited: ${item.isFavorited ? 'Yes' : 'No'}\n`;
 
-    if (selectedItems.length > 1) {
-      info += `\n+ ${selectedItems.length - 1} more items selected`;
-    }
+    if (selectedItems.length > 1) info += `\n+ ${selectedItems.length - 1} more items selected`;
 
     alert(info);
   };
 
   const handleSortChange = (newSortBy) => {
     setSortBy(newSortBy);
-    console.log('Sort by:', newSortBy);
   };
 
   const handleViewChange = (newViewMode) => {
     setViewMode(newViewMode);
-    console.log('View mode:', newViewMode);
   };
 
   const handleSelectionChange = useCallback((items) => {
@@ -338,72 +566,350 @@ export default function Page() {
   if (!user) return null;
 
   return (
-    <Layout styleStyle={style.main} loading={loading} user={user}>
-      <Controls
-        currentPath={currentPath}
-        selectedItems={selectedItems}
-        onNewFolder={handleNewFolder}
-        onNewFile={handleNewFile}
-        onNewTextFile={handleNewTextFile}
-        onUpload={handleUpload}
-        onDownload={handleDownload}
-        onDelete={handleDelete}
-        onRename={handleRename}
-        onFavorite={handleFavorite}
-        onProperties={handleProperties}
-        sortBy={sortBy}
-        onSortChange={handleSortChange}
-        viewMode={viewMode}
-        onViewChange={handleViewChange}
-      />
-      <div className={style.diskContainerRow}>
-        <Resizable
-          defaultSize={{ width: 300, height: "100%" }}
-          minWidth={200}
-          maxWidth={500}
-          minHeight="100%"
-          maxHeight="100%"
-          enable={{
-            top: false,
-            right: true,
-            bottom: false,
-            left: false,
-            topRight: false,
-            bottomRight: false,
-            bottomLeft: false,
-            topLeft: false
-          }}
-        >
-          <div className={style.folderStructureSidebar}>
-            <Image
-              src="/assets/app/corner.svg"
-              alt="corner"
-              width={30}
-              height={30}
-              loading="eager"
-              className={style.corner}
-            />
-            <FolderTree
-              socket={socket}
-              onFolderSelect={handleFolderSelect}
-              selectedPath={currentPath}
-            />
-          </div>
-        </Resizable>
-        <div className={style.fileListContainer}>
-          <FileList
-            ref={fileListRef}
-            socket={socket}
+    <Layout styleStyle={style.main} loading={loading} user={user} sideNav={true} currentPath={currentPath}>
+      {!isMobile && (
+        <div className={style.desktopContainer}>
+          <Controls
             currentPath={currentPath}
-            onFolderDoubleClick={handleFolderDoubleClick}
-            onSelectionChange={handleSelectionChange}
-            onFilesUpload={handleFilesUpload}
+            selectedItems={selectedItems}
+            onNewFolder={handleNewFolder}
+            onNewFile={handleNewFile}
+            onNewTextFile={handleNewTextFile}
+            onUpload={handleUpload}
+            onDownload={handleDownload}
+            onDelete={handleDelete}
+            onRename={handleRename}
+            onFavorite={handleFavorite}
+            onProperties={handleProperties}
             sortBy={sortBy}
+            onSortChange={handleSortChange}
             viewMode={viewMode}
-            user={user}
+            onViewChange={handleViewChange}
           />
+          <div className={style.diskContainerRow}>
+            <Resizable
+              defaultSize={{ width: 300, height: "100%" }}
+              minWidth={200}
+              maxWidth={500}
+              minHeight="100%"
+              maxHeight="100%"
+              enable={{
+                top: false,
+                right: true,
+                bottom: false,
+                left: false,
+                topRight: false,
+                bottomRight: false,
+                bottomLeft: false,
+                topLeft: false
+              }}
+            >
+              <div className={style.folderStructureSidebar}>
+                <Image
+                  src="/assets/app/corner.svg"
+                  alt="corner"
+                  width={30}
+                  height={30}
+                  loading="eager"
+                  className={style.corner}
+                />
+                <FolderTree
+                  socket={socket}
+                  onFolderSelect={handleFolderSelect}
+                  selectedPath={currentPath}
+                  mobile={isMobile}
+                />
+              </div>
+            </Resizable>
+            <div className={style.fileListContainer}>
+              <FileList
+                ref={fileListRef}
+                socket={socket}
+                currentPath={currentPath}
+                onFolderDoubleClick={handleFolderDoubleClick}
+                onSelectionChange={handleSelectionChange}
+                onFilesUpload={handleFilesUpload}
+                sortBy={sortBy}
+                viewMode={viewMode}
+                user={user}
+                mobile={isMobile}
+              />
+            </div>
+          </div>
         </div>
-      </div>
+      )}
+      {isMobile && (
+        <div className={style.mobileContainer}>
+          <div className={style.favouritesContainer}>
+            <div className={style.favouritesHeader}>
+              <h2 className={style.favouritesTitle}>Favourites</h2>
+              {(favorites.files.length > 0 || favorites.folders.length > 0) && (
+                <button
+                  className={style.viewAllButton}
+                  onClick={() => setCurrentPath('favorites')}
+                >
+                  View All
+                </button>
+              )}
+            </div>
+            {(favorites.files.length > 0 || favorites.folders.length > 0) ? (
+              <div className={style.favouritesList}>
+                {favorites.folders.map((folder) => (
+                  <div
+                    key={`folder-${folder.id}`}
+                    className={style.favouriteItem}
+                    onClick={() => handleFavoriteClick(folder)}
+                  >
+                    <div className={style.favouriteMediaContainer}>
+                      <div className={style.favouriteIcon}>
+                        📁
+                      </div>
+                      <div className={style.favouriteInfo}>
+                        <span className={style.favouriteName}>{folder.name}</span>
+                        <span className={style.favouriteFolderName}>
+                          {folder.path.split('/').slice(0, -1).join('/') || 'Root'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+
+                {favorites.files.map((file) => (
+                  <FavoriteFileItem
+                    key={`file-${file.id}`}
+                    file={file}
+                    onFavoriteClick={handleFavoriteClick}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className={style.favouritesEmpty}>
+                <span>No favourites yet</span>
+                <small>Star files and folders to see them here</small>
+              </div>
+            )}
+          </div>
+
+          <div className={style.storageContainer}>
+            <h2 className={style.storageTitle}>All storage</h2>
+            <div className={style.storageList}>
+              <div
+                className={style.storageItem}
+                onClick={() => setCurrentPath('')}
+              >
+                <div className={style.storageIcon}>
+                  💾
+                </div>
+                <div className={style.storageInfo}>
+                  <span className={style.storageName}>Main Storage</span>
+                  <span className={style.storageSize}>
+                    {storageLoading ? (
+                      ''
+                    ) : (
+                      `${formatFileSize(storageInfo.totalSize)} • ${storageInfo.totalFiles} files`
+                    )}
+                  </span>
+                </div>
+              </div>
+
+              {(favorites.files.length > 0 || favorites.folders.length > 0) && (
+                <div
+                  className={style.storageItem}
+                  onClick={() => setCurrentPath('favorites')}
+                >
+                  <div className={style.storageIcon}>
+                    ⭐
+                  </div>
+                  <div className={style.storageInfo}>
+                    <span className={style.storageName}>Favourites</span>
+                    <span className={style.storageSize}>
+                      {favorites.files.length + favorites.folders.length} items
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Mobile file explorer overlay */}
+          {currentPath !== undefined && (
+            <div className={`${style.mobileExplorerContainer} ${style.active}`}>
+              <div className={style.mobileExplorerHeader}>
+                <div className={style.headerContent}>
+                  <div className={style.folderNameBack}>
+                    <button className={style.backButton} onClick={() => setCurrentPath(undefined)}><ArrowLeft size={20} /></button>
+                    <h3 className={style.explorerTitle}>
+                      {currentPath === '' ? 'Main Storage' : currentPath === 'favorites' ? 'Favourites' : currentPath.split('/').pop() || 'Files'}
+                    </h3>
+                  </div>
+                  <div className={style.explorerControls}>
+                    <button className={style.viewToggleButton} onClick={toggleViewMode}>
+                      {viewMode === 'list' ? <LayoutGrid /> : <List />}
+                    </button>
+                    <button
+                      className={style.menuButton}
+                      onClick={() => setShowSortMenu(true)}
+                    >
+                      <EllipsisVertical size={18} />
+                    </button>
+                  </div>
+                </div>
+                <div className={style.breadcrumbs}>
+                  {getBreadcrumbs().map((breadcrumb, index) => {
+                    const isLast = index === getBreadcrumbs().length - 1;
+                    return (
+                      <span key={breadcrumb.path} className={style.breadcrumbItem}>
+                        {index > 0 && <span className={style.breadcrumbSeparator}>›</span>}
+                        {isLast ? (
+                          <span className={style.breadcrumbCurrent}>{breadcrumb.name}</span>
+                        ) : (
+                          <button
+                            className={style.breadcrumbLink}
+                            onClick={() => navigateToBreadcrumb(breadcrumb.path)}
+                          >
+                            {breadcrumb.name}
+                          </button>
+                        )}
+                      </span>
+                    );
+                  })}
+                </div>
+              </div>
+              <div className={style.mobileFileListContainer}>
+                <FileList
+                  ref={fileListRef}
+                  socket={socket}
+                  currentPath={currentPath}
+                  onFolderDoubleClick={handleFolderDoubleClick}
+                  onSelectionChange={handleSelectionChange}
+                  onFilesUpload={handleFilesUpload}
+                  sortBy={sortBy}
+                  viewMode={viewMode}
+                  user={user}
+                  mobile={isMobile}
+                />
+              </div>
+
+              <button className={style.floatingAddButton} onClick={handleNewFolder}>
+                <Plus size={35} />
+              </button>
+            </div>
+          )}
+
+          {/* Sort Menu */}
+          {showSortMenu && (
+            <div className={style.sortMenuOverlay} onClick={() => setShowSortMenu(false)}>
+              <div className={style.sortMenu} onClick={(e) => e.stopPropagation()}>
+                <div className={style.sortMenuHeader}>
+                  <h3>Options</h3>
+                  <button onClick={() => setShowSortMenu(false)}>×</button>
+                </div>
+                <div className={style.sortMenuOptions}>
+                  <button onClick={() => {
+                    setShowSortMenu(false);
+                    handleSelectAll();
+                  }}>Select All</button>
+                  <button onClick={() => {
+                    setShowSortMenu(false);
+                    setShowSortOptionsMenu(true);
+                  }}>Sort By</button>
+                  <button onClick={() => {
+                    setShowSortMenu(false);
+                    handleNewFolder();
+                  }}>Add New Folder</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Sort Options Menu */}
+          {showSortOptionsMenu && (
+            <div className={style.popupModalMenuOverlay} onClick={() => {
+              setShowSortOptionsMenu(false);
+              setSortMenuSwipePosition(0);
+              setSortMenuInitialY(0);
+            }}>
+              <div
+                className={style.popupModalMenu}
+                style={{
+                  transform: `translateY(${sortMenuSwipePosition}%)`
+                }}
+                onTouchStart={handleSortMenuTouchStart}
+                onTouchMove={handleSortMenuTouchMove}
+                onTouchEnd={handleSortMenuTouchEnd}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className={style.popupModalMenuHeader}>
+                  <div className={style.dragHandle}></div>
+                  <div>
+                    <h3>Sort By</h3>
+                    <button onClick={() => {
+                      setShowSortOptionsMenu(false);
+                      setSortMenuSwipePosition(0);
+                      setSortMenuInitialY(0);
+                    }}><X /></button>
+                  </div>
+                </div>
+                <div className={style.popupModalMenuOptions}>
+                  <button
+                    className={sortBy === 'name' ? style.active : ''}
+                    onClick={() => handleSortByOption('name')}
+                  >
+                    Name
+                    {sortBy === 'name' && <span><Check size={20} strokeWidth={2.5} /></span>}
+                  </button>
+                  <button
+                    className={sortBy === 'size' ? style.active : ''}
+                    onClick={() => handleSortByOption('size')}
+                  >
+                    File Size
+                    {sortBy === 'size' && <span><Check size={20} strokeWidth={2.5} /></span>}
+                  </button>
+                  <button
+                    className={sortBy === 'modified' ? style.active : ''}
+                    onClick={() => handleSortByOption('modified')}
+                  >
+                    Modified Date
+                    {sortBy === 'modified' && <span><Check size={20} strokeWidth={2.5} /></span>}
+                  </button>
+                  <button
+                    className={sortBy === 'type' ? style.active : ''}
+                    onClick={() => handleSortByOption('type')}
+                  >
+                    File Type
+                    {sortBy === 'type' && <span><Check size={20} strokeWidth={2.5} /></span>}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* New Folder Popup */}
+          {showNewFolderPopup && (
+            <div className={style.popupOverlay} onClick={cancelNewFolder}>
+              <div className={style.popup} onClick={(e) => e.stopPropagation()}>
+                <h3>New folder</h3>
+                <input
+                  type="text"
+                  placeholder="Enter new folder name"
+                  value={newFolderName}
+                  onChange={(e) => setNewFolderName(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && createNewFolder()}
+                  autoFocus
+                />
+                <div className={style.popupButtons}>
+                  <button className={style.cancelButton} onClick={cancelNewFolder}>
+                    Cancel
+                  </button>
+                  <button className={style.createButton} onClick={createNewFolder}>
+                    Create folder
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </Layout>
   );
 }

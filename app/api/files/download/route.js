@@ -3,6 +3,7 @@
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/db";
 import { verifyFolderOwnership } from "@/lib/folderAuth";
+import { getMimeType, shouldForceDownload } from "@/lib/mimeTypes";
 import { NextResponse } from "next/server";
 import fs from "fs/promises";
 import { createReadStream } from "fs";
@@ -65,6 +66,7 @@ export async function GET(req) {
 
             const fileStat = await fs.stat(requestedPath);
             const fileName = path.basename(requestedPath);
+            const fileSize = fileStat.size;
 
             let displayName = fileName;
             try {
@@ -82,7 +84,33 @@ export async function GET(req) {
             } catch (dbError) {
                 console.error('Could not fetch file record:', dbError);
             }
-            const stream = createReadStream(requestedPath);
+
+            // Handle Range requests for chunked downloads
+            const rangeHeader = req.headers.get('range');
+            let start = 0;
+            let end = fileSize - 1;
+            let isPartialContent = false;
+
+            if (rangeHeader) {
+                const ranges = rangeHeader.replace(/bytes=/, '').split('-');
+                start = parseInt(ranges[0], 10);
+                end = ranges[1] ? parseInt(ranges[1], 10) : fileSize - 1;
+                isPartialContent = true;
+
+                // Validate range
+                if (start < 0 || end >= fileSize || start > end) {
+                    return new Response('Range Not Satisfiable', {
+                        status: 416,
+                        headers: {
+                            'Content-Range': `bytes */${fileSize}`
+                        }
+                    });
+                }
+            }
+
+            const contentLength = end - start + 1;
+            const stream = createReadStream(requestedPath, { start, end });
+
             const readableStream = new ReadableStream({
                 start(controller) {
                     stream.on('data', (chunk) => {
@@ -103,13 +131,30 @@ export async function GET(req) {
                 }
             });
 
+            // Determine MIME type and content disposition
+            const mimeType = getMimeType(displayName);
+            const forceDownload = shouldForceDownload(displayName);
+
+            // Use inline for viewable files, attachment for others
+            const disposition = forceDownload ? 'attachment' : 'inline';
+
+            const headers = {
+                'Content-Type': mimeType,
+                'Content-Disposition': `${disposition}; filename="${encodeURIComponent(displayName)}"`,
+                'Content-Length': contentLength.toString(),
+                'Accept-Ranges': 'bytes',
+                'Cache-Control': 'no-cache',
+                'Last-Modified': fileStat.mtime.toUTCString(),
+                'X-Content-Type-Options': 'nosniff'
+            };
+
+            if (isPartialContent) {
+                headers['Content-Range'] = `bytes ${start}-${end}/${fileSize}`;
+            }
+
             return new Response(readableStream, {
-                headers: {
-                    'Content-Type': 'application/octet-stream',
-                    'Content-Disposition': `attachment; filename="${encodeURIComponent(displayName)}"`,
-                    'Content-Length': fileStat.size.toString(),
-                    'Cache-Control': 'no-cache'
-                }
+                status: isPartialContent ? 206 : 200,
+                headers
             });
 
         } catch (fileError) {

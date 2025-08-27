@@ -116,3 +116,44 @@
     color: var(--text);
     transition: color 0.3s ease;
 }
+
+.userProfileMobileList {
+    width: 100%;
+    height: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    position: relative;
+    gap: 18px;
+    padding: 0 7px;
+}
+
+.userProfileMobileListItem {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    cursor: pointer;
+}
+
+.userProfileMobileImg {
+    min-width: 30px;
+    min-height: 30px;
+    border: 1px solid var(--nav-user-profile-border);
+    border-radius: 50%;
+    background-color: var(--nav-user-profile-background);
+}
+
+.userProfileMobileListItem h1 {
+    font-size: 15px;
+    color: var(--text);
+    word-break: break-all;
+}
+
+.userProfileMobileSettings svg {
+    margin: 0 3px 0 2px;
+}
+
+.userProfileMobileLogout svg {
+    margin: 0 3px 0 4px;
+}

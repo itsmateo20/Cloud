@@ -7,7 +7,7 @@
     right: 0;
     bottom: 0;
     background: rgba(0, 0, 0, 0.95);
-    z-index: 2000;
+    z-index: 1100;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -19,6 +19,7 @@
     height: 100%;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
 }
 
 .header {
@@ -26,45 +27,54 @@
     top: 0;
     left: 0;
     right: 0;
-    z-index: 2001;
+    z-index: 1101;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 20px 24px;
+    padding: clamp(12px, 3vw, 20px) clamp(16px, 4vw, 24px);
     background: linear-gradient(180deg, rgba(0, 0, 0, 0.8) 0%, transparent 100%);
-    color: white;
+    color: var(--button-text-color);
 }
 
-.fileInfo {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
-
-.fileName {
-    margin: 0;
-    font-size: 18px;
+.fileInfoItem {
+    color: var(--text);
+    font-family: var(--font-rubik);
     font-weight: 500;
-    color: white;
+    font-size: clamp(14px, 2.5vw, 16px);
+    height: clamp(40px, 8vw, 45px);
+    padding: 0 clamp(16px, 4vw, 20px);
+    width: 100%;
+    text-align: left;
+    transition: background-color 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.file .fileName {
+    margin: 0;
+    font-size: clamp(16px, 3vw, 18px);
+    font-weight: 500;
+    color: var(--button-text-color);
 }
 
 .fileCounter {
-    font-size: 14px;
-    color: rgba(255, 255, 255, 0.7);
+    font-size: clamp(12px, 2vw, 14px);
+    color: var(--text-color-muted);
 }
 
 .headerControls {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: clamp(4px, 1vw, 8px);
 }
 
 .controlButton {
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--button-disabled);
     border: none;
-    border-radius: 6px;
-    padding: 8px;
-    color: white;
+    border-radius: clamp(4px, 1vw, 6px);
+    padding: clamp(6px, 1.5vw, 8px);
+    color: var(--button-text-color);
     cursor: pointer;
     transition: background-color 0.2s ease;
     display: flex;
@@ -73,7 +83,7 @@
 }
 
 .controlButton:hover {
-    background: rgba(255, 255, 255, 0.2);
+    background: var(--hover-background);
 }
 
 .dropdown {
@@ -136,12 +146,12 @@
     position: absolute;
     top: 50%;
     transform: translateY(-50%);
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--button-disabled);
     border: none;
     border-radius: 50%;
-    width: 48px;
-    height: 48px;
-    color: white;
+    width: clamp(40px, 8vw, 48px);
+    height: clamp(40px, 8vw, 48px);
+    color: var(--button-text-color);
     cursor: pointer;
     transition: all 0.2s ease;
     display: flex;
@@ -151,16 +161,29 @@
 }
 
 .navButton:hover {
-    background: rgba(255, 255, 255, 0.2);
+    background: var(--hover-background);
     transform: translateY(-50%) scale(1.1);
 }
 
 .navLeft {
-    left: 24px;
+    left: clamp(12px, 3vw, 24px);
 }
 
 .navRight {
-    right: 24px;
+    right: clamp(12px, 3vw, 24px);
+}
+
+.mobileNav {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .mobileNav {
+        display: flex;
+        width: clamp(36px, 8vw, 44px);
+        height: clamp(36px, 8vw, 44px);
+        z-index: 2002;
+    }
 }
 
 .fileContainer {
@@ -196,9 +219,8 @@
 }
 
 .video {
-    max-width: 90%;
-    max-height: 90%;
-    object-fit: contain;
+    max-width: 100%;
+    max-height: 100%;
 }
 
 .textContainer {
@@ -449,15 +471,15 @@
 
 .zoomControls {
     position: absolute;
-    bottom: 24px;
+    bottom: clamp(16px, 4vw, 24px);
     left: 50%;
     transform: translateX(-50%);
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: clamp(4px, 1vw, 8px);
     background: rgba(0, 0, 0, 0.7);
-    padding: 8px 16px;
-    border-radius: 24px;
+    padding: clamp(6px, 1.5vw, 8px) clamp(12px, 3vw, 16px);
+    border-radius: clamp(16px, 4vw, 24px);
     backdrop-filter: blur(10px);
     z-index: 2001;
 }
@@ -465,10 +487,10 @@
 .zoomButton {
     background: none;
     border: none;
-    color: white;
+    color: var(--button-text-color);
     cursor: pointer;
-    padding: 4px;
-    border-radius: 4px;
+    padding: clamp(3px, 0.8vw, 4px);
+    border-radius: clamp(3px, 0.8vw, 4px);
     transition: background-color 0.2s ease;
     display: flex;
     align-items: center;
@@ -476,13 +498,13 @@
 }
 
 .zoomButton:hover {
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--hover-background);
 }
 
 .zoomLevel {
-    color: white;
-    font-size: 14px;
-    min-width: 48px;
+    color: var(--button-text-color);
+    font-size: clamp(12px, 2vw, 14px);
+    min-width: clamp(40px, 8vw, 48px);
     text-align: center;
     user-select: none;
 }
@@ -564,12 +586,6 @@
         right: 16px;
     }
 
-    .image,
-    .video {
-        max-width: 95%;
-        max-height: 85%;
-    }
-
     .textContainer {
         padding: 5vh 5vw;
     }
@@ -592,5 +608,289 @@
     .zoomLevel {
         font-size: 12px;
         min-width: 40px;
+    }
+}
+
+/* Mobile specific styles */
+.mobileOverlay {
+    background: rgba(0, 0, 0, 1);
+}
+
+.mobileContainer {
+    position: relative;
+    width: 100%;
+    height: 100%;
+}
+
+.mobileHeader {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 2002;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background: rgba(0, 0, 0, 0.9);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    height: 60px;
+    box-sizing: border-box;
+}
+
+.mobileBackButton {
+    background: none;
+    border: none;
+    color: white;
+    padding: 8px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s ease;
+}
+
+.mobileBackButton:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.mobileActions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.mobileActionButton {
+    background: none;
+    border: none;
+    color: white;
+    padding: 8px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s ease;
+}
+
+.mobileActionButton:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.mobileDropdownMenu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background: rgba(0, 0, 0, 0.95);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    min-width: 180px;
+    padding: 8px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+/* Custom Video Controls */
+.customVideoControls {
+    position: fixed;
+    bottom: clamp(12px, 3vw, 20px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.9);
+    backdrop-filter: blur(20px);
+    border-radius: clamp(12px, 3vw, 16px);
+    padding: clamp(4px, 1vw, 8px);
+    /* Smaller padding */
+    display: flex;
+    flex-direction: column;
+    gap: clamp(8px, 2vw, 12px);
+    z-index: 2003;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    min-width: clamp(380px, 75vw, 650px);
+    /* Wider */
+    max-width: 90vw;
+}
+
+.customVideoControlsVertical {
+    bottom: clamp(12px, 3vw, 20px);
+    transform: translateX(-50%) rotate(90deg);
+    transform-origin: center bottom;
+    max-width: 80vh;
+}
+
+.videoProgressContainer {
+    display: flex;
+    align-items: center;
+    padding: 0 clamp(4px, 1vw, 8px);
+    /* Smaller padding */
+    gap: clamp(10px, 2.5vw, 16px);
+}
+
+.videoTimeAndControls {
+    display: flex;
+    align-items: center;
+    gap: clamp(8px, 2vw, 12px);
+    justify-content: flex-end;
+    /* Push content to the right */
+}
+
+.videoTimeDisplay {
+    color: var(--button-text-color);
+    font-size: clamp(11px, 2.5vw, 15px);
+    /* Slightly bigger text */
+    opacity: 0.9;
+    font-family: var(--font-courierprime);
+    font-weight: 500;
+}
+
+.videoProgressBar {
+    flex: 1;
+    height: clamp(6px, 1.5vw, 10px);
+    /* Thicker on desktop */
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: clamp(3px, 0.75vw, 5px);
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    user-select: none;
+}
+
+.videoProgressBar:hover {
+    height: clamp(8px, 2vw, 12px);
+    /* Even thicker on hover for desktop */
+}
+
+.videoProgressFill {
+    height: 100%;
+    background: #007AFF;
+    border-radius: clamp(3px, 0.75vw, 5px);
+    transition: width 0.3s ease;
+    pointer-events: none;
+}
+
+.videoOrientationButton {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: white;
+    padding: 8px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background-color 0.2s ease;
+    outline: none;
+}
+
+.videoOrientationButton:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.videoOrientationButton:focus {
+    outline: none;
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.videoControlButtons {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: clamp(8px, 2vw, 12px);
+    /* Reduced gap */
+    padding: clamp(2px, 0.5vw, 4px) 0;
+    /* Reduced vertical padding */
+}
+
+.videoControlCenter {
+    display: flex;
+    justify-content: center;
+    gap: clamp(6px, 1.5vw, 10px);
+    /* Reduced gap */
+    flex: 1;
+}
+
+.videoControlButton {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: white;
+    border-radius: clamp(6px, 1.5vw, 10px);
+    /* Smaller border radius */
+    cursor: pointer;
+    font-size: clamp(14px, 3vw, 18px);
+    width: clamp(55px, 9vw, 75px);
+    /* Fixed width instead of min-width */
+    height: clamp(30px, 9vw, 44px);
+    /* Square buttons */
+    padding: 0;
+    /* Remove padding for square buttons */
+    transition: background-color 0.2s ease;
+    outline: none;
+}
+
+/* Icon sizing inside buttons */
+.videoControlButton svg {
+    width: clamp(18px, 4vw, 24px);
+    /* Slightly larger icons */
+    height: clamp(18px, 4vw, 24px);
+}
+
+.videoControlButton:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.videoControlButton:focus {
+    outline: none;
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.videoVertical {
+    transform: rotate(90deg);
+    width: clamp(300px, 100vh, 100vh) !important;
+    height: clamp(200px, 100vw, calc(100vw - 40px)) !important;
+    max-width: calc(100vh - 40px) !important;
+    max-height: calc(100vw - 80px) !important;
+    object-fit: contain;
+}
+
+@media (max-width: 768px) {
+    .customVideoControls {
+        bottom: clamp(8px, 2vw, 10px);
+        left: clamp(8px, 2vw, 10px);
+        right: clamp(8px, 2vw, 10px);
+        transform: none;
+        min-width: auto;
+        max-width: none;
+    }
+
+    .customVideoControlsVertical {
+        bottom: 50%;
+        left: 15%;
+        right: auto;
+        transform: translateX(-50%) rotate(90deg);
+        transform-origin: center center;
+        min-width: clamp(240px, 60vw, 280px);
+        max-width: 70vh;
+    }
+
+    .videoControlButtons {
+        gap: clamp(4px, 1vw, 6px);
+    }
+
+    .videoControlCenter {
+        gap: clamp(3px, 0.8vw, 4px);
+    }
+
+    .videoControlButton {
+        padding: clamp(6px, 1.5vw, 8px) clamp(10px, 2.5vw, 12px);
+        font-size: clamp(11px, 2vw, 13px);
+        min-width: clamp(45px, 9vw, 50px);
+    }
+
+    .videoTimeDisplay {
+        min-width: 40px;
+        font-size: 15px;
     }
 }

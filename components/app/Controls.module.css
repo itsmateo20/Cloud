@@ -3,42 +3,42 @@
 .controls {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 8px 16px;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-sm) var(--spacing-base);
     background-color: var(--nav-background);
     transition: background-color 0.5s ease;
-    font-size: 14px;
-    min-height: 44px;
+    font-size: var(--font-size-sm);
+    min-height: clamp(40px, 8vw, 48px);
     flex-shrink: 0;
 }
 
 .section {
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: var(--spacing-xs);
 }
 
 .separator {
     width: 1px;
-    height: 24px;
+    height: clamp(20px, 4vw, 28px);
     background-color: var(--border-color);
-    margin: 0 8px;
+    margin: 0 var(--spacing-sm);
 }
 
 .button {
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 6px 12px;
+    gap: clamp(4px, 1vw, 8px);
+    padding: clamp(4px, 1vw, 8px) clamp(8px, 2vw, 16px);
     background: transparent;
     border: 1px solid transparent;
     border-radius: 4px;
     cursor: pointer;
     transition: all 0.2s ease;
     color: var(--text-color);
-    font-size: 13px;
+    font-size: var(--font-size-xs);
     white-space: nowrap;
-    min-height: 32px;
+    min-height: clamp(28px, 6vw, 36px);
 }
 
 .button:hover:not(.disabled) {
@@ -62,23 +62,43 @@
 }
 
 .icon {
-    font-size: 14px;
+    font-size: var(--font-size-sm);
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 16px;
-    height: 16px;
+    width: clamp(14px, 3vw, 18px);
+    height: clamp(14px, 3vw, 18px);
+}
+
+.dropdownIcon {
+    margin-right: var(--spacing-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: clamp(14px, 3vw, 18px);
+    height: clamp(14px, 3vw, 18px);
+}
+
+.checkmark {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--accent-color);
 }
 
 .label {
-    font-size: 13px;
+    font-size: var(--font-size-xs);
     line-height: 1;
 }
 
 .arrow {
-    font-size: 10px;
+    font-size: var(--font-size-xs);
     margin-left: 2px;
     transition: transform 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .dropdown {
@@ -89,7 +109,7 @@
     position: absolute;
     top: 100%;
     left: 0;
-    background: var(--background-color);
+    background: var(--background);
     border: 1px solid var(--border-color);
     border-radius: 6px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);

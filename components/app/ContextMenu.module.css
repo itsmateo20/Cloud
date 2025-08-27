@@ -7,16 +7,16 @@
     border-radius: 6px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     z-index: 1000;
-    min-width: 200px;
-    padding: 4px 0;
-    font-size: 14px;
+    min-width: clamp(160px, 40vw, 240px);
+    padding: var(--spacing-xs) 0;
+    font-size: var(--font-size-sm);
     user-select: none;
 }
 
 .menuItem {
     display: flex;
     align-items: center;
-    padding: 8px 16px;
+    padding: var(--spacing-sm) clamp(12px, 3vw, 20px);
     cursor: pointer;
     transition: background-color 0.1s ease;
 }
@@ -34,16 +34,18 @@
 }
 
 .icon {
-    margin-right: 12px;
-    width: 16px;
-    display: inline-block;
+    margin-right: clamp(8px, 2vw, 16px);
+    width: clamp(14px, 3vw, 18px);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     text-align: center;
 }
 
 .separator {
     height: 1px;
     background-color: #e5e5e5;
-    margin: 4px 0;
+    margin: var(--spacing-xs) 0;
 }
 
 .hasSubmenu {
@@ -53,7 +55,7 @@
 
 .arrow {
     margin-left: auto;
-    font-size: 12px;
+    font-size: var(--font-size-xs);
     color: #666;
 }
 

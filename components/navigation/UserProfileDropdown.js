@@ -12,7 +12,7 @@ import SoftLoading from "@/components/SoftLoading";
 import Image from "next/image";
 
 import nav from "@/components/navigation/UserProfileDropdown.module.css";
-import { LogOut } from "lucide-react";
+import { LogOut, Settings } from "lucide-react";
 
 export default function UserProfileDropdown({ user, mobile }) {
     const { signout } = useAuth();
@@ -72,9 +72,20 @@ export default function UserProfileDropdown({ user, mobile }) {
 
     if (mobile) {
         return (
-            <>
-                {profileImage ? <Image className={nav.userProfileImg} src={"https:" + profileImage} alt="User profile picture" width={30} height={30} loading="eager" /> : <SoftLoading className={nav.userProfileImg} />}
-            </>
+            <div className={nav.userProfileMobileList}>
+                <div className={nav.userProfileMobileListItem} ref={userProfileRef}>
+                    {profileImage ? <Image className={nav.userProfileMobileImg} src={"https:" + profileImage} alt="User profile picture" width={30} height={30} loading="eager" /> : <SoftLoading className={nav.userProfileImg} />}
+                    <h1>{user.email}</h1>
+                </div>
+                <div className={`${nav.userProfileMobileListItem} ${nav.userProfileMobileSettings}`}>
+                    <Settings size={25} strokeWidth={2} />
+                    <h1>Settings</h1>
+                </div>
+                <div className={`${nav.userProfileMobileListItem} ${nav.userProfileMobileLogout}`} onClick={() => signout()}>
+                    <LogOut size={23} strokeWidth={2} />
+                    <h1>Logout</h1>
+                </div>
+            </div>
         );
     } else return (
         <div
@@ -114,7 +125,7 @@ export default function UserProfileDropdown({ user, mobile }) {
                 }}
             >
                 <ul>
-                    <li onClick={() => signout()}><span>Logout</span><LogOut size={22} /></li>
+                    <li onClick={() => signout()}><span>Logout</span><LogOut size={22} strokeWidth={3} /></li>
                 </ul>
             </div>
         </div>

@@ -37,6 +37,17 @@ export const AuthProvider = ({ children, locked = true }) => {
         return false;
     };
 
+    // Function to check if route should redirect authenticated users (exclude QR routes)
+    const shouldRedirectAuthenticated = (currentPath) => {
+        // Don't redirect from QR routes even if authenticated
+        if (currentPath.startsWith('/qr/') && currentPath.split('/').length === 3) {
+            return false;
+        }
+
+        // Redirect from other public routes if authenticated
+        return staticPublicRoutes.includes(currentPath);
+    };
+
     useEffect(() => {
         const checkAuthAndRoute = async () => {
             try {
@@ -56,7 +67,7 @@ export const AuthProvider = ({ children, locked = true }) => {
                 if (isAuthenticated) {
                     setUser(sessionRes.user);
 
-                    if (isPublicRoute(pathname)) {
+                    if (shouldRedirectAuthenticated(pathname)) {
                         router.push("/");
                         return;
                     }

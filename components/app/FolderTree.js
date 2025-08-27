@@ -3,11 +3,13 @@ import { useEffect, useState } from "react";
 import styles from "./FolderTree.module.css";
 import { api } from "@/utils/api";
 import SoftLoading from "../SoftLoading";
+import { HardDrive, Star, FolderClosed, FolderOpen, ChevronRight, ChevronDown, Save } from 'lucide-react';
 
 export default function FolderTree({
     socket,
     onFolderSelect,
     selectedPath,
+    mobile = false,
 }) {
     const [rootFolders, setRootFolders] = useState([]);
     const [expandedFolders, setExpandedFolders] = useState(new Set());
@@ -37,17 +39,17 @@ export default function FolderTree({
         });
 
         socket?.on('file-favorited', handleContentChange);
+        socket?.on('folder-structure-updated', handleContentChange);
 
         return () => {
             socket?.off('file-favorited', handleContentChange);
+            socket?.off('folder-structure-updated');
         };
     }, [socket]);
 
     useEffect(() => {
         const autoExpandToPath = async () => {
-            if (selectedPath === 'favorites') {
-                return;
-            }
+            if (selectedPath === 'favorites') return;
 
             const pathParts = selectedPath.split('/').filter(part => part.length > 0);
             const foldersToExpand = [];
@@ -66,15 +68,11 @@ export default function FolderTree({
                     if (!folderContents.has(folderPath)) {
                         try {
                             await loadFolderContents(folderPath);
-                        } catch (error) {
-                            console.error(`Error loading contents for folder ${folderPath}:`, error);
-                        }
+                        } catch (error) { }
                     }
                 }
             }
-            if (hasChanges) {
-                setExpandedFolders(newExpanded);
-            }
+            if (hasChanges) setExpandedFolders(newExpanded);
         };
 
         autoExpandToPath();
@@ -82,6 +80,7 @@ export default function FolderTree({
 
     useEffect(() => {
         loadFolderContents("");
+        checkTabVisibility(); // Load favorites visibility on mount
     }, []);
 
     const handleFolderStructureUpdate = (payload) => {
@@ -113,9 +112,7 @@ export default function FolderTree({
             const newContents = new Map();
             prev.forEach((folders, path) => {
                 const updatedFolders = folders.map(folder => {
-                    if (folder.path === oldPath) {
-                        return { ...folder, name: newName, path: newPath };
-                    }
+                    if (folder.path === oldPath) return { ...folder, name: newName, path: newPath };
                     return folder;
                 });
                 newContents.set(path, updatedFolders);
@@ -164,19 +161,11 @@ export default function FolderTree({
             const data = await api.get(`/api/files?path=${encodeURIComponent(folderPath)}`);
 
             if (folderPath === "") {
-                console.log("API response for root folder:", data);
                 setRootFolders(data.folders || []);
                 setLoading(false);
-                console.log("Loading state set to false");
-            } else {
-                setFolderContents(prev => new Map(prev).set(folderPath, data.folders || []));
-            }
+            } else setFolderContents(prev => new Map(prev).set(folderPath, data.folders || []));
         } catch (error) {
-            console.error("Error loading folder contents:", error);
-            if (folderPath === "") {
-                setLoading(false);
-                console.log("Loading state set to false");
-            }
+            if (folderPath === "") setLoading(false);
         }
     };
 
@@ -212,7 +201,6 @@ export default function FolderTree({
                 favorites: hasFavorites,
             });
         } catch (error) {
-            console.error('Error checking tab visibility:', error);
             setTabVisibility({
                 favorites: false,
             });
@@ -254,7 +242,7 @@ export default function FolderTree({
                             className={styles.folderIcon}
                             onClick={() => handleFolderClick(folder)}
                         >
-                            📁
+                            {isExpanded ? <FolderOpen size={16} /> : <FolderClosed size={16} />}
                         </div>
 
                         <span
@@ -290,7 +278,7 @@ export default function FolderTree({
                     onClick={() => onFolderSelect("")}
                 >
                     <div className={styles.folderIcon}>
-                        💾
+                        <Save size={20} />
                     </div>
                     <span>This Disk</span>
                 </div>
@@ -300,7 +288,7 @@ export default function FolderTree({
                         className={`${styles.specialItem} ${selectedPath === 'favorites' ? styles.selected : ''}`}
                         onClick={() => onFolderSelect('favorites')}
                     >
-                        <span className={styles.folderIcon}>⭐</span>
+                        <span className={styles.folderIcon}><Star size={20} fill="currentColor" /></span>
                         <span>Favorites</span>
                     </div>
                 )}

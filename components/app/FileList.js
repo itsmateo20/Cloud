@@ -10,6 +10,21 @@ import SoftLoading from "@/components/SoftLoading";
 import { ContextMenu } from "./ContextMenu";
 import { FileViewer } from "./FileViewer";
 
+import {
+    Image,
+    FileText,
+    FileSpreadsheet,
+    FolderClosed,
+    Music,
+    Video,
+    Archive,
+    File,
+    Code,
+    FileJson,
+    FileX,
+    Star
+} from 'lucide-react';
+
 const formatDate = (date) => {
     if (!date) return '—';
 
@@ -26,7 +41,7 @@ const formatDate = (date) => {
     }
 };
 
-const getFileIcon = (filename) => {
+const getFileIcon = (filename, size = 16) => {
     const ext = filename.split('.').pop()?.toLowerCase();
     switch (ext) {
         case 'jpg':
@@ -35,31 +50,76 @@ const getFileIcon = (filename) => {
         case 'gif':
         case 'bmp':
         case 'svg':
-            return '🖼️';
+        case 'webp':
+            return <Image size={size} />;
         case 'pdf':
-            return '📄';
+            return <FileText size={size} />;
         case 'doc':
         case 'docx':
-            return '📝';
+            return <FileText size={size} />;
         case 'xls':
         case 'xlsx':
-            return '📊';
+            return <FileSpreadsheet size={size} />;
         case 'txt':
-            return '📃';
+        case 'md':
+            return <FileText size={size} />;
         case 'zip':
         case 'rar':
         case '7z':
-            return '🗜️';
+        case 'tar':
+        case 'gz':
+            return <Archive size={size} />;
         case 'mp3':
         case 'wav':
         case 'flac':
-            return '🎵';
+        case 'm4a':
+        case 'aac':
+            return <Music size={size} />;
         case 'mp4':
         case 'avi':
         case 'mkv':
-            return '🎬';
+        case 'webm':
+        case 'ogg':
+        case 'mov':
+        case 'wmv':
+        case 'flv':
+            return <Video size={size} />;
+        case 'js':
+        case 'jsx':
+        case 'ts':
+        case 'tsx':
+        case 'html':
+        case 'htm':
+        case 'css':
+        case 'scss':
+        case 'sass':
+        case 'py':
+        case 'java':
+        case 'c':
+        case 'cpp':
+        case 'h':
+        case 'cs':
+        case 'php':
+        case 'rb':
+        case 'go':
+        case 'rs':
+        case 'swift':
+        case 'sql':
+        case 'sh':
+        case 'bash':
+        case 'ps1':
+            return <Code size={size} />;
+        case 'json':
+        case 'xml':
+        case 'yml':
+        case 'yaml':
+        case 'toml':
+        case 'ini':
+        case 'cfg':
+        case 'conf':
+            return <FileJson size={size} />;
         default:
-            return '📄';
+            return <File size={size} />;
     }
 };
 
@@ -82,6 +142,32 @@ const getFileType = (filename) => {
     return types[ext] || 'File';
 };
 
+const isImage = (filename) => {
+    const ext = filename.split('.').pop()?.toLowerCase();
+    return ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg', 'webp'].includes(ext);
+};
+
+const isVideo = (filename) => {
+    const ext = filename.split('.').pop()?.toLowerCase();
+    return ['mp4', 'webm', 'ogg', 'avi', 'mov', 'wmv', 'flv', 'mkv'].includes(ext);
+};
+
+const getPreviewUrl = (file, currentPath) => {
+    if (isImage(file.name)) {
+        const fullPath = currentPath === '/' ? `/${file.name}` : `${currentPath}/${file.name}`;
+        return `/api/files/thumbnail?path=${encodeURIComponent(fullPath)}`;
+    }
+    return null;
+};
+
+const getVideoThumbnailUrl = (file, currentPath) => {
+    if (isVideo(file.name)) {
+        const fullPath = currentPath === '/' ? `/${file.name}` : `${currentPath}/${file.name}`;
+        return `/api/files/thumbnail?path=${encodeURIComponent(fullPath)}`;
+    }
+    return null;
+};
+
 const FileList = forwardRef(({
     socket,
     currentPath,
@@ -92,6 +178,7 @@ const FileList = forwardRef(({
     sortBy = 'name',
     viewMode = 'list',
     user,
+    mobile = false,
 }, ref) => {
     const [folders, setFolders] = useState([]);
     const [files, setFiles] = useState([]);
@@ -112,10 +199,69 @@ const FileList = forwardRef(({
         files: []
     });
 
+    // Column width state for details view
+    const [columnWidths, setColumnWidths] = useState({
+        name: 40,
+        dateModified: 25,
+        type: 20,
+        size: 15
+    });
+
+    const [resizing, setResizing] = useState({
+        isResizing: false,
+        startX: 0,
+        startWidth: 0,
+        column: null
+    });
+
     const [isDragOver, setIsDragOver] = useState(false);
     const [renaming, setRenaming] = useState({ active: false, items: [], value: "" });
     const [qrModal, setQrModal] = useState({ visible: false, type: '', qrCode: '', items: [] });
     const renameInputRef = useRef(null);
+
+    // Column resize functions
+    const handleResizeStart = (e, column) => {
+        e.preventDefault();
+        setResizing({
+            isResizing: true,
+            startX: e.clientX,
+            startWidth: columnWidths[column],
+            column
+        });
+    };
+
+    const handleResizeMove = useCallback((e) => {
+        if (!resizing.isResizing) return;
+
+        const deltaX = e.clientX - resizing.startX;
+        const newWidth = Math.max(10, Math.min(80, resizing.startWidth + (deltaX / window.innerWidth * 100)));
+
+        setColumnWidths(prev => ({
+            ...prev,
+            [resizing.column]: newWidth
+        }));
+    }, [resizing]);
+
+    const handleResizeEnd = useCallback(() => {
+        setResizing({
+            isResizing: false,
+            startX: 0,
+            startWidth: 0,
+            column: null
+        });
+    }, []);
+
+    // Add event listeners for column resizing
+    useEffect(() => {
+        if (resizing.isResizing) {
+            document.addEventListener('mousemove', handleResizeMove);
+            document.addEventListener('mouseup', handleResizeEnd);
+            return () => {
+                document.removeEventListener('mousemove', handleResizeMove);
+                document.removeEventListener('mouseup', handleResizeEnd);
+            };
+        }
+    }, [resizing.isResizing, handleResizeMove, handleResizeEnd]);
 
     // Rename functions
     const handleRenameInput = (e) => {
@@ -265,7 +411,17 @@ const FileList = forwardRef(({
         triggerFavorite: (items) => {
             handleContextMenuAction('favorite', items);
         },
-        refresh: refreshContent
+        refresh: refreshContent,
+        selectAll: () => {
+            try {
+                const allItems = [...folders, ...files];
+                const allPaths = new Set(allItems.map(item => item.path));
+                setSelectedItems(allPaths);
+                onSelectionChange?.(allItems);
+            } catch (error) {
+                console.error('Error in selectAll:', error);
+            }
+        }
     }));
 
     useEffect(() => {
@@ -307,10 +463,7 @@ const FileList = forwardRef(({
         });
 
         socket?.on("fileUploadedViaQR", (payload) => {
-            // Check if the upload is for the current user and path
             if (payload.userId === user?.id && payload.path === currentPath) {
-                console.log('Files uploaded via QR, refreshing folder:', payload.files);
-                // Refresh the contents to show the new files
                 loadContents();
             }
         });
@@ -439,6 +592,23 @@ const FileList = forwardRef(({
     }, [contextMenu.visible]);
 
     const handleItemClick = (item, event) => {
+        // On mobile, single click opens folders
+        if (mobile && item.type === 'folder' && !event.ctrlKey && !event.metaKey && !event.shiftKey) {
+            onFolderDoubleClick(item.path);
+            return;
+        }
+
+        // On mobile (both list and grid view), single click opens files in FileViewer
+        if (mobile && item.type === 'file' && !event.ctrlKey && !event.metaKey && !event.shiftKey) {
+            if (isViewableFile(item.name)) {
+                openFileViewer(item);
+            } else {
+                // For non-viewable files, download them
+                downloadFile(item.path, item.name);
+            }
+            return;
+        }
+
         if (event.ctrlKey || event.metaKey) {
             const newSelected = new Set(selectedItems);
             if (newSelected.has(item.path)) {
@@ -585,6 +755,7 @@ const FileList = forwardRef(({
     };
 
     const handleFileDoubleClick = (file) => {
+        // On desktop or if mobile double-click is somehow triggered, handle it
         if (isViewableFile(file.name)) {
             openFileViewer(file);
         } else {
@@ -853,10 +1024,24 @@ const FileList = forwardRef(({
                 case 'name':
                     return a.name.localeCompare(b.name);
                 case 'date':
+                case 'modified':
                     return new Date(b.modified || 0) - new Date(a.modified || 0);
                 case 'type':
+                    // For folders, always sort by name
+                    if (a.type === 'folder' && b.type === 'folder') {
+                        return a.name.localeCompare(b.name);
+                    }
+                    // Folders come first
                     if (a.type === 'folder' && b.type !== 'folder') return -1;
                     if (a.type !== 'folder' && b.type === 'folder') return 1;
+
+                    // For files, sort by file extension first, then by name
+                    const aExt = a.name.split('.').pop()?.toLowerCase() || '';
+                    const bExt = b.name.split('.').pop()?.toLowerCase() || '';
+
+                    if (aExt !== bExt) {
+                        return aExt.localeCompare(bExt);
+                    }
                     return a.name.localeCompare(b.name);
                 case 'size':
                     if (a.type === 'folder' && b.type !== 'folder') return -1;
@@ -876,7 +1061,7 @@ const FileList = forwardRef(({
 
     return (
         <div
-            className={`${styles.fileList} ${isDragOver ? styles.dragOver : ''}`}
+            className={`${styles.fileList} ${isDragOver ? styles.dragOver : ''} ${mobile ? styles.mobile : ''}`}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
@@ -884,10 +1069,30 @@ const FileList = forwardRef(({
             {/* Header - only show in list and details view */}
             {viewMode === 'details' && (
                 <div className={styles.header}>
-                    <div className={styles.headerCell} style={{ width: '35%' }}>Name</div>
-                    <div className={styles.headerCell} style={{ width: '20%' }}>Date modified</div>
-                    <div className={styles.headerCell} style={{ width: '15%' }}>Type</div>
-                    <div className={styles.headerCell} style={{ width: '15%' }}>Size</div>
+                    <div className={styles.headerCell} style={{ width: `${columnWidths.name}%` }}>
+                        Name
+                        <div
+                            className={styles.resizeHandle}
+                            onMouseDown={(e) => handleResizeStart(e, 'name')}
+                        />
+                    </div>
+                    <div className={styles.headerCell} style={{ width: `${columnWidths.dateModified}%` }}>
+                        Date modified
+                        <div
+                            className={styles.resizeHandle}
+                            onMouseDown={(e) => handleResizeStart(e, 'dateModified')}
+                        />
+                    </div>
+                    <div className={styles.headerCell} style={{ width: `${columnWidths.type}%` }}>
+                        Type
+                        <div
+                            className={styles.resizeHandle}
+                            onMouseDown={(e) => handleResizeStart(e, 'type')}
+                        />
+                    </div>
+                    <div className={styles.headerCell} style={{ width: `${columnWidths.size}%` }}>
+                        Size
+                    </div>
                 </div>
             )}
 
@@ -899,6 +1104,7 @@ const FileList = forwardRef(({
                 {sortedFolders.map(folder => {
                     const isIconView = ['extraLargeIcons', 'largeIcons', 'mediumIcons', 'smallIcons'].includes(viewMode);
                     const isTilesView = viewMode === 'tiles';
+                    const isGridView = viewMode === 'grid';
                     const isListOrDetailsView = ['list', 'details'].includes(viewMode);
 
                     return (
@@ -915,7 +1121,7 @@ const FileList = forwardRef(({
                         >
                             {isIconView ? (
                                 <>
-                                    <div className={styles.itemIcon}>📁</div>
+                                    <div className={styles.itemIcon}><FolderClosed size={16} /></div>
                                     <div className={styles.itemName}>
                                         {renaming.active && renaming.items.length > 0 && renaming.items[0].path === folder.path ? (
                                             <input
@@ -933,12 +1139,12 @@ const FileList = forwardRef(({
                                         ) : (
                                             folder.name
                                         )}
-                                        {folder.isFavorited && <span className={styles.favoriteIcon}>⭐</span>}
+                                        {folder.isFavorited && <span className={styles.favoriteIcon}><Star size={13} fill="currentColor" /></span>}
                                     </div>
                                 </>
                             ) : isTilesView ? (
                                 <>
-                                    <div className={styles.itemIcon}>📁</div>
+                                    <div className={styles.itemIcon}><FolderClosed size={16} /></div>
                                     <div className={styles.itemContent}>
                                         <div className={styles.itemName}>
                                             {renaming.active && renaming.items.length > 0 && renaming.items[0].path === folder.path ? (
@@ -957,17 +1163,42 @@ const FileList = forwardRef(({
                                             ) : (
                                                 folder.name
                                             )}
-                                            {folder.isFavorited && <span className={styles.favoriteIcon}>⭐</span>}
+                                            {folder.isFavorited && <span className={styles.favoriteIcon}><Star size={13} fill="currentColor" /></span>}
                                         </div>
                                         <div className={styles.itemDetails}>
                                             File folder
                                         </div>
                                     </div>
                                 </>
+                            ) : isGridView ? (
+                                <div className={styles.gridFolder}>
+                                    <div className={styles.itemIcon}><FolderClosed size={16} /></div>
+                                    <div className={styles.itemContent}>
+                                        <div className={styles.itemName}>
+                                            {renaming.active && renaming.items.length > 0 && renaming.items[0].path === folder.path ? (
+                                                <input
+                                                    ref={renameInputRef}
+                                                    className={styles.renameInput}
+                                                    value={renaming.value}
+                                                    autoFocus
+                                                    onChange={handleRenameInput}
+                                                    onBlur={cancelRename}
+                                                    onKeyDown={e => {
+                                                        if (e.key === "Enter") submitRename();
+                                                        if (e.key === "Escape") cancelRename();
+                                                    }}
+                                                />
+                                            ) : (
+                                                folder.name
+                                            )}
+                                            {folder.isFavorited && <span className={styles.favoriteIcon}><Star size={13} fill="currentColor" /></span>}
+                                        </div>
+                                    </div>
+                                </div>
                             ) : isListOrDetailsView ? (
                                 <>
-                                    <div className={styles.cell} style={{ width: viewMode === 'details' ? '40%' : 'auto' }}>
-                                        <span className={styles.itemIcon}>📁</span>
+                                    <div className={`${styles.cell} ${styles.nameCell}`} style={{ width: `${columnWidths.name}%` }}>
+                                        <span className={styles.itemIcon}><FolderClosed size={16} /></span>
                                         {renaming.active && renaming.items.length > 0 && renaming.items[0].path === folder.path ? (
                                             <input
                                                 ref={renameInputRef}
@@ -989,17 +1220,17 @@ const FileList = forwardRef(({
                                                 {folder.name}
                                             </span>
                                         )}
-                                        {folder.isFavorited && <span className={styles.favoriteIcon}>⭐</span>}
+                                        {folder.isFavorited && <span className={styles.favoriteIcon}><Star size={13} fill="currentColor" /></span>}
                                     </div>
                                     {viewMode === 'details' && (
                                         <>
-                                            <div className={styles.cell} style={{ width: '20%' }}>
+                                            <div className={styles.cell} style={{ width: `${columnWidths.dateModified}%` }}>
                                                 {formatDate(folder.modified || folder.updatedAt || folder.modifiedAt || folder.createdAt)}
                                             </div>
-                                            <div className={styles.cell} style={{ width: '15%' }}>
+                                            <div className={styles.cell} style={{ width: `${columnWidths.type}%` }}>
                                                 File folder
                                             </div>
-                                            <div className={styles.cell} style={{ width: '15%' }}>
+                                            <div className={styles.cell} style={{ width: `${columnWidths.size}%` }}>
                                                 —
                                             </div>
                                         </>
@@ -1013,6 +1244,7 @@ const FileList = forwardRef(({
                 {sortedFiles.map(file => {
                     const isIconView = ['extraLargeIcons', 'largeIcons', 'mediumIcons', 'smallIcons'].includes(viewMode);
                     const isTilesView = viewMode === 'tiles';
+                    const isGridView = viewMode === 'grid';
                     const isListOrDetailsView = ['list', 'details'].includes(viewMode);
 
                     return (
@@ -1026,7 +1258,7 @@ const FileList = forwardRef(({
                             {isIconView ? (
                                 <>
                                     <div className={styles.itemIcon}>
-                                        {getFileIcon(file.name)}
+                                        {getFileIcon(file.name, 48)}
                                     </div>
                                     <div className={styles.itemName}>
                                         {renaming.active && renaming.items.length > 0 && renaming.items[0].path === file.path ? (
@@ -1045,13 +1277,13 @@ const FileList = forwardRef(({
                                         ) : (
                                             file.name
                                         )}
-                                        {file.isFavorited && <span className={styles.favoriteIcon}>⭐</span>}
+                                        {file.isFavorited && <span className={styles.favoriteIcon}><Star size={13} fill="currentColor" /></span>}
                                     </div>
                                 </>
                             ) : isTilesView ? (
                                 <>
                                     <div className={styles.itemIcon}>
-                                        {getFileIcon(file.name)}
+                                        {getFileIcon(file.name, 48)}
                                     </div>
                                     <div className={styles.itemContent}>
                                         <div className={styles.itemName}>
@@ -1071,7 +1303,7 @@ const FileList = forwardRef(({
                                             ) : (
                                                 file.name
                                             )}
-                                            {file.isFavorited && <span className={styles.favoriteIcon}>⭐</span>}
+                                            {file.isFavorited && <span className={styles.favoriteIcon}><Star size={13} fill="currentColor" /></span>}
                                         </div>
                                         <div className={styles.itemDetails}>
                                             {getFileType(file.name)}<br />
@@ -1079,11 +1311,66 @@ const FileList = forwardRef(({
                                         </div>
                                     </div>
                                 </>
+                            ) : isGridView ? (
+                                <div className={styles.gridFile}>
+                                    <div className={styles.gridFileHeader}>
+                                        <div className={styles.gridFileName}>
+                                            {renaming.active && renaming.items.length > 0 && renaming.items[0].path === file.path ? (
+                                                <input
+                                                    ref={renameInputRef}
+                                                    className={styles.renameInput}
+                                                    value={renaming.value}
+                                                    autoFocus
+                                                    onChange={handleRenameInput}
+                                                    onBlur={cancelRename}
+                                                    onKeyDown={e => {
+                                                        if (e.key === "Enter") submitRename();
+                                                        if (e.key === "Escape") cancelRename();
+                                                    }}
+                                                />
+                                            ) : (
+                                                file.name
+                                            )}
+                                            {file.isFavorited && <span className={styles.favoriteIcon}><Star size={13} fill="currentColor" /></span>}
+                                        </div>
+                                        <div className={styles.gridFileSize}>
+                                            {formatFileSize(file.size)}
+                                        </div>
+                                    </div>
+                                    <div className={styles.gridFileContent}>
+                                        {(isImage(file.name) || isVideo(file.name)) ? (
+                                            <div className={styles.itemPreview}>
+                                                {isImage(file.name) ? (
+                                                    <img
+                                                        src={getPreviewUrl(file, currentPath)}
+                                                        alt={file.name}
+                                                        className={styles.previewImage}
+                                                    />
+                                                ) : (
+                                                    <video
+                                                        src={`/api/files/download?path=${encodeURIComponent(currentPath === '/' ? `/${file.name}` : `${currentPath}/${file.name}`)}`}
+                                                        className={styles.previewVideo}
+                                                        muted
+                                                        playsInline
+                                                        preload="metadata"
+                                                        onLoadedData={(e) => {
+                                                            e.target.currentTime = 0;
+                                                        }}
+                                                    />
+                                                )}
+                                            </div>
+                                        ) : (
+                                            <div className={styles.itemIcon}>
+                                                {getFileIcon(file.name, 64)}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
                             ) : isListOrDetailsView ? (
                                 <>
-                                    <div className={styles.cell} style={{ width: viewMode === 'details' ? '40%' : 'auto' }}>
+                                    <div className={`${styles.cell} ${styles.nameCell}`} style={{ width: `${columnWidths.name}%` }}>
                                         <span className={styles.itemIcon}>
-                                            {getFileIcon(file.name)}
+                                            {getFileIcon(file.name, 16)}
                                         </span>
                                         {renaming.active && renaming.items.length > 0 && renaming.items[0].path === file.path ? (
                                             <input
@@ -1103,17 +1390,17 @@ const FileList = forwardRef(({
                                                 {file.name}
                                             </span>
                                         )}
-                                        {file.isFavorited && <span className={styles.favoriteIcon}>⭐</span>}
+                                        {file.isFavorited && <span className={styles.favoriteIcon}><Star size={13} fill="currentColor" /></span>}
                                     </div>
                                     {viewMode === 'details' && (
                                         <>
-                                            <div className={styles.cell} style={{ width: '20%' }}>
+                                            <div className={styles.cell} style={{ width: `${columnWidths.dateModified}%` }}>
                                                 {formatDate(file.modified || file.modifiedAt || file.createdAt)}
                                             </div>
-                                            <div className={styles.cell} style={{ width: '15%' }}>
+                                            <div className={styles.cell} style={{ width: `${columnWidths.type}%` }}>
                                                 {getFileType(file.name)}
                                             </div>
-                                            <div className={styles.cell} style={{ width: '15%' }}>
+                                            <div className={styles.cell} style={{ width: `${columnWidths.size}%` }}>
                                                 {formatFileSize(file.size)}
                                             </div>
                                         </>
@@ -1159,6 +1446,7 @@ const FileList = forwardRef(({
                     onClose={() => setFileViewer(prev => ({ ...prev, isOpen: false }))}
                     onNavigate={(newIndex) => setFileViewer(prev => ({ ...prev, currentIndex: newIndex }))}
                     onAction={handleFileViewerAction}
+                    mobile={mobile}
                 />
             )}
 
@@ -1204,6 +1492,7 @@ const FileList = forwardRef(({
                     </div>
                 </div>
             )}
+
         </div>
     );
 });

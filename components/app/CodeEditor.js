@@ -31,9 +31,7 @@ export function CodeEditor({
     }, [file.name]);
 
     useEffect(() => {
-        if (isMarkdown && showPreview) {
-            renderMarkdown(editorContent);
-        }
+        if (isMarkdown && showPreview) renderMarkdown(editorContent);
     }, [editorContent, isMarkdown, showPreview]);
 
     const getLanguage = (filename) => {
@@ -320,9 +318,7 @@ export function CodeEditor({
         editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, handleSave);
         editor.addCommand(monaco.KeyCode.Escape, () => {
             if (hasChanges) {
-                if (confirm('You have unsaved changes. Are you sure you want to close?')) {
-                    onClose();
-                }
+                if (confirm('You have unsaved changes. Are you sure you want to close?')) onClose();
             } else {
                 onClose();
             }
@@ -335,7 +331,6 @@ export function CodeEditor({
     return (
         <div className={styles.codeEditorOverlay} onKeyDown={handleKeyDown}>
             <div className={styles.codeEditorContainer}>
-                {/* Header */}
                 <div className={styles.header}>
                     <div className={styles.fileInfo}>
                         <div className={styles.fileName}>
@@ -387,7 +382,6 @@ export function CodeEditor({
                     </div>
                 </div>
 
-                {/* Content */}
                 <div className={styles.editorContent}>
                     {isMarkdown && showPreview ? (
                         <div className={styles.markdownPreview}>
@@ -403,7 +397,7 @@ export function CodeEditor({
                             value={editorContent}
                             onChange={handleEditorChange}
                             onMount={handleEditorMount}
-                            theme="custom-dark" // This will be overridden by the theme detection
+                            theme="custom-dark"
                             options={{
                                 readOnly: readOnly,
                                 selectOnLineNumbers: true,
@@ -424,7 +418,6 @@ export function CodeEditor({
                     )}
                 </div>
 
-                {/* Status Bar */}
                 <div className={styles.statusBar}>
                     <div className={styles.statusLeft}>
                         <span className={styles.language}>{getLanguage(file.name)}</span>

@@ -18,10 +18,7 @@ export default function QRHandler({ token, type, data }) {
     };
 
     const handleUpload = async () => {
-        if (files.length === 0) {
-            setMessage('Please select files to upload');
-            return;
-        }
+        if (files.length === 0) return setMessage('Please select files to upload');
 
         setUploading(true);
         setMessage('');
@@ -39,7 +36,7 @@ export default function QRHandler({ token, type, data }) {
             if (result.success) {
                 setMessage(`Successfully uploaded ${files.length} file(s)!`);
                 setFiles([]);
-                // Reset file input
+
                 document.getElementById('fileInput').value = '';
             } else {
                 setMessage(`Upload failed: ${result.message}`);

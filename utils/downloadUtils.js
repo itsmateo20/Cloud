@@ -17,16 +17,20 @@ export class DownloadManager {
 
     async downloadFile(filePath, fileName, type = 'file') {
         const downloadId = this.generateId();
+        let progressTimeout;
+        let hasReceivedProgress = false;
+        let isCompleted = false;
 
         try {
             window.dispatchEvent(new CustomEvent('downloadStart', {
                 detail: {
                     id: downloadId,
                     fileName,
-                    fileSize: 0, // Will be updated when we get the response
+                    fileSize: 0,
                     type
                 }
             }));
+
             const abortController = new AbortController();
             this.activeDownloads.set(downloadId, abortController);
             const handleCancel = (event) => {
@@ -35,18 +39,10 @@ export class DownloadManager {
                 }
             };
             window.addEventListener('downloadCancel', handleCancel);
+
             const url = type === 'folder'
-                ? `/api/files/download?path=${encodeURIComponent(filePath)}&type=folder`
+                ? `/api/files/folder-zip?path=${encodeURIComponent(filePath)}`
                 : `/api/files/download?path=${encodeURIComponent(filePath)}`;
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = fileName;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            let progressTimeout;
-            let hasReceivedProgress = false;
-            let isCompleted = false; // Track if download was already marked as completed
 
             const startProgressTimeout = () => {
                 clearTimeout(progressTimeout);
@@ -61,60 +57,145 @@ export class DownloadManager {
                         }));
                         this.activeDownloads.delete(downloadId);
                     }
-                }, 10000); // 10 second timeout
+                }, 10000);
             };
 
-            startProgressTimeout();
-            const progressResponse = await fetch(url, {
-                signal: abortController.signal
-            });
+            // For folders (ZIP downloads), handle differently for better progress tracking
+            if (type === 'folder') {
+                startProgressTimeout();
+                const response = await fetch(url, {
+                    signal: abortController.signal
+                });
 
-            if (!progressResponse.ok) {
-                clearTimeout(progressTimeout);
-                throw new Error(`Download failed: ${progressResponse.status} ${progressResponse.statusText}`);
-            }
-            const contentLength = progressResponse.headers.get('content-length');
-            const total = contentLength ? parseInt(contentLength, 10) : 0;
-            window.dispatchEvent(new CustomEvent('downloadProgress', {
-                detail: {
-                    id: downloadId,
-                    loaded: 0,
-                    total,
-                    speed: 0
+                if (!response.ok) {
+                    clearTimeout(progressTimeout);
+                    throw new Error(`Download failed: ${response.status} ${response.statusText}`);
                 }
-            }));
-            const reader = progressResponse.body.getReader();
-            let loaded = 0;
-            let lastTime = Date.now();
-            let lastLoaded = 0;
 
-            while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
+                // Get total size info from headers
+                const totalFiles = parseInt(response.headers.get('X-Total-Files') || '0');
+                const totalSize = parseInt(response.headers.get('X-Total-Size') || '0');
 
-                loaded += value.length;
-                hasReceivedProgress = true;
-                const now = Date.now();
-                const timeDiff = (now - lastTime) / 1000;
+                window.dispatchEvent(new CustomEvent('downloadProgress', {
+                    detail: {
+                        id: downloadId,
+                        loaded: 0,
+                        total: totalSize,
+                        speed: 0
+                    }
+                }));
 
-                if (timeDiff >= 0.5) {
-                    const bytesDiff = loaded - lastLoaded;
-                    const speed = timeDiff > 0 ? bytesDiff / timeDiff : 0;
+                // Read the ZIP stream with progress tracking
+                const reader = response.body.getReader();
+                const chunks = [];
+                let loaded = 0;
+                let lastTime = Date.now();
+                let lastLoaded = 0;
 
-                    window.dispatchEvent(new CustomEvent('downloadProgress', {
-                        detail: {
-                            id: downloadId,
-                            loaded,
-                            total,
-                            speed
-                        }
-                    }));
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
 
-                    lastTime = now;
-                    lastLoaded = loaded;
-                    startProgressTimeout();
+                    chunks.push(value);
+                    loaded += value.length;
+                    hasReceivedProgress = true;
+                    const now = Date.now();
+                    const timeDiff = (now - lastTime) / 1000;
+
+                    if (timeDiff >= 0.3) { // More frequent updates for ZIP
+                        const bytesDiff = loaded - lastLoaded;
+                        const speed = timeDiff > 0 ? bytesDiff / timeDiff : 0;
+
+                        window.dispatchEvent(new CustomEvent('downloadProgress', {
+                            detail: {
+                                id: downloadId,
+                                loaded,
+                                total: totalSize || loaded,
+                                speed
+                            }
+                        }));
+
+                        lastTime = now;
+                        lastLoaded = loaded;
+                        startProgressTimeout();
+                    }
+                }
+
+                // Create blob and trigger download
+                const blob = new Blob(chunks, { type: 'application/zip' });
+                const blobUrl = window.URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = blobUrl;
+                link.download = fileName;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                window.URL.revokeObjectURL(blobUrl);
+
+            } else {
+                // Regular file download
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = fileName;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+
+                startProgressTimeout();
+                const progressResponse = await fetch(url, {
+                    signal: abortController.signal
+                });
+
+                if (!progressResponse.ok) {
+                    clearTimeout(progressTimeout);
+                    throw new Error(`Download failed: ${progressResponse.status} ${progressResponse.statusText}`);
+                }
+
+                const contentLength = progressResponse.headers.get('content-length');
+                const total = contentLength ? parseInt(contentLength, 10) : 0;
+                window.dispatchEvent(new CustomEvent('downloadProgress', {
+                    detail: {
+                        id: downloadId,
+                        loaded: 0,
+                        total,
+                        speed: 0
+                    }
+                }));
+
+                const reader = progressResponse.body.getReader();
+                let loaded = 0;
+                let lastTime = Date.now();
+                let lastLoaded = 0;
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    loaded += value.length;
+                    hasReceivedProgress = true;
+                    const now = Date.now();
+                    const timeDiff = (now - lastTime) / 1000;
+
+                    if (timeDiff >= 0.5) {
+                        const bytesDiff = loaded - lastLoaded;
+                        const speed = timeDiff > 0 ? bytesDiff / timeDiff : 0;
+
+                        window.dispatchEvent(new CustomEvent('downloadProgress', {
+                            detail: {
+                                id: downloadId,
+                                loaded,
+                                total,
+                                speed
+                            }
+                        }));
+
+                        lastTime = now;
+                        lastLoaded = loaded;
+                        startProgressTimeout();
+                    }
                 }
             }
+
             clearTimeout(progressTimeout);
             if (!isCompleted) {
                 isCompleted = true;

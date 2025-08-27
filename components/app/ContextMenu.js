@@ -2,6 +2,21 @@
 
 import { useEffect, useRef, useState } from "react";
 import styles from "./ContextMenu.module.css";
+import {
+    FolderOpen,
+    Download,
+    Smartphone,
+    MapPin,
+    HeartOff,
+    Info,
+    Upload,
+    Edit3,
+    Star,
+    StarOff,
+    RotateCcw,
+    Trash2,
+    ChevronRight
+} from 'lucide-react';
 
 export function ContextMenu({
     x,
@@ -23,15 +38,11 @@ export function ContextMenu({
         if (!isVisible) return;
 
         const handleClickOutside = (event) => {
-            if (menuRef.current && !menuRef.current.contains(event.target)) {
-                onClose();
-            }
+            if (menuRef.current && !menuRef.current.contains(event.target)) onClose();
         };
 
         const handleKeyDown = (event) => {
-            if (event.key === "Escape") {
-                onClose();
-            }
+            if (event.key === "Escape") onClose();
         };
 
         document.addEventListener("mousedown", handleClickOutside);
@@ -49,13 +60,9 @@ export function ContextMenu({
             const viewportWidth = window.innerWidth;
             const viewportHeight = window.innerHeight;
 
-            if (x + rect.width > viewportWidth) {
-                menuRef.current.style.left = `${viewportWidth - rect.width - 10}px`;
-            }
+            if (x + rect.width > viewportWidth) menuRef.current.style.left = `${viewportWidth - rect.width - 10}px`;
 
-            if (y + rect.height > viewportHeight) {
-                menuRef.current.style.top = `${viewportHeight - rect.height - 10}px`;
-            }
+            if (y + rect.height > viewportHeight) menuRef.current.style.top = `${viewportHeight - rect.height - 10}px`;
         }
     }, [isVisible, x, y]);
 
@@ -90,13 +97,13 @@ export function ContextMenu({
             {isFavoritesPage ? (
                 <>
                     <div className={styles.menuItem} onClick={() => handleAction("open")}>
-                        <span className={styles.icon}>📂</span>
+                        <span className={styles.icon}><FolderOpen size={16} /></span>
                         {isFolder ? "Open" : "Open"}
                     </div>
 
                     {!isFolder && (
                         <div className={styles.menuItem} onClick={() => handleAction("download")}>
-                            <span className={styles.icon}>⬇️</span>
+                            <span className={styles.icon}><Download size={16} /></span>
                             Download{isMultipleSelected ? ` (${selectedItems.length})` : ""}
                         </div>
                     )}
@@ -107,14 +114,14 @@ export function ContextMenu({
                             onMouseEnter={() => setShowQrSubmenu(true)}
                             onMouseLeave={() => setShowQrSubmenu(false)}
                         >
-                            <span className={styles.icon}>📱</span>
+                            <span className={styles.icon}><Smartphone size={16} /></span>
                             QR Code
-                            <span className={styles.arrow}>▶</span>
+                            <span className={styles.arrow}><ChevronRight size={12} /></span>
 
                             {showQrSubmenu && (
                                 <div className={styles.submenu}>
                                     <div className={styles.submenuItem} onClick={() => handleSubmenuAction("download-qr")}>
-                                        <span className={styles.icon}>📱</span>
+                                        <span className={styles.icon}><Smartphone size={16} /></span>
                                         Download file{isMultipleSelected ? `s` : ""} on Mobile device{isMultipleSelected ? ` (${selectedItems.length})` : ""}
                                     </div>
                                 </div>
@@ -125,19 +132,19 @@ export function ContextMenu({
                     <div className={styles.separator}></div>
 
                     <div className={styles.menuItem} onClick={() => handleAction("go-to-location")}>
-                        <span className={styles.icon}>📍</span>
+                        <span className={styles.icon}><MapPin size={16} /></span>
                         Take me to file location
                     </div>
 
                     <div className={styles.menuItem} onClick={() => handleAction("remove-favorite")}>
-                        <span className={styles.icon}>💔</span>
+                        <span className={styles.icon}><HeartOff size={16} /></span>
                         Remove from Favorites{isMultipleSelected ? ` (${selectedItems.length})` : ""}
                     </div>
 
                     <div className={styles.separator}></div>
 
                     <div className={styles.menuItem} onClick={() => handleAction("properties")}>
-                        <span className={styles.icon}>ℹ️</span>
+                        <span className={styles.icon}><Info size={16} /></span>
                         Properties
                     </div>
                 </>
@@ -145,12 +152,12 @@ export function ContextMenu({
 
                 <>
                     <div className={styles.menuItem} onClick={() => handleAction("open")}>
-                        <span className={styles.icon}>📂</span>
+                        <span className={styles.icon}><FolderOpen size={16} /></span>
                         {isFolder ? "Open" : "Open"}
                     </div>
 
                     <div className={styles.menuItem} onClick={() => handleAction("download")}>
-                        <span className={styles.icon}>⬇️</span>
+                        <span className={styles.icon}><Download size={16} /></span>
                         {isFolder ? "Download as ZIP" : "Download"}{isMultipleSelected ? ` (${selectedItems.length})` : ""}
                     </div>
 
@@ -159,18 +166,18 @@ export function ContextMenu({
                         onMouseEnter={() => setShowQrSubmenu(true)}
                         onMouseLeave={() => setShowQrSubmenu(false)}
                     >
-                        <span className={styles.icon}>📱</span>
+                        <span className={styles.icon}><Smartphone size={16} /></span>
                         QR Code
-                        <span className={styles.arrow}>▶</span>
+                        <span className={styles.arrow}><ChevronRight size={12} /></span>
 
                         {showQrSubmenu && (
                             <div className={styles.submenu}>
                                 <div className={styles.submenuItem} onClick={() => handleSubmenuAction("download-qr")}>
-                                    <span className={styles.icon}>📱</span>
+                                    <span className={styles.icon}><Smartphone size={16} /></span>
                                     Download file{isMultipleSelected ? `s` : ""} on Mobile device{isMultipleSelected ? ` (${selectedItems.length})` : ""}
                                 </div>
                                 <div className={styles.submenuItem} onClick={() => handleSubmenuAction("upload-qr")}>
-                                    <span className={styles.icon}>📲</span>
+                                    <span className={styles.icon}><Upload size={16} /></span>
                                     Upload files from Mobile device
                                 </div>
                             </div>
@@ -180,7 +187,7 @@ export function ContextMenu({
                     <div className={styles.separator}></div>
 
                     <div className={styles.menuItem} onClick={() => handleAction("rename")}>
-                        <span className={styles.icon}>✏️</span>
+                        <span className={styles.icon}><Edit3 size={16} /></span>
                         Rename{isMultipleSelected ? ` (${selectedItems.length})` : ""}
                     </div>
 
@@ -190,22 +197,22 @@ export function ContextMenu({
                             onMouseEnter={() => setShowFavoriteSubmenu(true)}
                             onMouseLeave={() => setShowFavoriteSubmenu(false)}
                         >
-                            <span className={styles.icon}>⭐</span>
+                            <span className={styles.icon}><Star size={16} /></span>
                             Favorite Options
-                            <span className={styles.arrow}>▶</span>
+                            <span className={styles.arrow}><ChevronRight size={12} /></span>
 
                             {showFavoriteSubmenu && (
                                 <div className={styles.submenu}>
                                     <div className={styles.submenuItem} onClick={() => handleSubmenuAction("add-favorite")}>
-                                        <span className={styles.icon}>☆</span>
+                                        <span className={styles.icon}><StarOff size={16} /></span>
                                         Add Favorite
                                     </div>
                                     <div className={styles.submenuItem} onClick={() => handleSubmenuAction("remove-favorite")}>
-                                        <span className={styles.icon}>⭐</span>
+                                        <span className={styles.icon}><Star size={16} /></span>
                                         Remove Favorite
                                     </div>
                                     <div className={styles.submenuItem} onClick={() => handleSubmenuAction("toggle-favorite")}>
-                                        <span className={styles.icon}>🔄</span>
+                                        <span className={styles.icon}><RotateCcw size={16} /></span>
                                         Toggle Favorite
                                     </div>
                                 </div>
@@ -213,7 +220,7 @@ export function ContextMenu({
                         </div>
                     ) : (
                         <div className={styles.menuItem} onClick={() => handleAction("favorite")}>
-                            <span className={styles.icon}>{selectedItem?.isFavorited ? "⭐" : "☆"}</span>
+                            <span className={styles.icon}>{selectedItem?.isFavorited ? <Star size={16} fill="currentColor" /> : <StarOff size={16} />}</span>
                             {isMultipleSelected ? "Toggle Favorites" : (selectedItem?.isFavorited ? "Remove from Favorites" : "Add to Favorites")}
                         </div>
                     )}
@@ -221,7 +228,7 @@ export function ContextMenu({
                     <div className={styles.separator}></div>
 
                     <div className={styles.menuItem} onClick={() => handleAction("properties")}>
-                        <span className={styles.icon}>ℹ️</span>
+                        <span className={styles.icon}><Info size={16} /></span>
                         Properties
                     </div>
 
@@ -231,7 +238,7 @@ export function ContextMenu({
                         className={`${styles.menuItem} ${styles.danger}`}
                         onClick={() => handleAction("delete")}
                     >
-                        <span className={styles.icon}>🗑️</span>
+                        <span className={styles.icon}><Trash2 size={16} /></span>
                         Delete{isMultipleSelected ? ` (${selectedItems.length})` : ""}
                     </div>
                 </>
