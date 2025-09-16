@@ -58,7 +58,9 @@ import {
     Maximize,
     ArrowLeft,
     ArrowRight,
-    Star
+    Star,
+    Eye,
+    FileText
 } from 'lucide-react';
 
 export function FileViewer({
@@ -94,6 +96,9 @@ export function FileViewer({
     const [deleteMenuInitialY, setDeleteMenuInitialY] = useState(0);
     const [isVideoMuted, setIsVideoMuted] = useState(false);
     const [isVideoFullscreen, setIsVideoFullscreen] = useState(false);
+    const [isEmpty, setIsEmpty] = useState(false);
+    const [isHtmlPreview, setIsHtmlPreview] = useState(false);
+    const [autoFitImage, setAutoFitImage] = useState(false);
     const imagePositionRef = useRef({ x: 0, y: 0 });
     const isDraggingRef = useRef(false);
     const dragStartRef = useRef({ x: 0, y: 0 });
@@ -103,6 +108,8 @@ export function FileViewer({
 
     const contentRef = useRef(null);
     const containerRef = useRef(null);
+    const sidePanelRef = useRef(null);
+    const lastFocusedElementRef = useRef(null);
     const dropdownRef = useRef(null);
 
     // Video control functions
@@ -119,7 +126,14 @@ export function FileViewer({
 
     const seekVideo = (seconds) => {
         if (videoRef.current) {
-            videoRef.current.currentTime = Math.max(0, Math.min(videoRef.current.currentTime + seconds, videoDuration));
+            const currentTime = videoRef.current.currentTime;
+            const duration = videoRef.current.duration || videoDuration;
+
+            // Ensure duration is valid
+            if (!duration || isNaN(duration)) return;
+
+            const newTime = Math.max(0, Math.min(currentTime + seconds, duration));
+            videoRef.current.currentTime = newTime;
         }
     };
 
@@ -163,17 +177,21 @@ export function FileViewer({
 
     const handleVideoLoadedMetadata = () => {
         if (videoRef.current) {
-            setVideoDuration(videoRef.current.duration);
+            const duration = videoRef.current.duration;
+            if (!isNaN(duration) && duration > 0) {
+                setVideoDuration(duration);
+            }
         }
     };
 
     const handleProgressBarClick = (e) => {
         e.stopPropagation();
-        if (videoRef.current && progressBarRef.current) {
+        if (videoRef.current && progressBarRef.current && videoDuration > 0) {
             const rect = progressBarRef.current.getBoundingClientRect();
-            const percent = (e.clientX - rect.left) / rect.width;
+            const percent = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
             const newTime = percent * videoDuration;
             videoRef.current.currentTime = newTime;
+            setVideoCurrentTime(newTime);
         }
     };
 
@@ -184,11 +202,12 @@ export function FileViewer({
     };
 
     const handleProgressBarMouseMove = (e) => {
-        if (isDraggingProgress && videoRef.current && progressBarRef.current) {
+        if (isDraggingProgress && videoRef.current && progressBarRef.current && videoDuration > 0) {
             const rect = progressBarRef.current.getBoundingClientRect();
             const percent = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
             const newTime = percent * videoDuration;
             videoRef.current.currentTime = newTime;
+            setVideoCurrentTime(newTime);
         }
     };
 
@@ -297,6 +316,7 @@ export function FileViewer({
     };
 
     const handleFileInfo = () => {
+        lastFocusedElementRef.current = document.activeElement;
         setShowFileInfoModal(true);
         setShowDropdown(false);
     };
@@ -340,10 +360,20 @@ export function FileViewer({
         if (!isOpen) return;
 
         const handleKeyDown = (e) => {
+            // Suppress FileViewer shortcuts while code editor is open
+            if (showCodeEditor) return;
             console.log(e.key)
             switch (e.key) {
                 case 'Escape':
-                    onClose();
+                    if (showFileInfoModal) {
+                        setShowFileInfoModal(false);
+                        // Restore focus to the element that opened the panel
+                        if (lastFocusedElementRef.current && lastFocusedElementRef.current.focus) {
+                            lastFocusedElementRef.current.focus();
+                        }
+                    } else {
+                        onClose();
+                    }
                     break;
                 case 'ArrowLeft':
                 case '<':
@@ -452,14 +482,51 @@ export function FileViewer({
                 animationFrameRef.current = null;
             }
         };
-    }, [isOpen, currentFileIndex, files.length, onClose, onNavigate]);
+    }, [isOpen, currentFileIndex, files.length, onClose, onNavigate, showFileInfoModal, showCodeEditor]);
+
+    // ResizeObserver to track side panel width -> CSS variable
+    useEffect(() => {
+        if (!sidePanelRef.current) return;
+        const el = sidePanelRef.current;
+        const updateWidth = () => {
+            const w = el.getBoundingClientRect().width;
+            // Apply variable on container so transforms remain scoped
+            if (containerRef.current) {
+                containerRef.current.style.setProperty('--fv-side-panel-width', w + 'px');
+            }
+        };
+        updateWidth();
+        const ro = new ResizeObserver(updateWidth);
+        ro.observe(el);
+        return () => ro.disconnect();
+    }, [showFileInfoModal]);
+
+    // Focus management when panel opens
+    useEffect(() => {
+        if (showFileInfoModal && sidePanelRef.current) {
+            const heading = sidePanelRef.current.querySelector('h3');
+            if (heading) heading.focus?.();
+        }
+    }, [showFileInfoModal]);
 
     useEffect(() => {
         if (isOpen) {
             setIsLoading(true);
             setFileError(false);
+            setIsEmpty(false);
             setFileContent('');
+            setAutoFitImage(false);
             resetZoom();
+
+            // Reset video state when switching files
+            setIsVideoPlaying(false);
+            setVideoCurrentTime(0);
+            setVideoDuration(0);
+            setIsVideoMuted(false);
+            setIsVideoFullscreen(false);
+
+            // Reset HTML preview state
+            setIsHtmlPreview(false);
 
             if (currentFile) loadFileContent(currentFile);
         }
@@ -615,6 +682,13 @@ export function FileViewer({
     };
 
     const loadFileContent = async (file) => {
+        // Check if file is empty (0 bytes) regardless of type
+        if (file.size === 0) {
+            setIsEmpty(true);
+            setIsLoading(false);
+            return;
+        }
+
         const fileType = getFileType(file.name);
 
         if (['text', 'code'].includes(fileType)) {
@@ -623,7 +697,15 @@ export function FileViewer({
                 if (!response.ok) throw new Error('Failed to load file');
 
                 const text = await response.text();
-                setFileContent(text);
+
+                // Check if file content is empty (just whitespace)
+                if (text.trim() === '') {
+                    setFileContent('');
+                    setIsEmpty(true);
+                } else {
+                    setFileContent(text);
+                    setIsEmpty(false);
+                }
 
                 setIsLoading(false);
             } catch (error) {
@@ -706,6 +788,10 @@ export function FileViewer({
         console.error('File loading error:', e);
         setIsLoading(false);
         setFileError(true);
+        // Reset video state on error
+        setIsVideoPlaying(false);
+        setVideoCurrentTime(0);
+        setVideoDuration(0);
     };
 
     const handleVideoError = (e) => {
@@ -714,6 +800,10 @@ export function FileViewer({
         console.error('Video file size:', currentFile?.size ? `${(currentFile.size / (1024 * 1024)).toFixed(1)}MB` : 'Unknown size');
         setIsLoading(false);
         setFileError(true);
+        // Reset video state on error
+        setIsVideoPlaying(false);
+        setVideoCurrentTime(0);
+        setVideoDuration(0);
     };
 
     const updateImageTransform = useCallback((scale, position) => {
@@ -724,7 +814,7 @@ export function FileViewer({
 
     const handleZoomIn = useCallback(() => {
         setImageScale(prev => {
-            const newScale = Math.min(prev * 1.2, 5);
+            const newScale = Math.min(prev * 1.2, 10); // 1000%
             updateImageTransform(newScale, imagePositionRef.current);
             return newScale;
         });
@@ -815,6 +905,12 @@ export function FileViewer({
         return editableExtensions.includes(ext);
     };
 
+    const isHtmlFile = (filename) => {
+        if (!filename) return false;
+        const ext = filename.split('.').pop()?.toLowerCase();
+        return ext === 'html' || ext === 'htm';
+    };
+
     const openCodeEditor = () => {
         if (isEditableFile(currentFile?.name)) {
             setShowCodeEditor(true);
@@ -823,7 +919,8 @@ export function FileViewer({
 
     const handleCodeEditorSave = (newContent) => {
         setFileContent(newContent);
-        onAction?.('refresh', currentFile);
+        // Notify parent with lightweight payload; parent can decide if deeper refresh required
+        onAction?.('content-updated', { file: currentFile, content: newContent });
     };
 
     const renderFileContent = () => {
@@ -864,6 +961,17 @@ export function FileViewer({
             );
         }
 
+        if (isEmpty) {
+            return (
+                <div className={style.error}>
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
+                        <path d="M13 3L3 13v8h8l10-10L13 3zm2.83 6.83l-1.41 1.41L12 9.83l-2.42 2.42-1.41-1.41L10.59 8.42 8.17 6l1.41-1.41L12 7.01l2.42-2.42L15.83 6l-2.42 2.42L15.83 8.42z" fill="currentColor" />
+                    </svg>
+                    <p>This file is empty</p>
+                </div>
+            );
+        }
+
         switch (fileType) {
             case 'image':
                 return (
@@ -878,12 +986,20 @@ export function FileViewer({
                             ref={contentRef}
                             src={getStreamUrl(currentFile)}
                             alt={currentFile.name}
-                            className={style.image}
+                            className={`${style.image} ${autoFitImage ? style.autoFitImage : ''}`}
                             style={{
                                 willChange: imageScale > 1 ? 'transform' : 'auto',
                                 cursor: imageScale > 1 ? (isDragging ? 'grabbing' : 'grab') : 'default'
                             }}
-                            onLoad={handleFileLoad}
+                            onLoad={(e) => {
+                                const img = e.currentTarget;
+                                const vw = window.innerWidth;
+                                const vh = window.innerHeight;
+                                const tooWide = img.naturalWidth > vw * 0.95;
+                                const tooTall = img.naturalHeight > vh * 0.95;
+                                setAutoFitImage(tooWide || tooTall);
+                                handleFileLoad();
+                            }}
                             onError={handleFileError}
                             draggable={false}
                         />
@@ -935,7 +1051,7 @@ export function FileViewer({
                                     >
                                         <div
                                             className={style.videoProgressFill}
-                                            style={{ width: `${(videoCurrentTime / videoDuration) * 100}%` }}
+                                            style={{ width: `${videoDuration > 0 ? (videoCurrentTime / videoDuration) * 100 : 0}%` }}
                                         />
                                     </div>
                                     <div className={style.videoTimeAndControls}>
@@ -974,9 +1090,9 @@ export function FileViewer({
                                             className={style.videoControlButton}
                                             onClick={(e) => {
                                                 e.stopPropagation();
-                                                seekVideo(-10);
+                                                seekVideo(10);
                                             }}
-                                            title="-10s"
+                                            title="+10s"
                                         >
                                             10s <Redo2 size={14} strokeWidth={3} />
                                         </button>
@@ -1019,9 +1135,9 @@ export function FileViewer({
                                             className={style.videoControlButton}
                                             onClick={(e) => {
                                                 e.stopPropagation();
-                                                seekVideo(10);
+                                                seekVideo(-10);
                                             }}
-                                            title="+10s"
+                                            title="-10s"
                                         >
                                             <Undo2 size={14} strokeWidth={3} /> 10s
                                         </button>
@@ -1045,6 +1161,22 @@ export function FileViewer({
 
             case 'text':
             case 'code':
+                // Check if this is an HTML file and preview mode is enabled
+                if (isHtmlFile(currentFile?.name) && isHtmlPreview) {
+                    return (
+                        <div className={style.contentContainer}>
+                            <div className={style.htmlPreviewContainer}>
+                                <iframe
+                                    srcDoc={fileContent}
+                                    className={style.htmlPreview}
+                                    sandbox="allow-same-origin allow-scripts allow-forms"
+                                    title="HTML Preview"
+                                />
+                            </div>
+                        </div>
+                    );
+                }
+
                 const language = getPrismLanguage(currentFile.name);
                 let highlightedCode = fileContent;
                 try {
@@ -1135,62 +1267,64 @@ export function FileViewer({
         <>
             {/* Main FileViewer */}
             <div className={`${style.overlay} ${mobile ? style.mobileOverlay : ''}`} style={{ display: showCodeEditor ? 'none' : 'flex' }}>
-                <div className={`${style.container} ${mobile ? style.mobileContainer : ''}`} ref={containerRef}>
-                    {/* Header */}
-                    {showControls && (
-                        <div className={`${style.header} ${mobile ? style.mobileHeader : ''}`}>
-                            {mobile ? (
-                                // Mobile header layout: back button on left, actions on right
-                                <>
-                                    <button
-                                        className={style.mobileBackButton}
-                                        onClick={onClose}
-                                        title="Back"
-                                    >
-                                        <ArrowLeft size={24} />
-                                    </button>
-
-                                    <div className={style.mobileActions}>
+                <div className={`${style.container} ${!mobile && showFileInfoModal ? style.containerWithPanelSpace : ''} ${mobile ? style.mobileContainer : ''}`} ref={containerRef}>
+                    {/* Main content area */}
+                    <div className={style.mainContentArea}>
+                        {/* Header */}
+                        {showControls && (
+                            <div className={`${style.header} ${mobile ? style.mobileHeader : ''}`}>
+                                {mobile ? (
+                                    // Mobile header layout: back button on left, actions on right
+                                    <>
                                         <button
-                                            className={style.mobileActionButton}
-                                            onClick={() => handleAction('favorite')}
-                                            title="Favorite"
+                                            className={style.mobileBackButton}
+                                            onClick={onClose}
+                                            title="Back"
                                         >
-                                            <Star size={20} fill={currentFile.isFavorited ? "currentColor" : "none"} />
+                                            <ArrowLeft size={24} />
                                         </button>
 
-                                        <div className={style.dropdown} ref={dropdownRef}>
+                                        <div className={style.mobileActions}>
                                             <button
                                                 className={style.mobileActionButton}
-                                                onClick={() => setShowDropdown(!showDropdown)}
-                                                title="More options"
+                                                onClick={() => handleAction('favorite')}
+                                                title="Favorite"
                                             >
-                                                <MoreVertical size={20} />
+                                                <Star size={20} fill={currentFile.isFavorited ? "currentColor" : "none"} />
                                             </button>
 
-                                            {showDropdown && (
-                                                <div className={`${style.dropdownMenu} ${style.mobileDropdownMenu}`}>
-                                                    <button
-                                                        className={style.dropdownItem}
-                                                        onClick={handleDownload}
-                                                    >
-                                                        Download
-                                                    </button>
+                                            <div className={style.dropdown} ref={dropdownRef}>
+                                                <button
+                                                    className={style.mobileActionButton}
+                                                    onClick={() => setShowDropdown(!showDropdown)}
+                                                    title="More options"
+                                                >
+                                                    <MoreVertical size={20} />
+                                                </button>
 
-                                                    <button
-                                                        className={style.dropdownItem}
-                                                        onClick={handleFileInfo}
-                                                    >
-                                                        File Info
-                                                    </button>
-
-                                                    {getFileType(currentFile.name) === 'image' && (
+                                                {showDropdown && (
+                                                    <div className={`${style.dropdownMenu} ${style.mobileDropdownMenu}`}>
                                                         <button
                                                             className={style.dropdownItem}
-                                                            onClick={() => {
-                                                                const printWindow = window.open('', '_blank');
-                                                                const imageUrl = getDownloadUrl(currentFile);
-                                                                printWindow.document.write(`
+                                                            onClick={handleDownload}
+                                                        >
+                                                            Download
+                                                        </button>
+
+                                                        <button
+                                                            className={style.dropdownItem}
+                                                            onClick={handleFileInfo}
+                                                        >
+                                                            File Info
+                                                        </button>
+
+                                                        {getFileType(currentFile.name) === 'image' && (
+                                                            <button
+                                                                className={style.dropdownItem}
+                                                                onClick={() => {
+                                                                    const printWindow = window.open('', '_blank');
+                                                                    const imageUrl = getDownloadUrl(currentFile);
+                                                                    printWindow.document.write(`
                                                                 <html>
                                                                     <head><title>Print ${currentFile.name}</title></head>
                                                                     <body style="margin: 0; text-align: center;">
@@ -1198,195 +1332,248 @@ export function FileViewer({
                                                                     </body>
                                                                 </html>
                                                             `);
-                                                            }}
+                                                                }}
+                                                            >
+                                                                Print
+                                                            </button>
+                                                        )}
+
+                                                        <button
+                                                            className={style.dropdownItem}
+                                                            onClick={handleDeleteConfirm}
                                                         >
-                                                            Print
+                                                            Delete
                                                         </button>
-                                                    )}
-
-                                                    <button
-                                                        className={style.dropdownItem}
-                                                        onClick={handleDeleteConfirm}
-                                                    >
-                                                        Delete
-                                                    </button>
-                                                </div>
-                                            )}
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
-                                    </div>
-                                </>
-                            ) : (
-                                // Desktop header layout (existing)
-                                <>
-                                    <div className={style.fileInfo}>
-                                        <h3 className={style.fileName}>{currentFile.name}</h3>
-                                        <span className={style.fileCounter}>
-                                            {currentFileIndex + 1} of {files.length}
-                                        </span>
-                                    </div>
+                                    </>
+                                ) : (
+                                    // Desktop header layout (existing)
+                                    <>
+                                        <div className={style.fileInfo}>
+                                            <h3 className={style.fileName}>{currentFile.name}</h3>
+                                            <span className={style.fileCounter}>
+                                                {currentFileIndex + 1} of {files.length}
+                                            </span>
+                                        </div>
 
-                                    <div className={style.headerControls}>
-                                        {isEditableFile(currentFile?.name) && (
-                                            <button
-                                                className={style.editButton}
-                                                onClick={openCodeEditor}
-                                                title="Edit file"
-                                            >
-                                                <Edit size={20} />
-                                            </button>
-                                        )}
+                                        <div className={style.headerControls}>
+                                            {isEditableFile(currentFile?.name) && (
+                                                <button
+                                                    className={style.editButton}
+                                                    onClick={openCodeEditor}
+                                                    title="Edit file"
+                                                >
+                                                    <Edit size={20} />
+                                                </button>
+                                            )}
 
-                                        <button
-                                            className={style.controlButton}
-                                            onClick={handleDownload}
-                                            title="Download"
-                                        >
-                                            <Download size={20} />
-                                        </button>
+                                            {isHtmlFile(currentFile?.name) && (
+                                                <button
+                                                    className={`${style.controlButton} ${isHtmlPreview ? style.previewButtonActive : ''}`}
+                                                    onClick={() => setIsHtmlPreview(!isHtmlPreview)}
+                                                    title={isHtmlPreview ? "Show code" : "Preview HTML"}
+                                                >
+                                                    {isHtmlPreview ? <FileText size={20} /> : <Eye size={20} />}
+                                                </button>
+                                            )}
 
-                                        <div className={style.dropdown} ref={dropdownRef}>
                                             <button
                                                 className={style.controlButton}
-                                                onClick={() => setShowDropdown(!showDropdown)}
-                                                title="More options"
+                                                onClick={handleDownload}
+                                                title="Download"
                                             >
-                                                <MoreVertical size={20} />
+                                                <Download size={20} />
                                             </button>
 
-                                            {showDropdown && (
-                                                <div className={style.dropdownMenu}>
-                                                    {/* Only show rename if user owns the file or has rename permission */}
-                                                    {(currentFile.canRename) && (
-                                                        <>
-                                                            <button
-                                                                className={style.dropdownItem}
-                                                                onClick={() => handleAction('rename')}
-                                                            >
-                                                                Rename
-                                                            </button>
+                                            <div className={style.dropdown} ref={dropdownRef}>
+                                                <button
+                                                    className={style.controlButton}
+                                                    onClick={() => setShowDropdown(!showDropdown)}
+                                                    title="More options"
+                                                >
+                                                    <MoreVertical size={20} />
+                                                </button>
 
-                                                            <div className={style.dropdownSeparator}></div>
-                                                        </>
-                                                    )}
+                                                {showDropdown && (
+                                                    <div className={style.dropdownMenu}>
+                                                        {/* Only show rename if user owns the file or has rename permission */}
+                                                        {(currentFile.canRename) && (
+                                                            <>
+                                                                <button
+                                                                    className={style.dropdownItem}
+                                                                    onClick={() => handleAction('rename')}
+                                                                >
+                                                                    Rename
+                                                                </button>
 
-                                                    <button
-                                                        className={style.dropdownItem}
-                                                        onClick={handleFileInfo}
-                                                    >
-                                                        Properties
-                                                    </button>
-                                                </div>
-                                            )}
+                                                                <div className={style.dropdownSeparator}></div>
+                                                            </>
+                                                        )}
+
+                                                        <button
+                                                            className={style.dropdownItem}
+                                                            onClick={handleFileInfo}
+                                                        >
+                                                            Properties
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            <button
+                                                className={style.controlButton}
+                                                onClick={onClose}
+                                                title="Close (Esc)"
+                                            >
+                                                <X size={20} />
+                                            </button>
                                         </div>
+                                    </>
+                                )}
+                            </div>
+                        )}
 
-                                        <button
-                                            className={style.controlButton}
-                                            onClick={onClose}
-                                            title="Close (Esc)"
-                                        >
-                                            <X size={20} />
-                                        </button>
-                                    </div>
-                                </>
-                            )}
+                        {/* Navigation - only show on desktop */}
+                        {!mobile && showControls && currentFileIndex > 0 && (
+                            <button
+                                className={`${style.navButton} ${style.navLeft}`}
+                                onClick={() => onNavigate(currentFileIndex - 1)}
+                                title="Previous file"
+                            >
+                                <ChevronLeft size={24} />
+                            </button>
+                        )}
+
+                        {!mobile && showControls && currentFileIndex < files.length - 1 && (
+                            <button
+                                className={`${style.navButton} ${style.navRight}`}
+                                onClick={() => onNavigate(currentFileIndex + 1)}
+                                title="Next file"
+                            >
+                                <ChevronRight size={24} />
+                            </button>
+                        )}
+
+                        {/* Content Container */}
+                        <div
+                            className={`${style.fileContainer} ${(getFileType(currentFile?.name) === 'image' && imageScale > 1) ? style.zoomActive : ''}`}
+                            onClick={toggleControls}
+                            onTouchStart={handleFileSwipeStart}
+                            onTouchMove={handleFileSwipeMove}
+                            onTouchEnd={handleFileSwipeEnd}
+                        >
+                            {isLoading && (<SoftLoading />)}
+                            {!isLoading && renderFileContent()}
                         </div>
-                    )}
 
-                    {/* Navigation - only show on desktop */}
-                    {!mobile && showControls && currentFileIndex > 0 && (
-                        <button
-                            className={`${style.navButton} ${style.navLeft}`}
-                            onClick={() => onNavigate(currentFileIndex - 1)}
-                            title="Previous file"
-                        >
-                            <ChevronLeft size={24} />
-                        </button>
-                    )}
+                        {/* Mobile Navigation - only show on mobile */}
+                        {mobile && showControls && (
+                            <>
+                                {currentFileIndex > 0 && (
+                                    <button
+                                        className={`${style.navButton} ${style.navLeft} ${style.mobileNav}`}
+                                        onClick={goToPreviousFile}
+                                        title="Previous file"
+                                    >
+                                        <ChevronLeft size={20} />
+                                    </button>
+                                )}
 
-                    {!mobile && showControls && currentFileIndex < files.length - 1 && (
-                        <button
-                            className={`${style.navButton} ${style.navRight}`}
-                            onClick={() => onNavigate(currentFileIndex + 1)}
-                            title="Next file"
-                        >
-                            <ChevronRight size={24} />
-                        </button>
-                    )}
+                                {currentFileIndex < files.length - 1 && (
+                                    <button
+                                        className={`${style.navButton} ${style.navRight} ${style.mobileNav}`}
+                                        onClick={goToNextFile}
+                                        title="Next file"
+                                    >
+                                        <ChevronRight size={20} />
+                                    </button>
+                                )}
+                            </>
+                        )}
 
-                    {/* Content Container */}
-                    <div
-                        className={style.fileContainer}
-                        onClick={toggleControls}
-                        onTouchStart={handleFileSwipeStart}
-                        onTouchMove={handleFileSwipeMove}
-                        onTouchEnd={handleFileSwipeEnd}
-                    >
-                        {isLoading && (<SoftLoading />)}
-                        {!isLoading && renderFileContent()}
+                        {/* Zoom Controls - Only for images */}
+                        {supportsZoom && !isLoading && !fileError && showControls && (
+                            <div className={`${style.zoomControls} ${!mobile && showFileInfoModal ? style.zoomControlsWithSidePanel : ''}`}>
+                                <button
+                                    className={style.zoomButton}
+                                    onClick={handleZoomOut}
+                                    title="Zoom out (-)"
+                                >
+                                    <ZoomOut size={16} />
+                                </button>
+
+                                <span className={style.zoomLevel}>
+                                    {Math.round(imageScale * 100)}%
+                                </span>
+
+                                <button
+                                    className={style.zoomButton}
+                                    onClick={handleZoomIn}
+                                    title="Zoom in (+)"
+                                >
+                                    <ZoomIn size={16} />
+                                </button>
+
+                                <button
+                                    className={style.zoomButton}
+                                    onClick={resetZoom}
+                                    title="Reset zoom (0)"
+                                >
+                                    <RotateCw size={16} />
+                                </button>
+                            </div>
+                        )}
                     </div>
-
-                    {/* Mobile Navigation - only show on mobile */}
-                    {mobile && showControls && (
-                        <>
-                            {currentFileIndex > 0 && (
-                                <button
-                                    className={`${style.navButton} ${style.navLeft} ${style.mobileNav}`}
-                                    onClick={goToPreviousFile}
-                                    title="Previous file"
-                                >
-                                    <ChevronLeft size={20} />
-                                </button>
-                            )}
-
-                            {currentFileIndex < files.length - 1 && (
-                                <button
-                                    className={`${style.navButton} ${style.navRight} ${style.mobileNav}`}
-                                    onClick={goToNextFile}
-                                    title="Next file"
-                                >
-                                    <ChevronRight size={20} />
-                                </button>
-                            )}
-                        </>
-                    )}
-
-                    {/* Zoom Controls - Only for images */}
-                    {supportsZoom && !isLoading && !fileError && showControls && (
-                        <div className={style.zoomControls}>
-                            <button
-                                className={style.zoomButton}
-                                onClick={handleZoomOut}
-                                title="Zoom out (-)"
-                            >
-                                <ZoomOut size={16} />
-                            </button>
-
-                            <span className={style.zoomLevel}>
-                                {Math.round(imageScale * 100)}%
-                            </span>
-
-                            <button
-                                className={style.zoomButton}
-                                onClick={handleZoomIn}
-                                title="Zoom in (+)"
-                            >
-                                <ZoomIn size={16} />
-                            </button>
-
-                            <button
-                                className={style.zoomButton}
-                                onClick={resetZoom}
-                                title="Reset zoom (0)"
-                            >
-                                <RotateCw size={16} />
-                            </button>
-                        </div>
-                    )}
                 </div>
+                {/* Close main content area div for desktop */}
             </div>
 
-            {/* File Info Modal */}
-            {showFileInfoModal && (
+            {/* Desktop Side Panel */}
+            {!mobile && (
+                <div ref={sidePanelRef} className={`${style.sidePanel} ${showFileInfoModal ? style.sidePanelOpen : ''}`}>        
+                    <div className={style.sidePanelHeader}>
+                        <h3>File Information</h3>
+                        <button onClick={() => {
+                            setShowFileInfoModal(false);
+                            setFileInfoMenuSwipePosition(0);
+                            setFileInfoMenuInitialY(0);
+                            if (lastFocusedElementRef.current && lastFocusedElementRef.current.focus) {
+                                lastFocusedElementRef.current.focus();
+                            }
+                        }}><X /></button>
+                    </div>
+                    <div className={style.sidePanelContent}>
+                        <div className={style.fileInfoItem}>
+                            <span>Name:</span>
+                            <span>{currentFile.name}</span>
+                        </div>
+                        <div className={style.fileInfoItem}>
+                            <span>Size:</span>
+                            <span>{formatFileSize(currentFile.size)}</span>
+                        </div>
+                        <div className={style.fileInfoItem}>
+                            <span>Type:</span>
+                            <span>{getFileType(currentFile.name)}</span>
+                        </div>
+                        <div className={style.fileInfoItem}>
+                            <span>Path:</span>
+                            <span>{currentFile.path}</span>
+                        </div>
+                        {currentFile.modified && (
+                            <div className={style.fileInfoItem}>
+                                <span>Modified:</span>
+                                <span>{formatDate(currentFile.modified)}</span>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {/* Mobile File Info Modal */}
+            {mobile && showFileInfoModal && (
                 <div className={mainStyle.popupModalMenuOverlay} onClick={() => {
                     setShowFileInfoModal(false);
                     setFileInfoMenuSwipePosition(0);

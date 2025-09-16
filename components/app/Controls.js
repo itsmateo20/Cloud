@@ -32,9 +32,7 @@ import {
 const Controls = ({
     currentPath,
     selectedItems = [],
-    onNewFolder,
-    onNewFile,
-    onNewTextFile,
+    onOpenNewItemModal,
     onUpload,
     onDownload,
     onDelete,
@@ -111,7 +109,7 @@ const Controls = ({
                             <button
                                 className={styles.dropdownItem}
                                 onClick={() => {
-                                    onNewFolder();
+                                    onOpenNewItemModal?.('folder');
                                     setShowNewDropdown(false);
                                 }}
                             >
@@ -121,7 +119,7 @@ const Controls = ({
                             <button
                                 className={styles.dropdownItem}
                                 onClick={() => {
-                                    onNewFile();
+                                    onOpenNewItemModal?.('file');
                                     setShowNewDropdown(false);
                                 }}
                             >
@@ -131,7 +129,7 @@ const Controls = ({
                             <button
                                 className={styles.dropdownItem}
                                 onClick={() => {
-                                    onNewTextFile();
+                                    onOpenNewItemModal?.('text');
                                     setShowNewDropdown(false);
                                 }}
                             >

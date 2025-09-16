@@ -19,7 +19,66 @@
     height: 100%;
     display: flex;
     flex-direction: column;
-    overflow: hidden;
+    justify-content: center;
+    /* Remove transform shifting; we'll use padding to reserve space */
+    transition: padding-right 0.35s ease;
+}
+
+/* New pattern: add right padding equal to panel width when open so header/content stay put */
+.containerWithPanelSpace {
+    padding-right: var(--fv-side-panel-width, 400px);
+}
+
+/* Desktop layout with side panel */
+.containerWithSidePanel {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+}
+
+.mainContentArea {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    transition: margin-right 0.3s ease;
+    position: relative;
+}
+
+.sidePanel {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 400px;
+    height: 100vh;
+    background: var(--background);
+    border-left: 2px solid var(--border-color);
+    z-index: 2500;
+    display: flex;
+    flex-direction: column;
+    transform: translateX(100%);
+    transition: transform 0.35s cubic-bezier(.4,.0,.2,1);
+    will-change: transform;
+}
+
+.sidePanelOpen {
+    transform: translateX(0);
+}
+
+.sidePanelHeader {
+    padding: 20px;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.sidePanelContent {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
 }
 
 .header {
@@ -34,6 +93,7 @@
     padding: clamp(12px, 3vw, 20px) clamp(16px, 4vw, 24px);
     background: linear-gradient(180deg, rgba(0, 0, 0, 0.8) 0%, transparent 100%);
     color: var(--button-text-color);
+    transition: all 0.3s ease;
 }
 
 .fileInfoItem {
@@ -67,6 +127,7 @@
     display: flex;
     align-items: center;
     gap: clamp(4px, 1vw, 8px);
+    transition: all 0.3s ease;
 }
 
 .controlButton {
@@ -192,7 +253,40 @@
     align-items: center;
     justify-content: center;
     position: relative;
-    overflow: hidden;
+}
+
+.fileContainerWithSidePanel {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    /* Center content between left edge and 400px side panel by shifting center left by 200px */
+    padding-right: 200px;
+}
+    /* .fileContainerWithSidePanel deprecated: dynamic container shift now handles centering */
+
+/* Enable scroll/pan space when an image is zoomed beyond viewport */
+.zoomActive {
+    cursor: grab;
+}
+
+.zoomActive::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+.zoomActive::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.zoomActive::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.25);
+    border-radius: 8px;
+}
+
+.zoomActive::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.4);
 }
 
 .contentContainer {
@@ -201,14 +295,13 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    overflow: auto;
     transform-style: preserve-3d;
     -webkit-transform-style: preserve-3d;
 }
 
 .image {
-    max-width: 90%;
-    max-height: 90%;
+    max-width: 100%;
+    max-height: 100%;
     object-fit: contain;
     user-select: none;
     transform-origin: center center;
@@ -216,6 +309,12 @@
     -webkit-backface-visibility: hidden;
     perspective: 1000px;
     -webkit-perspective: 1000px;
+}
+
+/* Constrain very large images on initial load; toggled via state */
+.autoFitImage {
+    max-width: 90vw;
+    max-height: 85vh;
 }
 
 .video {
@@ -481,8 +580,10 @@
     padding: clamp(6px, 1.5vw, 8px) clamp(12px, 3vw, 16px);
     border-radius: clamp(16px, 4vw, 24px);
     backdrop-filter: blur(10px);
-    z-index: 2001;
+    z-index: 3000;
 }
+
+/* With side panel we shift container, so zoom controls remain centered automatically */
 
 .zoomButton {
     background: none;
@@ -711,6 +812,35 @@
     min-width: clamp(380px, 75vw, 650px);
     /* Wider */
     max-width: 90vw;
+    transition: transform 0.3s ease, left 0.3s ease;
+}
+
+.customVideoControlsWithSidePanel {
+    position: fixed;
+    bottom: clamp(12px, 3vw, 20px);
+    left: calc(50% - 200px);
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.9);
+    backdrop-filter: blur(20px);
+    border-radius: clamp(12px, 3vw, 16px);
+    padding: clamp(4px, 1vw, 8px);
+    /* Smaller padding */
+    display: flex;
+    flex-direction: column;
+    gap: clamp(8px, 2vw, 12px);
+    z-index: 2003;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    min-width: clamp(380px, 75vw, 650px);
+    /* Wider */
+    max-width: 90vw;
+    transition: transform 0.3s ease, left 0.3s ease;
+}
+    /* .customVideoControlsWithSidePanel deprecated: container shift centers controls */
+/* Removed special animation; class retained in JS logic but no styling needed */
+
+@keyframes zoomPanelOpen {
+    0% { opacity: 0; transform: translate(-50%, 10px); }
+    100% { opacity: 1; transform: translate(-50%, 0); }
 }
 
 .customVideoControlsVertical {
@@ -893,4 +1023,48 @@
         min-width: 40px;
         font-size: 15px;
     }
+}
+
+/* File Info Items */
+.fileInfoItem {
+    display: flex;
+    justify-content: space-between;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.fileInfoItem:last-child {
+    border-bottom: none;
+}
+
+.fileInfoItem span:first-child {
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.fileInfoItem span:last-child {
+    color: var(--text-color);
+    word-break: break-all;
+}
+
+/* HTML Preview */
+.htmlPreviewContainer {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.htmlPreview {
+    width: 100%;
+    height: 100%;
+    border: none;
+    background: white;
+    border-radius: 8px;
+}
+
+.previewButtonActive {
+    background: var(--accent-color) !important;
+    color: white !important;
 }

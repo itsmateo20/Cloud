@@ -216,15 +216,22 @@ export function DownloadManager() {
     const overallProgress = getOverallProgress();
     const shouldShowButton = hasActiveDownloads || hasHistory;
 
-    if (!shouldShowButton) {
-        return null;
-    }
+    // Notify others (like ToastProvider) about visibility / expansion changes
+    useEffect(() => {
+        if (shouldShowButton) {
+            window.dispatchEvent(new CustomEvent('downloadManagerVisibility', { detail: { visible: true, expanded: isExpanded } }));
+        } else {
+            window.dispatchEvent(new CustomEvent('downloadManagerVisibility', { detail: { visible: false, expanded: false } }));
+        }
+    }, [shouldShowButton, isExpanded]);
+
+    if (!shouldShowButton) return null;
 
     return (
         <div className={style.downloadManager}>
             <button
                 className={`${style.floatingButton} ${isExpanded ? style.expanded : ''} ${hasActiveDownloads ? style.hasActiveDownloads : ''}`}
-                onClick={() => setIsExpanded(!isExpanded)}
+                onClick={() => setIsExpanded(prev => !prev)}
                 title={hasActiveDownloads ? `${downloads.length} active download${downloads.length > 1 ? 's' : ''} - ${Math.round(overallProgress)}%` : 'Download history'}
             >
                 {hasActiveDownloads && !isExpanded && (

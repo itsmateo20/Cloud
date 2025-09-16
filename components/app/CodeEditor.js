@@ -31,8 +31,32 @@ export function CodeEditor({
     }, [file.name]);
 
     useEffect(() => {
-        if (isMarkdown && showPreview) renderMarkdown(editorContent);
+        if (isMarkdown && showPreview) {
+            // Debounce markdown rendering to avoid constant updates while typing
+            const timeoutId = setTimeout(() => {
+                renderMarkdown(editorContent);
+            }, 500); // Wait 500ms after user stops typing
+
+            return () => clearTimeout(timeoutId);
+        }
     }, [editorContent, isMarkdown, showPreview]);
+
+    // Handle unsaved changes warning when closing/refreshing tab
+    useEffect(() => {
+        const handleBeforeUnload = (e) => {
+            if (hasChanges) {
+                e.preventDefault();
+                e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+                return 'You have unsaved changes. Are you sure you want to leave?';
+            }
+        };
+
+        window.addEventListener('beforeunload', handleBeforeUnload);
+
+        return () => {
+            window.removeEventListener('beforeunload', handleBeforeUnload);
+        };
+    }, [hasChanges]);
 
     const getLanguage = (filename) => {
         const ext = filename.split('.').pop()?.toLowerCase();

@@ -6,8 +6,45 @@ import { downloadFile, downloadFolder } from "@/utils/downloadUtils";
 
 import styles from "./FileList.module.css";
 import SoftLoading from "@/components/SoftLoading";
+import React from 'react';
+
+// Lightweight in-memory cache so previously loaded thumbnails don't show loader again
+const ThumbnailWithLoader = ({ src, alt, cacheRef }) => {
+    const [loaded, setLoaded] = useState(() => cacheRef?.current?.has(src));
+
+    useEffect(() => {
+        if (cacheRef?.current?.has(src)) {
+            setLoaded(true);
+        }
+    }, [src, cacheRef]);
+
+    const handleLoad = () => {
+        if (cacheRef?.current && !cacheRef.current.has(src)) {
+            cacheRef.current.add(src);
+        }
+        setLoaded(true);
+    };
+
+    return (
+        <>
+            {!loaded && <div className={styles.thumbLoader}><SoftLoading /></div>}
+            <img
+                src={src}
+                alt={alt}
+                className={styles.thumbnailImage}
+                loading="lazy"
+                decoding="async"
+                style={!loaded ? { visibility: 'hidden', position: 'absolute' } : {}}
+                onLoad={handleLoad}
+                onError={(e) => { e.currentTarget.style.display = 'none'; setLoaded(true); }}
+            />
+        </>
+    );
+};
 
 import { ContextMenu } from "./ContextMenu";
+import { useToast } from './ToastProvider';
+import ConfirmModal from "./ConfirmModal";
 import { FileViewer } from "./FileViewer";
 
 import {
@@ -155,7 +192,10 @@ const isVideo = (filename) => {
 const getPreviewUrl = (file, currentPath) => {
     if (isImage(file.name)) {
         const fullPath = currentPath === '/' ? `/${file.name}` : `${currentPath}/${file.name}`;
-        return `/api/files/thumbnail?path=${encodeURIComponent(fullPath)}`;
+        // Attempt to use modified timestamp for cache busting
+        const mod = file.modified || file.modifiedAt || file.updatedAt || file.createdAt || '';
+        const v = mod ? new Date(mod).getTime() : '';
+        return `/api/files/thumbnail?path=${encodeURIComponent(fullPath)}${v ? `&v=${v}` : ''}`;
     }
     return null;
 };
@@ -163,7 +203,9 @@ const getPreviewUrl = (file, currentPath) => {
 const getVideoThumbnailUrl = (file, currentPath) => {
     if (isVideo(file.name)) {
         const fullPath = currentPath === '/' ? `/${file.name}` : `${currentPath}/${file.name}`;
-        return `/api/files/thumbnail?path=${encodeURIComponent(fullPath)}`;
+        const mod = file.modified || file.modifiedAt || file.updatedAt || file.createdAt || '';
+        const v = mod ? new Date(mod).getTime() : '';
+        return `/api/files/video-thumbnail?path=${encodeURIComponent(fullPath)}${v ? `&v=${v}` : ''}`;
     }
     return null;
 };
@@ -180,6 +222,9 @@ const FileList = forwardRef(({
     user,
     mobile = false,
 }, ref) => {
+    const toast = (() => { try { return useToast(); } catch { return null; } })();
+    // Holds successfully loaded thumbnail URLs for session-level memory cache
+    const thumbnailCacheRef = useRef(new Set());
     const [folders, setFolders] = useState([]);
     const [files, setFiles] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -304,8 +349,9 @@ const FileList = forwardRef(({
                         });
                     }
                     refreshContent();
+                    toast?.addSuccess('Renamed successfully');
                 } else {
-                    alert('Failed to rename file/folder');
+                    toast?.addError('Failed to rename');
                 }
             } else {
                 // Multi-rename logic
@@ -335,10 +381,11 @@ const FileList = forwardRef(({
                     }
                 }
                 refreshContent();
+                toast?.addSuccess('Items renamed');
             }
         } catch (error) {
             console.error('Error renaming:', error);
-            alert('Error renaming file/folder');
+            toast?.addError('Error renaming');
         }
 
         cancelRename();
@@ -368,12 +415,13 @@ const FileList = forwardRef(({
                     qrCode: response.qrCode,
                     items
                 });
+                toast?.addSuccess(type === 'download' ? 'QR code ready (download)' : 'QR code ready (upload)');
             } else {
-                alert('Failed to generate QR code');
+                toast?.addError('Failed to generate QR code');
             }
         } catch (error) {
             console.error('Error generating QR code:', error);
-            alert('Error generating QR code');
+            toast?.addError('Error generating QR code');
         }
     };
 
@@ -412,6 +460,11 @@ const FileList = forwardRef(({
             handleContextMenuAction('favorite', items);
         },
         refresh: refreshContent,
+        updateItem: (path, patch) => {
+            if (!path) return;
+            setFiles(prev => prev.map(f => f.path === path ? { ...f, ...patch } : f));
+            setFolders(prev => prev.map(f => f.path === path ? { ...f, ...patch } : f));
+        },
         selectAll: () => {
             try {
                 const allItems = [...folders, ...files];
@@ -421,6 +474,10 @@ const FileList = forwardRef(({
             } catch (error) {
                 console.error('Error in selectAll:', error);
             }
+        },
+        startRename: (item) => {
+            if (!item) return;
+            setRenaming({ active: true, items: [item], value: item.name });
         }
     }));
 
@@ -545,6 +602,22 @@ const FileList = forwardRef(({
             loadContents();
             return;
         }
+        <ConfirmModal
+            open={confirmState.open}
+            title={confirmState.title}
+            message={confirmState.message}
+            onCancel={() => {
+                // Special handling: if download choice modal canceled, treat as QR path
+                if (confirmState.action === 'context-download-mode') {
+                    generateQRCode('download', confirmState.context);
+                }
+                closeConfirm();
+            }}
+            onConfirm={executeConfirmedAction}
+            destructive={confirmState.destructive}
+            confirmLabel={confirmState.confirmLabel}
+            cancelLabel={confirmState.cancelLabel}
+        />
 
         newItems.forEach(item => {
             const itemType = item.type || (item.name && item.name.includes('.') ? 'file' : 'folder');
@@ -695,6 +768,124 @@ const FileList = forwardRef(({
         }
     };
 
+    // Centralized confirmation modal state
+    const [confirmState, setConfirmState] = useState({
+        open: false,
+        title: '',
+        message: '',
+        destructive: false,
+        context: null,
+        confirmLabel: 'Confirm',
+        cancelLabel: 'Cancel',
+        action: ''
+    });
+
+    const openConfirm = (cfg) => setConfirmState(prev => ({ ...prev, open: true, ...cfg }));
+    const closeConfirm = () => setConfirmState(prev => ({ ...prev, open: false, context: null, action: '' }));
+
+    const executeConfirmedAction = async () => {
+        const { action, context } = confirmState;
+        if (!action) { closeConfirm(); return; }
+        try {
+            switch (action) {
+                case 'fileViewer-delete': {
+                    const file = context;
+                    const requestData = { paths: [file.path] };
+                    const response = await api.post('/api/files/delete', requestData);
+                    if (response.success) {
+                        setFileViewer(prev => ({ ...prev, isOpen: false }));
+                        refreshContent();
+                        toast?.addSuccess('File deleted');
+                    } else {
+                        toast?.addError('Failed to delete file');
+                    }
+                    break;
+                }
+                case 'context-delete': {
+                    const items = context;
+                    const requestData = { paths: items.map(i => i.path) };
+                    const response = await api.post('/api/files/delete', requestData);
+                    if (response.success) {
+                        setSelectedItems(new Set());
+                        setLastSelectedItem(null);
+                        refreshContent();
+                        toast?.addSuccess(items.length === 1 ? 'Item deleted' : `${items.length} items deleted`);
+                    } else toast?.addError('Failed to delete items');
+                    break;
+                }
+                case 'context-download-mode': {
+                    // user chose direct download inside modal
+                    const items = context;
+                    items.forEach(item => {
+                        if (item.type === 'file') downloadFile(item.path, item.name);
+                        else if (item.type === 'folder') downloadFolder(item.path, item.name);
+                    });
+                    break;
+                }
+                case 'favorite-multi-add': {
+                    const items = context;
+                    for (const item of items) {
+                        if (!item.isFavorited) {
+                            try {
+                                await api.post('/api/user/favorites', {
+                                    fileId: item.type === 'file' ? item.id : undefined,
+                                    folderId: item.type === 'folder' ? item.id : undefined,
+                                    action: 'add'
+                                });
+                                if (item.type === 'file') {
+                                    setFiles(prev => prev.map(f => f.path === item.path ? { ...f, isFavorited: true } : f));
+                                } else {
+                                    setFolders(prev => prev.map(f => f.path === item.path ? { ...f, isFavorited: true } : f));
+                                }
+                            } catch (e) { console.error('Error updating favorite status:', e); }
+                        }
+                    }
+                    refreshContent();
+                    toast?.addInfo('Added to favorites');
+                    break;
+                }
+                case 'favorite-multi-remove': {
+                    const { items, fromFavoritesPath } = context;
+                    if (fromFavoritesPath) {
+                        const response = await api.post('/api/user/favorites', {
+                            action: 'remove',
+                            items: items.map(item => ({ name: item.name, path: item.path, isFolder: item.isFolder || item.type === 'folder' }))
+                        });
+                        if (response.success) {
+                            setFiles(prev => prev.filter(f => !items.some(it => it.name === f.name)));
+                            setFolders(prev => prev.filter(f => !items.some(it => it.name === f.name)));
+                            setSelectedItems(new Set());
+                            setLastSelectedItem(null);
+                            refreshContent();
+                            toast?.addInfo('Removed from favorites');
+                        } else toast?.addError(response.message || 'Failed to remove from favorites');
+                    } else {
+                        for (const item of items) {
+                            if (item.isFavorited) {
+                                try {
+                                    await api.post('/api/user/favorites', {
+                                        fileId: item.type === 'file' ? item.id : undefined,
+                                        folderId: item.type === 'folder' ? item.id : undefined,
+                                        action: 'remove'
+                                    });
+                                    if (item.type === 'file') setFiles(prev => prev.map(f => f.path === item.path ? { ...f, isFavorited: false } : f));
+                                    else setFolders(prev => prev.map(f => f.path === item.path ? { ...f, isFavorited: false } : f));
+                                } catch (e) { console.error('Error removing from favorites:', e); }
+                            }
+                        }
+                        refreshContent();
+                        toast?.addInfo('Removed from favorites');
+                    }
+                    break;
+                }
+                default:
+                    break;
+            }
+        } finally {
+            closeConfirm();
+        }
+    };
+
     const handleFileViewerAction = async (action, file) => {
         switch (action) {
             case 'rename':
@@ -704,27 +895,14 @@ const FileList = forwardRef(({
                 break;
 
             case 'delete':
-                const confirmed = confirm(`Are you sure you want to delete "${file.name}"?`);
-                if (confirmed) {
-                    try {
-                        const requestData = {
-                            paths: [file.path]
-                        };
-
-
-                        const response = await api.post('/api/files/delete', requestData);
-
-                        if (response.success) {
-                            setFileViewer(prev => ({ ...prev, isOpen: false }));
-                            refreshContent();
-                        } else {
-                            alert('Failed to delete file');
-                        }
-                    } catch (error) {
-                        console.error('Error deleting:', error);
-                        alert('Error deleting file');
-                    }
-                }
+                openConfirm({
+                    title: 'Delete File',
+                    message: `Are you sure you want to delete "${file.name}"? This action cannot be undone.`,
+                    destructive: true,
+                    confirmLabel: 'Delete',
+                    context: file,
+                    action: 'fileViewer-delete'
+                });
                 break;
 
             case 'favorite':
@@ -745,7 +923,7 @@ const FileList = forwardRef(({
                 break;
 
             case 'properties':
-                alert(`Properties for: ${file.name}\nPath: ${file.path}\nSize: ${formatFileSize(file.size)}\nModified: ${formatDate(file.modified)}`);
+                toast?.addInfo('Open properties panel (placeholder)');
                 break;
         }
     };
@@ -771,23 +949,17 @@ const FileList = forwardRef(({
                 else downloadFile(items[0].path, items[0].name);
                 break;
 
-            case 'download':
-                // Show download options: Direct download or QR code
-                const downloadChoice = confirm('Download directly to this device?\n\nOK = Download to this device\nCancel = Generate QR code for mobile download');
-                if (downloadChoice) {
-                    // Direct download
-                    items.forEach(item => {
-                        if (item.type === 'file') {
-                            downloadFile(item.path, item.name);
-                        } else if (item.type === 'folder') {
-                            downloadFolder(item.path, item.name);
-                        }
-                    });
-                } else {
-                    // Generate QR code for download
-                    generateQRCode('download', items);
-                }
+            case 'download': {
+                openConfirm({
+                    title: 'Download Files',
+                    message: 'Download directly to this device?\n\nChoose Confirm to download locally. Choose Cancel to generate a QR code for mobile download.',
+                    confirmLabel: 'Download Here',
+                    cancelLabel: 'QR Code',
+                    context: items,
+                    action: 'context-download-mode'
+                });
                 break;
+            }
 
             case 'download-qr':
                 generateQRCode('download', items);
@@ -798,31 +970,18 @@ const FileList = forwardRef(({
                 break;
 
             case 'rename':
-                // Trigger inline rename for selected items
                 setRenaming({ active: true, items, value: items[0].name });
                 break;
 
             case 'delete':
-                const deleteConfirmed = confirm(`Are you sure you want to delete ${items.length} item(s)?`);
-                if (deleteConfirmed) {
-                    try {
-                        const requestData = {
-                            paths: items.map(item => item.path)
-                        };
-
-
-                        const response = await api.post('/api/files/delete', requestData);
-
-                        if (response.success) {
-                            setSelectedItems(new Set());
-                            setLastSelectedItem(null);
-                            refreshContent();
-                        }
-                        else alert('Failed to delete items');
-                    } catch (error) {
-                        alert('Error deleting items');
-                    }
-                }
+                openConfirm({
+                    title: `Delete ${items.length} Item${items.length > 1 ? 's' : ''}`,
+                    message: `Are you sure you want to delete ${items.length} item(s)? This cannot be undone.`,
+                    destructive: true,
+                    confirmLabel: 'Delete',
+                    context: items,
+                    action: 'context-delete'
+                });
                 break;
 
             case 'favorite':
@@ -849,36 +1008,16 @@ const FileList = forwardRef(({
                         refreshContent();
                     } catch (error) {
                         console.error('Error updating favorite status:', error);
-                        alert('Failed to update favorite status');
+                        toast?.addError('Failed to update favorite');
                     }
                 } else {
-                    const confirmed = confirm(`Add ${items.length} items to favorites?`);
-                    if (confirmed) {
-                        for (const item of items) {
-                            if (!item.isFavorited) {
-                                try {
-                                    await api.post('/api/user/favorites', {
-                                        fileId: item.type === 'file' ? item.id : undefined,
-                                        folderId: item.type === 'folder' ? item.id : undefined,
-                                        action: 'add'
-                                    });
-
-                                    if (item.type === 'file') {
-                                        setFiles(prev => prev.map(f =>
-                                            f.path === item.path ? { ...f, isFavorited: true } : f
-                                        ));
-                                    } else {
-                                        setFolders(prev => prev.map(f =>
-                                            f.path === item.path ? { ...f, isFavorited: true } : f
-                                        ));
-                                    }
-                                } catch (error) {
-                                    console.error('Error updating favorite status:', error);
-                                }
-                            }
-                        }
-                        refreshContent();
-                    }
+                    openConfirm({
+                        title: 'Add Favorites',
+                        message: `Add ${items.length} items to favorites?`,
+                        confirmLabel: 'Add',
+                        context: items,
+                        action: 'favorite-multi-add'
+                    });
                 }
                 break;
 
@@ -910,66 +1049,17 @@ const FileList = forwardRef(({
                 break;
 
             case 'remove-favorite':
-                const removeConfirmed = confirm(`Remove ${items.length === 1 ? `"${items[0].name}"` : `${items.length} items`} from favorites?`);
-                if (removeConfirmed) {
-                    try {
-                        if (currentPath === 'favorites') {
-                            const response = await api.post('/api/user/favorites', {
-                                action: 'remove',
-                                items: items.map(item => ({
-                                    name: item.name,
-                                    path: item.path, // Use the current path as-is for favorites
-                                    isFolder: item.isFolder || item.type === 'folder'
-                                }))
-                            });
-
-                            if (response.success) {
-                                setFiles(prev => prev.filter(f => !items.some(item => item.name === f.name)));
-                                setFolders(prev => prev.filter(f => !items.some(item => item.name === f.name)));
-                                setSelectedItems(new Set());
-                                setLastSelectedItem(null);
-
-                                refreshContent();
-                                alert(`${items.length === 1 ? 'Item' : 'Items'} removed from favorites`);
-                            } else {
-                                alert(response.message || 'Failed to remove from favorites');
-                            }
-                        } else {
-                            for (const item of items) {
-                                if (item.isFavorited) {
-                                    try {
-                                        await api.post('/api/user/favorites', {
-                                            fileId: item.type === 'file' ? item.id : undefined,
-                                            folderId: item.type === 'folder' ? item.id : undefined,
-                                            action: 'remove'
-                                        });
-
-                                        if (item.type === 'file') {
-                                            setFiles(prev => prev.map(f =>
-                                                f.path === item.path ? { ...f, isFavorited: false } : f
-                                            ));
-                                        } else {
-                                            setFolders(prev => prev.map(f =>
-                                                f.path === item.path ? { ...f, isFavorited: false } : f
-                                            ));
-                                        }
-                                    } catch (error) {
-                                        console.error('Error removing from favorites:', error);
-                                    }
-                                }
-                            }
-                            refreshContent();
-                            alert(`${items.length === 1 ? 'Item' : 'Items'} removed from favorites`);
-                        }
-                    } catch (error) {
-                        console.error('Error removing from favorites:', error);
-                        alert('Error removing from favorites: ' + error.message);
-                    }
-                }
+                openConfirm({
+                    title: 'Remove Favorites',
+                    message: `Remove ${items.length === 1 ? `"${items[0].name}"` : `${items.length} items`} from favorites?`,
+                    confirmLabel: 'Remove',
+                    context: { items, fromFavoritesPath: currentPath === 'favorites' },
+                    action: 'favorite-multi-remove'
+                });
                 break;
 
             case 'properties':
-                alert(`Properties for: ${items[0].name}\nPath: ${items[0].path}\nSize: ${items[0].size ? formatFileSize(items[0].size) : 'N/A'}\nModified: ${formatDate(items[0].modified)}`);
+                toast?.addInfo('Open properties panel (placeholder)');
                 break;
 
             default:
@@ -1056,8 +1146,11 @@ const FileList = forwardRef(({
     if (loading) {
         return <SoftLoading />;
     }
-    const sortedFolders = sortItems(folders, sortBy);
-    const sortedFiles = sortItems(files, sortBy);
+    // Safety filter: ensure internal .thumbnails cache never surfaces in UI even if backend missed it
+    const filteredFolders = folders.filter(f => f.name !== '.thumbnails' && !f.path.endsWith('/.thumbnails'));
+    const filteredFiles = files.filter(f => !f.path.includes('/.thumbnails/') && !f.name.startsWith('.thumbnails'));
+    const sortedFolders = sortItems(filteredFolders, sortBy);
+    const sortedFiles = sortItems(filteredFiles, sortBy);
 
     return (
         <div
@@ -1121,8 +1214,14 @@ const FileList = forwardRef(({
                         >
                             {isIconView ? (
                                 <>
-                                    <div className={styles.itemIcon}><FolderClosed size={16} /></div>
-                                    <div className={styles.itemName}>
+                                    <div className={styles.iconVisualRegion}>
+                                        <div className={styles.itemVisualWrapper}>
+                                            <div className={`${styles.itemIcon} ${styles.folderIcon}`}>
+                                                <FolderClosed size={48} />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className={`${styles.iconNameRegion} ${styles.itemName}`}>
                                         {renaming.active && renaming.items.length > 0 && renaming.items[0].path === folder.path ? (
                                             <input
                                                 ref={renameInputRef}
@@ -1137,14 +1236,19 @@ const FileList = forwardRef(({
                                                 }}
                                             />
                                         ) : (
-                                            folder.name
+                                            <span
+                                                className={styles.overflowClamp}
+                                                data-tooltip={folder.name}
+                                            >{folder.name}</span>
                                         )}
                                         {folder.isFavorited && <span className={styles.favoriteIcon}><Star size={13} fill="currentColor" /></span>}
                                     </div>
                                 </>
                             ) : isTilesView ? (
                                 <>
-                                    <div className={styles.itemIcon}><FolderClosed size={16} /></div>
+                                    <div className={styles.thumbWrapper}>
+                                        <div className={styles.fallbackIcon}><FolderClosed size={40} /></div>
+                                    </div>
                                     <div className={styles.itemContent}>
                                         <div className={styles.itemName}>
                                             {renaming.active && renaming.items.length > 0 && renaming.items[0].path === folder.path ? (
@@ -1161,7 +1265,10 @@ const FileList = forwardRef(({
                                                     }}
                                                 />
                                             ) : (
-                                                folder.name
+                                                <span
+                                                    className={styles.overflowClamp}
+                                                    data-tooltip={folder.name}
+                                                >{folder.name}</span>
                                             )}
                                             {folder.isFavorited && <span className={styles.favoriteIcon}><Star size={13} fill="currentColor" /></span>}
                                         </div>
@@ -1189,7 +1296,10 @@ const FileList = forwardRef(({
                                                     }}
                                                 />
                                             ) : (
-                                                folder.name
+                                                <span
+                                                    className={styles.overflowClamp}
+                                                    data-tooltip={folder.name}
+                                                >{folder.name}</span>
                                             )}
                                             {folder.isFavorited && <span className={styles.favoriteIcon}><Star size={13} fill="currentColor" /></span>}
                                         </div>
@@ -1217,7 +1327,10 @@ const FileList = forwardRef(({
                                                 fontWeight: 'bold',
                                                 color: 'inherit'
                                             }}>
-                                                {folder.name}
+                                                <span
+                                                    className={styles.overflowClamp}
+                                                    data-tooltip={folder.name}
+                                                >{folder.name}</span>
                                             </span>
                                         )}
                                         {folder.isFavorited && <span className={styles.favoriteIcon}><Star size={13} fill="currentColor" /></span>}
@@ -1257,10 +1370,18 @@ const FileList = forwardRef(({
                         >
                             {isIconView ? (
                                 <>
-                                    <div className={styles.itemIcon}>
-                                        {getFileIcon(file.name, 48)}
+                                    <div className={styles.iconVisualRegion}>
+                                        <div className={styles.itemVisualWrapper}>
+                                            {isImage(file.name) ? (
+                                                <ThumbnailWithLoader cacheRef={thumbnailCacheRef} src={getPreviewUrl(file, currentPath)} alt={file.name} />
+                                            ) : isVideo(file.name) ? (
+                                                <ThumbnailWithLoader cacheRef={thumbnailCacheRef} src={getVideoThumbnailUrl(file, currentPath)} alt={file.name} />
+                                            ) : (
+                                                <div className={`${styles.itemIcon} ${styles.fileIcon}`}>{getFileIcon(file.name, 48)}</div>
+                                            )}
+                                        </div>
                                     </div>
-                                    <div className={styles.itemName}>
+                                    <div className={`${styles.iconNameRegion} ${styles.itemName}`}>
                                         {renaming.active && renaming.items.length > 0 && renaming.items[0].path === file.path ? (
                                             <input
                                                 ref={renameInputRef}
@@ -1275,15 +1396,24 @@ const FileList = forwardRef(({
                                                 }}
                                             />
                                         ) : (
-                                            file.name
+                                            <span
+                                                className={styles.overflowClamp}
+                                                data-tooltip={file.name}
+                                            >{file.name}</span>
                                         )}
                                         {file.isFavorited && <span className={styles.favoriteIcon}><Star size={13} fill="currentColor" /></span>}
                                     </div>
                                 </>
                             ) : isTilesView ? (
                                 <>
-                                    <div className={styles.itemIcon}>
-                                        {getFileIcon(file.name, 48)}
+                                    <div className={styles.thumbWrapper}>
+                                        {isImage(file.name) ? (
+                                            <ThumbnailWithLoader cacheRef={thumbnailCacheRef} src={getPreviewUrl(file, currentPath)} alt={file.name} />
+                                        ) : isVideo(file.name) ? (
+                                            <ThumbnailWithLoader cacheRef={thumbnailCacheRef} src={getVideoThumbnailUrl(file, currentPath)} alt={file.name} />
+                                        ) : (
+                                            <div className={styles.fallbackIcon}>{getFileIcon(file.name, 40)}</div>
+                                        )}
                                     </div>
                                     <div className={styles.itemContent}>
                                         <div className={styles.itemName}>
@@ -1301,7 +1431,10 @@ const FileList = forwardRef(({
                                                     }}
                                                 />
                                             ) : (
-                                                file.name
+                                                <span
+                                                    className={styles.overflowClamp}
+                                                    data-tooltip={file.name}
+                                                >{file.name}</span>
                                             )}
                                             {file.isFavorited && <span className={styles.favoriteIcon}><Star size={13} fill="currentColor" /></span>}
                                         </div>
@@ -1329,7 +1462,10 @@ const FileList = forwardRef(({
                                                     }}
                                                 />
                                             ) : (
-                                                file.name
+                                                <span
+                                                    className={styles.overflowClamp}
+                                                    data-tooltip={file.name}
+                                                >{file.name}</span>
                                             )}
                                             {file.isFavorited && <span className={styles.favoriteIcon}><Star size={13} fill="currentColor" /></span>}
                                         </div>
@@ -1387,7 +1523,10 @@ const FileList = forwardRef(({
                                             />
                                         ) : (
                                             <span className={styles.itemName}>
-                                                {file.name}
+                                                <span
+                                                    className={styles.overflowClamp}
+                                                    data-tooltip={file.name}
+                                                >{file.name}</span>
                                             </span>
                                         )}
                                         {file.isFavorited && <span className={styles.favoriteIcon}><Star size={13} fill="currentColor" /></span>}

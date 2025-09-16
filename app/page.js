@@ -10,6 +10,9 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import Image from "next/image";
 
 import Layout from "@/components/Layout";
+import { useToast } from '@/components/app/ToastProvider';
+import FilePropertiesModal from '@/components/app/FilePropertiesModal';
+import NewItemModal from '@/components/app/NewItemModal';
 import FolderTree from "@/components/app/FolderTree";
 import FileList from "@/components/app/FileList";
 import Controls from "@/components/app/Controls";
@@ -21,12 +24,14 @@ import { useIsMobile } from "@/utils/useIsMobile";
 
 import { Resizable } from "re-resizable";
 import { ArrowLeft, Check, EllipsisVertical, LayoutGrid, List, Plus, X, HardDrive, Star } from "lucide-react";
+import ConfirmModal from '@/components/app/ConfirmModal';
 
 let socket;
 
 export default function Page() {
   const { user, loading } = useAuth();
   const fileListRef = useRef(null);
+  const toast = useToast();
 
   const [currentPath, setCurrentPath] = useState(undefined);
   const [selectedItems, setSelectedItems] = useState([]);
@@ -42,6 +47,8 @@ export default function Page() {
   const [sortMenuInitialY, setSortMenuInitialY] = useState(0);
   const [showNewFolderPopup, setShowNewFolderPopup] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
+  const [confirmState, setConfirmState] = useState({ open: false, title: '', message: '', action: '' });
+  const [propertiesState, setPropertiesState] = useState({ open: false, items: [] });
 
   const isMobile = useIsMobile();
 
@@ -56,9 +63,50 @@ export default function Page() {
       loadStorageInfo();
     }
 
+    const debounceMap = new Map();
+
+    const schedule = (key, fn, wait = 160) => {
+      if (debounceMap.get(key)) clearTimeout(debounceMap.get(key));
+      const t = setTimeout(() => { fn(); debounceMap.delete(key); }, wait);
+      debounceMap.set(key, t);
+    };
+
+    const handleFileUpdated = (payload) => {
+      // Payloads emitted from rename endpoint provide parent path in path
+      if (!fileListRef.current) return;
+      const current = currentPath || '';
+      switch (payload.action) {
+        case 'rename':
+        case 'delete':
+        case 'create':
+        case 'upload':
+        case 'refresh':
+        default:
+          // For now just refresh if parent path matches
+          if ((payload.path || '') === current) {
+            schedule('refresh-current', () => fileListRef.current?.refresh?.());
+          }
+          break;
+      }
+    };
+
+    const handleFolderStructure = (payload) => {
+      if (!fileListRef.current) return;
+      // If action pertains to current path (creation in current folder or rename affecting it) refresh
+      if (payload?.path === currentPath || payload?.oldPath?.startsWith(currentPath || '') || payload?.newPath?.startsWith(currentPath || '')) {
+        schedule('refresh-structure', () => fileListRef.current?.refresh?.());
+      } else if (currentPath === '' && (payload?.path === '' || !payload?.path)) {
+        schedule('refresh-root', () => fileListRef.current?.refresh?.());
+      }
+    };
+
+    socket?.on('file-updated', handleFileUpdated);
+    socket?.on('folder-structure-updated', handleFolderStructure);
+
     return () => {
-      socket?.off("folder-structure-updated");
-      socket?.off("file-updated");
+      socket?.off('folder-structure-updated', handleFolderStructure);
+      socket?.off('file-updated', handleFileUpdated);
+      debounceMap.forEach(t => clearTimeout(t));
       socket = null;
     };
   }, [isMobile, user]);
@@ -452,12 +500,15 @@ export default function Page() {
       }
 
       const result = await api.post('/api/files/upload', formData);
-
-      if (result.success && fileListRef.current) fileListRef.current.refresh();
-      else alert(`Upload failed: ${result.message}`);
+      if (result.success) {
+        toast.addSuccess(`${files.length} file${files.length > 1 ? 's' : ''} uploaded`);
+        if (fileListRef.current) fileListRef.current.refresh();
+      } else {
+        toast.addError(`Upload failed: ${result.message}`);
+      }
 
     } catch (error) {
-      alert('Upload failed: Network error');
+      toast.addError('Upload failed: network error');
     }
   };
 
@@ -471,80 +522,62 @@ export default function Page() {
       else if (item.type === 'folder') downloadFolder(item.path, item.name);
       else return
     });
+    toast.addInfo(`Started download of ${selectedItems.length} item${selectedItems.length > 1 ? 's' : ''}`);
   };
 
   const handleDelete = async () => {
     if (!selectedItems || selectedItems.length === 0) return;
-
     const itemNames = selectedItems.map(item => item.name).join(', ');
-    const confirmed = confirm(`Are you sure you want to delete: ${itemNames}?`);
+    setConfirmState({
+      open: true,
+      title: `Delete ${selectedItems.length} item${selectedItems.length > 1 ? 's' : ''}`,
+      message: `Are you sure you want to delete: ${itemNames}? This cannot be undone.`,
+      action: 'bulk-delete'
+    });
+  };
 
-    if (!confirmed) return;
-
-    try {
-      const paths = selectedItems.map(item => item.path);
-
-      const result = await api.post('/api/files/delete', { paths });
-
-      if (result.success) setSelectedItems([]);
-      else alert(`Delete failed: ${result.message}`);
-
-    } catch (error) {
-      alert('Delete failed: Network error');
+  const handleRename = () => {
+    // Delegate to FileList's inline rename logic by emitting a custom event that FileList can listen for via ref
+    if (!selectedItems || selectedItems.length !== 1) return;
+    if (fileListRef.current) {
+      // Implemented in FileList: expose a startRename method through useImperativeHandle
+      fileListRef.current.startRename?.(selectedItems[0]);
     }
   };
 
-  const handleRename = async () => {
-    if (!selectedItems || selectedItems.length !== 1) return;
-
-    const item = selectedItems[0];
-    const newName = prompt(`Rename "${item.name}" to:`, item.name);
-
-    if (!newName || newName === item.name) return;
-
-    try {
-      const result = await api.post('/api/files/rename', JSON.stringify({
-        oldPath: item.path,
-        newName: newName
-      }));
-
-      if (result.success) setSelectedItems([]);
-      else alert(`Rename failed: ${result.message}`);
-
-    } catch (error) {
-      alert('Rename failed: Network error');
+  const executeConfirmed = async () => {
+    if (confirmState.action === 'bulk-delete') {
+      try {
+        const paths = selectedItems.map(item => item.path);
+        const result = await api.post('/api/files/delete', { paths });
+        if (result.success) {
+          toast.addSuccess(`Deleted ${paths.length} item${paths.length > 1 ? 's' : ''}`);
+          setSelectedItems([]);
+          fileListRef.current?.refresh?.();
+        } else {
+          toast.addError(`Delete failed: ${result.message}`);
+        }
+      } catch (e) {
+        toast.addError('Delete failed: network error');
+      } finally {
+        setConfirmState({ open: false, title: '', message: '', action: '' });
+      }
+    } else {
+      setConfirmState({ open: false, title: '', message: '', action: '' });
     }
   };
 
   const handleFavorite = () => {
     if (!selectedItems || selectedItems.length === 0) return;
-    if (fileListRef.current) fileListRef.current.triggerFavorite(selectedItems);
+    if (fileListRef.current) {
+      fileListRef.current.triggerFavorite(selectedItems);
+      toast.addInfo(selectedItems.length === 1 ? 'Toggled favorite' : 'Favorites updated');
+    }
   };
 
   const handleProperties = () => {
     if (!selectedItems || selectedItems.length === 0) return;
-    const item = selectedItems[0];
-
-    let info = `Properties for: ${item.name}\n\n`;
-    info += `Type: ${item.type}\n`;
-    info += `Path: ${item.path}\n`;
-
-    if (item.size !== undefined) {
-      const size = item.size;
-      const sizeStr = size < 1024 ? `${size} B` :
-        size < 1024 * 1024 ? `${(size / 1024).toFixed(1)} KB` :
-          size < 1024 * 1024 * 1024 ? `${(size / (1024 * 1024)).toFixed(1)} MB` :
-            `${(size / (1024 * 1024 * 1024)).toFixed(1)} GB`;
-      info += `Size: ${sizeStr}\n`;
-    }
-
-    if (item.modified) info += `Modified: ${new Date(item.modified).toLocaleString()}\n`;
-
-    if (item.isFavorited !== undefined) info += `Favorited: ${item.isFavorited ? 'Yes' : 'No'}\n`;
-
-    if (selectedItems.length > 1) info += `\n+ ${selectedItems.length - 1} more items selected`;
-
-    alert(info);
+    setPropertiesState({ open: true, items: selectedItems.map(i => ({ ...i })) });
   };
 
   const handleSortChange = (newSortBy) => {
@@ -563,18 +596,77 @@ export default function Page() {
     uploadFiles(files);
   };
 
+  // New item modal state & logic
+  const [newItemModalOpen, setNewItemModalOpen] = useState(false);
+  const [newItemInitialType, setNewItemInitialType] = useState('folder');
+
+  const openNewItemModal = (initialType = 'folder') => {
+    setNewItemInitialType(initialType);
+    setNewItemModalOpen(true);
+  };
+
+  const existingNames = (fileListRef.current?.getItems?.() || []).map(i => i.name);
+
+  const handleCreateItem = async ({ type, name }) => {
+    try {
+      const res = await fetch('/api/files/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, type, currentPath })
+      });
+      const data = await res.json();
+      if (!data.success) {
+        toast.addError(`Failed to create ${type}: ${data.message || data.code}`);
+        return { success: false, error: data.message || data.code };
+      }
+      fileListRef.current?.refresh?.();
+      toast.addSuccess(`${type === 'folder' ? 'Folder' : type === 'text' ? 'Text document' : 'File'} "${name}" created`);
+      return { success: true };
+    } catch (e) {
+      toast.addError(`Create failed: ${e.message}`);
+      return { success: false, error: e.message };
+    }
+  };
+
+  // Lightweight handler passed to FileViewer to avoid full list refresh on save
+  const handleFileViewerAction = (action, payload) => {
+    if (action === 'content-updated') {
+      const { file, content, saved } = payload || {};
+      if (file && typeof content === 'string') {
+        const optimisticSize = new Blob([content]).size;
+        fileListRef.current?.updateItem?.(file.path, { size: optimisticSize, modified: new Date() });
+        if (saved) toast.addSuccess(`Saved changes to ${file.name}`);
+      }
+      return;
+    }
+  };
+
   if (!user) return null;
 
   return (
     <Layout styleStyle={style.main} loading={loading} user={user} sideNav={true} currentPath={currentPath}>
+      <ConfirmModal
+        open={confirmState.open}
+        title={confirmState.title}
+        message={confirmState.message}
+        destructive={confirmState.action === 'bulk-delete'}
+        confirmLabel={confirmState.action === 'bulk-delete' ? 'Delete' : 'Confirm'}
+        cancelLabel="Cancel"
+        onCancel={() => setConfirmState({ open: false, title: '', message: '', action: '' })}
+        onConfirm={executeConfirmed}
+      />
+      <FilePropertiesModal
+        open={propertiesState.open}
+        items={propertiesState.items}
+        onClose={() => setPropertiesState({ open: false, items: [] })}
+      />
+      {/* Pass action handler down via FileList -> FileViewer chain if supported */}
       {!isMobile && (
         <div className={style.desktopContainer}>
           <Controls
             currentPath={currentPath}
             selectedItems={selectedItems}
-            onNewFolder={handleNewFolder}
-            onNewFile={handleNewFile}
-            onNewTextFile={handleNewTextFile}
+            onOpenNewItemModal={openNewItemModal}
             onUpload={handleUpload}
             onDownload={handleDownload}
             onDelete={handleDelete}
@@ -638,6 +730,14 @@ export default function Page() {
           </div>
         </div>
       )}
+      {/* New Item Modal */}
+      <NewItemModal
+        isOpen={newItemModalOpen}
+        existingNames={existingNames}
+        onClose={() => setNewItemModalOpen(false)}
+        onCreate={handleCreateItem}
+        initialType={newItemInitialType}
+      />
       {isMobile && (
         <div className={style.mobileContainer}>
           <div className={style.favouritesContainer}>

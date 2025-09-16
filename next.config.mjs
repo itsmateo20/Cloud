@@ -38,7 +38,7 @@ const nextConfig = {
                 pathname: '/avatar/**',
             },
         ],
-        qualities: [50, 80, 100]
+        qualities: [5, 15, 25, 35, 50, 75, 100],
     },
 
     allowedDevOrigins: [

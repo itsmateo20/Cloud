@@ -4,6 +4,7 @@ import fonts from "@/app/fonts";
 import "@/public/styles/globals.css";
 
 import { AuthProvider } from "@/context/AuthProvider";
+import { ToastProvider } from "@/components/app/ToastProvider";
 import { getSiteUrl } from "@/lib/getSiteUrl";
 import { DownloadManager } from "@/components/app/DownloadManager";
 
@@ -73,12 +74,14 @@ export const viewport = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en">
-      <body className={fonts.join(" ")}>
-        <AuthProvider>
-          {children}
-          <DownloadManager />
-        </AuthProvider>
+    <html lang="en" className={fonts.join(' ')}>
+      <body>
+        <ToastProvider>
+          <AuthProvider>
+            {children}
+            <DownloadManager />
+          </AuthProvider>
+        </ToastProvider>
       </body>
     </html>
   );

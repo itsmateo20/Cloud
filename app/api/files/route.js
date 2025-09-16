@@ -55,12 +55,14 @@ export async function GET(req) {
             return NextResponse.json({ folders: [], files: [] });
         }
 
-        const items = await fs.readdir(targetPath);
+        const items = (await fs.readdir(targetPath))
+            // Hide internal thumbnail cache directory
+            .filter(name => name !== '.thumbnails');
         const folders = [];
         const files = [];
 
         await Promise.all(
-            items.filter(item => !item.endsWith(".INF")).map(async item => {
+            items.filter(item => !item.endsWith(".INF") && item !== '.thumbnails').map(async item => {
                 const itemPath = path.join(targetPath, item);
                 const stat = await fs.stat(itemPath);
                 const relativePath = path.relative(userFolder, itemPath).replace(/\\/g, "/");
