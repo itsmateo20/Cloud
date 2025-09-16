@@ -51,7 +51,7 @@ export default function FilePropertiesModal({ open, items = [], onClose }) {
     const dateString = (ts) => ts ? new Date(ts).toLocaleString() : '—';
 
     return (
-        <div className={`${styles.backdrop} ${closing ? styles.backdropClosing : ''}`} onMouseDown={(e)=>{ if(e.target===e.currentTarget) onClose?.(); }}>
+        <div className={`${styles.backdrop} ${closing ? styles.backdropClosing : ''}`} onMouseDown={(e) => { if (e.target === e.currentTarget) onClose?.(); }}>
             <div className={`${styles.modal} ${closing ? styles.modalClosing : ''}`} onClick={(e) => e.stopPropagation()}>
                 <div className={styles.header}>
                     <h3 className={styles.title}>{multiple ? `${items.length} items selected` : first.name}</h3>

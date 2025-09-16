@@ -1533,7 +1533,7 @@ export function FileViewer({
 
             {/* Desktop Side Panel */}
             {!mobile && (
-                <div ref={sidePanelRef} className={`${style.sidePanel} ${showFileInfoModal ? style.sidePanelOpen : ''}`}>        
+                <div ref={sidePanelRef} className={`${style.sidePanel} ${showFileInfoModal ? style.sidePanelOpen : ''}`}>
                     <div className={style.sidePanelHeader}>
                         <h3>File Information</h3>
                         <button onClick={() => {

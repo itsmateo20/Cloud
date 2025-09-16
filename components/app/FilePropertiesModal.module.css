@@ -10,7 +10,9 @@
     animation: fpFadeIn .18s ease;
 }
 
-.backdropClosing { animation: fpFadeOut .18s ease forwards; }
+.backdropClosing {
+    animation: fpFadeOut .18s ease forwards;
+}
 
 .modal {
     width: 480px;
@@ -25,7 +27,9 @@
     animation: popIn .16s ease;
 }
 
-.modalClosing { animation: popOut .16s ease forwards; }
+.modalClosing {
+    animation: popOut .16s ease forwards;
+}
 
 @keyframes popIn {
     from {
@@ -40,12 +44,36 @@
 }
 
 @keyframes popOut {
-    from { opacity: 1; transform: translateY(0) scale(1); }
-    to { opacity: 0; transform: translateY(6px) scale(.96); }
+    from {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+
+    to {
+        opacity: 0;
+        transform: translateY(6px) scale(.96);
+    }
 }
 
-@keyframes fpFadeIn { from { opacity:0; } to { opacity:1; } }
-@keyframes fpFadeOut { from { opacity:1; } to { opacity:0; } }
+@keyframes fpFadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes fpFadeOut {
+    from {
+        opacity: 1;
+    }
+
+    to {
+        opacity: 0;
+    }
+}
 
 .header {
     padding: 16px 20px 8px;

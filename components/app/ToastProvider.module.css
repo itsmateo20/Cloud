@@ -1,54 +1,104 @@
 .container {
-  position: fixed;
-  bottom: 16px;
-  right: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  z-index: 5000;
-  max-width: min(420px, 90vw);
+    position: fixed;
+    bottom: 16px;
+    right: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    z-index: 5000;
+    max-width: min(420px, 90vw);
 }
+
 .withDownloadManager {
-  /* Shift left so it doesn't overlap circular download button (56px + margins) */
-  right: 92px;
-  transition: right .28s cubic-bezier(.4,0,.2,1);
+    /* Shift left so it doesn't overlap circular download button (56px + margins) */
+    right: 92px;
+    transition: right .28s cubic-bezier(.4, 0, .2, 1);
 }
+
 .dmExpanded {
-  /* When panel is expanded we give a bit more space */
-  right: 340px; /* panel min width 300 + spacing 24 + a bit for safe padding */
+    /* When panel is expanded we give a bit more space */
+    right: 340px;
+    /* panel min width 300 + spacing 24 + a bit for safe padding */
 }
+
 @media (max-width: 820px) {
-  .dmExpanded { right: 16px; } /* On smaller screens let it overlay to avoid excessive shift */
+    .dmExpanded {
+        right: 16px;
+    }
+
+    /* On smaller screens let it overlay to avoid excessive shift */
 }
+
 .toast {
-  --enter: var(--modal-enter-duration,180ms);
-  background: var(--nav-background);
-  border: 1px solid var(--border-color);
-  border-radius: 10px;
-  padding: clamp(10px,2vw,14px) clamp(14px,3vw,20px);
-  font-size: clamp(13px, 2.4vw, 14px);
-  line-height: 1.4;
-  color: var(--text);
-  box-shadow: 0 4px 18px -4px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.04) inset;
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  animation: toastIn var(--enter) var(--modal-ease) both;
-  position: relative;
-  overflow: hidden;
+    --enter: var(--modal-enter-duration, 180ms);
+    background: var(--nav-background);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: clamp(10px, 2vw, 14px) clamp(14px, 3vw, 20px);
+    font-size: clamp(13px, 2.4vw, 14px);
+    line-height: 1.4;
+    color: var(--text);
+    box-shadow: 0 4px 18px -4px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.04) inset;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    animation: toastIn var(--enter) var(--modal-ease) both;
+    position: relative;
+    overflow: hidden;
 }
+
 .toast::before {
-  content: '';
-  position: absolute;
-  left:0; top:0; bottom:0;
-  width: 4px;
-  background: var(--accent, #2563eb);
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: var(--accent, #2563eb);
 }
-.success::before { background: #059669; }
-.error::before { background: #dc2626; }
-.warning::before { background: #d97706; }
-.info::before { background: #2563eb; }
-.body { flex:1; }
-.close { background:none; border:none; color: var(--text-secondary,#bbb); cursor:pointer; font-size:16px; line-height:1; padding:2px 4px; }
-.close:hover { color: var(--text); }
-@keyframes toastIn { from { opacity:0; transform: translateY(6px) scale(.97);} to { opacity:1; transform: translateY(0) scale(1);} }
+
+.success::before {
+    background: #059669;
+}
+
+.error::before {
+    background: #dc2626;
+}
+
+.warning::before {
+    background: #d97706;
+}
+
+.info::before {
+    background: #2563eb;
+}
+
+.body {
+    flex: 1;
+}
+
+.close {
+    background: none;
+    border: none;
+    color: var(--text-secondary, #bbb);
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 1;
+    padding: 2px 4px;
+}
+
+.close:hover {
+    color: var(--text);
+}
+
+@keyframes toastIn {
+    from {
+        opacity: 0;
+        transform: translateY(6px) scale(.97);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}

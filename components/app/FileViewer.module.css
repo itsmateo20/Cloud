@@ -59,7 +59,7 @@
     display: flex;
     flex-direction: column;
     transform: translateX(100%);
-    transition: transform 0.35s cubic-bezier(.4,.0,.2,1);
+    transition: transform 0.35s cubic-bezier(.4, .0, .2, 1);
     will-change: transform;
 }
 
@@ -264,7 +264,8 @@
     /* Center content between left edge and 400px side panel by shifting center left by 200px */
     padding-right: 200px;
 }
-    /* .fileContainerWithSidePanel deprecated: dynamic container shift now handles centering */
+
+/* .fileContainerWithSidePanel deprecated: dynamic container shift now handles centering */
 
 /* Enable scroll/pan space when an image is zoomed beyond viewport */
 .zoomActive {
@@ -835,12 +836,20 @@
     max-width: 90vw;
     transition: transform 0.3s ease, left 0.3s ease;
 }
-    /* .customVideoControlsWithSidePanel deprecated: container shift centers controls */
+
+/* .customVideoControlsWithSidePanel deprecated: container shift centers controls */
 /* Removed special animation; class retained in JS logic but no styling needed */
 
 @keyframes zoomPanelOpen {
-    0% { opacity: 0; transform: translate(-50%, 10px); }
-    100% { opacity: 1; transform: translate(-50%, 0); }
+    0% {
+        opacity: 0;
+        transform: translate(-50%, 10px);
+    }
+
+    100% {
+        opacity: 1;
+        transform: translate(-50%, 0);
+    }
 }
 
 .customVideoControlsVertical {
