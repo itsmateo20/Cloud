@@ -49,7 +49,7 @@ export default function Page() {
   const [showNewFolderPopup, setShowNewFolderPopup] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
   const [confirmState, setConfirmState] = useState({ open: false, title: '', message: '', action: '' });
-  
+
   // Global drag & drop state
   const [isGlobalDragOver, setIsGlobalDragOver] = useState(false);
   const [isDragInvalid, setIsDragInvalid] = useState(false);
@@ -520,20 +520,20 @@ export default function Page() {
       appendMetadataToFormData(formData, files);
 
       // Show immediate feedback
-      const sizeText = totalSize > 1024 * 1024 
+      const sizeText = totalSize > 1024 * 1024
         ? `${(totalSize / (1024 * 1024)).toFixed(1)}MB`
         : `${(totalSize / 1024).toFixed(1)}KB`;
-      
+
       toast.addInfo(`Uploading ${files.length} file${files.length > 1 ? 's' : ''} (${sizeText})...`);
 
       // Use enhanced api.upload for FormData handling
       const result = await api.upload('/api/files/upload', formData);
-      
+
       if (result.success) {
         // Show detailed success message
         const uploadedNames = result.files?.map(f => f.name).join(', ') || 'files';
         toast.addSuccess(`✅ Uploaded: ${uploadedNames}`);
-        
+
         // Refresh file list
         if (fileListRef.current) {
           fileListRef.current.refresh();
@@ -559,7 +559,7 @@ export default function Page() {
 
     } catch (error) {
       console.error('Upload error:', error);
-      
+
       if (error.name === 'AbortError') {
         toast.addWarning('Upload cancelled');
       } else if (error.message?.includes('fetch')) {
@@ -574,12 +574,12 @@ export default function Page() {
   const handleGlobalDragOver = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     // Check if drag contains files
     const hasFiles = e.dataTransfer && Array.from(e.dataTransfer.types).includes('Files');
-    
+
     if (!hasFiles) return;
-    
+
     if (currentPath === 'favorites') {
       setIsDragInvalid(true);
       setIsGlobalDragOver(false);
@@ -599,7 +599,7 @@ export default function Page() {
     e.preventDefault();
     e.stopPropagation();
     dragCounterRef.current--;
-    
+
     // Only clear states when truly leaving the page
     if (dragCounterRef.current === 0) {
       setIsGlobalDragOver(false);
@@ -610,7 +610,7 @@ export default function Page() {
   const handleGlobalDrop = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     // Reset drag states
     setIsGlobalDragOver(false);
     setIsDragInvalid(false);
@@ -802,239 +802,77 @@ export default function Page() {
           Cannot upload to favorites
         </div>
       )}
-      
+
       <Layout styleStyle={style.main} loading={loading} user={user} sideNav={true} currentPath={currentPath}>
-      <ConfirmModal
-        open={confirmState.open}
-        title={confirmState.title}
-        message={confirmState.message}
-        destructive={confirmState.action === 'bulk-delete'}
-        confirmLabel={confirmState.action === 'bulk-delete' ? 'Delete' : 'Confirm'}
-        cancelLabel="Cancel"
-        onCancel={() => setConfirmState({ open: false, title: '', message: '', action: '' })}
-        onConfirm={executeConfirmed}
-      />
-      <FilePropertiesModal
-        open={propertiesState.open}
-        items={propertiesState.items}
-        onClose={() => setPropertiesState({ open: false, items: [] })}
-      />
-      {/* Pass action handler down via FileList -> FileViewer chain if supported */}
-      {!isMobile && (
-        <div className={style.desktopContainer}>
-          <Controls
-            currentPath={currentPath}
-            selectedItems={selectedItems}
-            onOpenNewItemModal={openNewItemModal}
-            onUpload={handleUpload}
-            onDownload={handleDownload}
-            onDelete={handleDelete}
-            onRename={handleRename}
-            onFavorite={handleFavorite}
-            onProperties={handleProperties}
-            sortBy={sortBy}
-            onSortChange={handleSortChange}
-            viewMode={viewMode}
-            onViewChange={handleViewChange}
-          />
-          <div className={style.diskContainerRow}>
-            <Resizable
-              defaultSize={{ width: 300, height: "100%" }}
-              minWidth={200}
-              maxWidth={500}
-              minHeight="100%"
-              maxHeight="100%"
-              enable={{
-                top: false,
-                right: true,
-                bottom: false,
-                left: false,
-                topRight: false,
-                bottomRight: false,
-                bottomLeft: false,
-                topLeft: false
-              }}
-            >
-              <div className={style.folderStructureSidebar}>
-                <Image
-                  src="/assets/app/corner.svg"
-                  alt="corner"
-                  width={30}
-                  height={30}
-                  loading="eager"
-                  className={style.corner}
-                />
-                <FolderTree
-                  socket={socket}
-                  onFolderSelect={handleFolderSelect}
-                  selectedPath={currentPath}
-                  mobile={isMobile}
-                />
-              </div>
-            </Resizable>
-            <div className={style.fileListContainer}>
-              <FileList
-                ref={fileListRef}
-                socket={socket}
-                currentPath={currentPath}
-                onFolderDoubleClick={handleFolderDoubleClick}
-                onSelectionChange={handleSelectionChange}
-                onFilesUpload={handleFilesUpload}
-                sortBy={sortBy}
-                viewMode={viewMode}
-                user={user}
-                mobile={isMobile}
-              />
-            </div>
-          </div>
-        </div>
-      )}
-      {/* New Item Modal */}
-      <NewItemModal
-        isOpen={newItemModalOpen}
-        existingNames={existingNames}
-        onClose={() => setNewItemModalOpen(false)}
-        onCreate={handleCreateItem}
-        initialType={newItemInitialType}
-      />
-      {isMobile && (
-        <div className={style.mobileContainer}>
-          <div className={style.favouritesContainer}>
-            <div className={style.favouritesHeader}>
-              <h2 className={style.favouritesTitle}>Favourites</h2>
-              {(favorites.files.length > 0 || favorites.folders.length > 0) && (
-                <button
-                  className={style.viewAllButton}
-                  onClick={() => setCurrentPath('favorites')}
-                >
-                  View All
-                </button>
-              )}
-            </div>
-            {(favorites.files.length > 0 || favorites.folders.length > 0) ? (
-              <div className={style.favouritesList}>
-                {favorites.folders.map((folder) => (
-                  <div
-                    key={`folder-${folder.id}`}
-                    className={style.favouriteItem}
-                    onClick={() => handleFavoriteClick(folder)}
-                  >
-                    <div className={style.favouriteMediaContainer}>
-                      <div className={style.favouriteIcon}>
-                        📁
-                      </div>
-                      <div className={style.favouriteInfo}>
-                        <span className={style.favouriteName}>{folder.name}</span>
-                        <span className={style.favouriteFolderName}>
-                          {folder.path.split('/').slice(0, -1).join('/') || 'Root'}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-
-                {favorites.files.map((file) => (
-                  <FavoriteFileItem
-                    key={`file-${file.id}`}
-                    file={file}
-                    onFavoriteClick={handleFavoriteClick}
-                  />
-                ))}
-              </div>
-            ) : (
-              <div className={style.favouritesEmpty}>
-                <span>No favourites yet</span>
-                <small>Star files and folders to see them here</small>
-              </div>
-            )}
-          </div>
-
-          <div className={style.storageContainer}>
-            <h2 className={style.storageTitle}>All storage</h2>
-            <div className={style.storageList}>
-              <div
-                className={style.storageItem}
-                onClick={() => setCurrentPath('')}
+        <ConfirmModal
+          open={confirmState.open}
+          title={confirmState.title}
+          message={confirmState.message}
+          destructive={confirmState.action === 'bulk-delete'}
+          confirmLabel={confirmState.action === 'bulk-delete' ? 'Delete' : 'Confirm'}
+          cancelLabel="Cancel"
+          onCancel={() => setConfirmState({ open: false, title: '', message: '', action: '' })}
+          onConfirm={executeConfirmed}
+        />
+        <FilePropertiesModal
+          open={propertiesState.open}
+          items={propertiesState.items}
+          onClose={() => setPropertiesState({ open: false, items: [] })}
+        />
+        {/* Pass action handler down via FileList -> FileViewer chain if supported */}
+        {!isMobile && (
+          <div className={style.desktopContainer}>
+            <Controls
+              currentPath={currentPath}
+              selectedItems={selectedItems}
+              onOpenNewItemModal={openNewItemModal}
+              onUpload={handleUpload}
+              onDownload={handleDownload}
+              onDelete={handleDelete}
+              onRename={handleRename}
+              onFavorite={handleFavorite}
+              onProperties={handleProperties}
+              sortBy={sortBy}
+              onSortChange={handleSortChange}
+              viewMode={viewMode}
+              onViewChange={handleViewChange}
+            />
+            <div className={style.diskContainerRow}>
+              <Resizable
+                defaultSize={{ width: 300, height: "100%" }}
+                minWidth={200}
+                maxWidth={500}
+                minHeight="100%"
+                maxHeight="100%"
+                enable={{
+                  top: false,
+                  right: true,
+                  bottom: false,
+                  left: false,
+                  topRight: false,
+                  bottomRight: false,
+                  bottomLeft: false,
+                  topLeft: false
+                }}
               >
-                <div className={style.storageIcon}>
-                  💾
+                <div className={style.folderStructureSidebar}>
+                  <Image
+                    src="/assets/app/corner.svg"
+                    alt="corner"
+                    width={30}
+                    height={30}
+                    loading="eager"
+                    className={style.corner}
+                  />
+                  <FolderTree
+                    socket={socket}
+                    onFolderSelect={handleFolderSelect}
+                    selectedPath={currentPath}
+                    mobile={isMobile}
+                  />
                 </div>
-                <div className={style.storageInfo}>
-                  <span className={style.storageName}>Main Storage</span>
-                  <span className={style.storageSize}>
-                    {storageLoading ? (
-                      ''
-                    ) : (
-                      `${formatFileSize(storageInfo.totalSize)} • ${storageInfo.totalFiles} files`
-                    )}
-                  </span>
-                </div>
-              </div>
-
-              {(favorites.files.length > 0 || favorites.folders.length > 0) && (
-                <div
-                  className={style.storageItem}
-                  onClick={() => setCurrentPath('favorites')}
-                >
-                  <div className={style.storageIcon}>
-                    ⭐
-                  </div>
-                  <div className={style.storageInfo}>
-                    <span className={style.storageName}>Favourites</span>
-                    <span className={style.storageSize}>
-                      {favorites.files.length + favorites.folders.length} items
-                    </span>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Mobile file explorer overlay */}
-          {currentPath !== undefined && (
-            <div className={`${style.mobileExplorerContainer} ${style.active}`}>
-              <div className={style.mobileExplorerHeader}>
-                <div className={style.headerContent}>
-                  <div className={style.folderNameBack}>
-                    <button className={style.backButton} onClick={() => setCurrentPath(undefined)}><ArrowLeft size={20} /></button>
-                    <h3 className={style.explorerTitle}>
-                      {currentPath === '' ? 'Main Storage' : currentPath === 'favorites' ? 'Favourites' : currentPath.split('/').pop() || 'Files'}
-                    </h3>
-                  </div>
-                  <div className={style.explorerControls}>
-                    <button className={style.viewToggleButton} onClick={toggleViewMode}>
-                      {viewMode === 'list' ? <LayoutGrid /> : <List />}
-                    </button>
-                    <button
-                      className={style.menuButton}
-                      onClick={() => setShowSortMenu(true)}
-                    >
-                      <EllipsisVertical size={18} />
-                    </button>
-                  </div>
-                </div>
-                <div className={style.breadcrumbs}>
-                  {getBreadcrumbs().map((breadcrumb, index) => {
-                    const isLast = index === getBreadcrumbs().length - 1;
-                    return (
-                      <span key={breadcrumb.path} className={style.breadcrumbItem}>
-                        {index > 0 && <span className={style.breadcrumbSeparator}>›</span>}
-                        {isLast ? (
-                          <span className={style.breadcrumbCurrent}>{breadcrumb.name}</span>
-                        ) : (
-                          <button
-                            className={style.breadcrumbLink}
-                            onClick={() => navigateToBreadcrumb(breadcrumb.path)}
-                          >
-                            {breadcrumb.name}
-                          </button>
-                        )}
-                      </span>
-                    );
-                  })}
-                </div>
-              </div>
-              <div className={style.mobileFileListContainer}>
+              </Resizable>
+              <div className={style.fileListContainer}>
                 <FileList
                   ref={fileListRef}
                   socket={socket}
@@ -1048,128 +886,290 @@ export default function Page() {
                   mobile={isMobile}
                 />
               </div>
-
-              <button className={style.floatingAddButton} onClick={handleNewFolder}>
-                <Plus size={35} />
-              </button>
             </div>
-          )}
-
-          {/* Sort Menu */}
-          {showSortMenu && (
-            <div className={style.sortMenuOverlay} onClick={() => setShowSortMenu(false)}>
-              <div className={style.sortMenu} onClick={(e) => e.stopPropagation()}>
-                <div className={style.sortMenuHeader}>
-                  <h3>Options</h3>
-                  <button onClick={() => setShowSortMenu(false)}>×</button>
-                </div>
-                <div className={style.sortMenuOptions}>
-                  <button onClick={() => {
-                    setShowSortMenu(false);
-                    handleSelectAll();
-                  }}>Select All</button>
-                  <button onClick={() => {
-                    setShowSortMenu(false);
-                    setShowSortOptionsMenu(true);
-                  }}>Sort By</button>
-                  <button onClick={() => {
-                    setShowSortMenu(false);
-                    handleNewFolder();
-                  }}>Add New Folder</button>
-                </div>
+          </div>
+        )}
+        {/* New Item Modal */}
+        <NewItemModal
+          isOpen={newItemModalOpen}
+          existingNames={existingNames}
+          onClose={() => setNewItemModalOpen(false)}
+          onCreate={handleCreateItem}
+          initialType={newItemInitialType}
+        />
+        {isMobile && (
+          <div className={style.mobileContainer}>
+            <div className={style.favouritesContainer}>
+              <div className={style.favouritesHeader}>
+                <h2 className={style.favouritesTitle}>Favourites</h2>
+                {(favorites.files.length > 0 || favorites.folders.length > 0) && (
+                  <button
+                    className={style.viewAllButton}
+                    onClick={() => setCurrentPath('favorites')}
+                  >
+                    View All
+                  </button>
+                )}
               </div>
-            </div>
-          )}
+              {(favorites.files.length > 0 || favorites.folders.length > 0) ? (
+                <div className={style.favouritesList}>
+                  {favorites.folders.map((folder) => (
+                    <div
+                      key={`folder-${folder.id}`}
+                      className={style.favouriteItem}
+                      onClick={() => handleFavoriteClick(folder)}
+                    >
+                      <div className={style.favouriteMediaContainer}>
+                        <div className={style.favouriteIcon}>
+                          📁
+                        </div>
+                        <div className={style.favouriteInfo}>
+                          <span className={style.favouriteName}>{folder.name}</span>
+                          <span className={style.favouriteFolderName}>
+                            {folder.path.split('/').slice(0, -1).join('/') || 'Root'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
 
-          {/* Sort Options Menu */}
-          {showSortOptionsMenu && (
-            <div className={style.popupModalMenuOverlay} onClick={() => {
-              setShowSortOptionsMenu(false);
-              setSortMenuSwipePosition(0);
-              setSortMenuInitialY(0);
-            }}>
-              <div
-                className={style.popupModalMenu}
-                style={{
-                  transform: `translateY(${sortMenuSwipePosition}%)`
-                }}
-                onTouchStart={handleSortMenuTouchStart}
-                onTouchMove={handleSortMenuTouchMove}
-                onTouchEnd={handleSortMenuTouchEnd}
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className={style.popupModalMenuHeader}>
-                  <div className={style.dragHandle}></div>
-                  <div>
-                    <h3>Sort By</h3>
-                    <button onClick={() => {
-                      setShowSortOptionsMenu(false);
-                      setSortMenuSwipePosition(0);
-                      setSortMenuInitialY(0);
-                    }}><X /></button>
+                  {favorites.files.map((file) => (
+                    <FavoriteFileItem
+                      key={`file-${file.id}`}
+                      file={file}
+                      onFavoriteClick={handleFavoriteClick}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className={style.favouritesEmpty}>
+                  <span>No favourites yet</span>
+                  <small>Star files and folders to see them here</small>
+                </div>
+              )}
+            </div>
+
+            <div className={style.storageContainer}>
+              <h2 className={style.storageTitle}>All storage</h2>
+              <div className={style.storageList}>
+                <div
+                  className={style.storageItem}
+                  onClick={() => setCurrentPath('')}
+                >
+                  <div className={style.storageIcon}>
+                    💾
+                  </div>
+                  <div className={style.storageInfo}>
+                    <span className={style.storageName}>Main Storage</span>
+                    <span className={style.storageSize}>
+                      {storageLoading ? (
+                        ''
+                      ) : (
+                        `${formatFileSize(storageInfo.totalSize)} • ${storageInfo.totalFiles} files`
+                      )}
+                    </span>
                   </div>
                 </div>
-                <div className={style.popupModalMenuOptions}>
-                  <button
-                    className={sortBy === 'name' ? style.active : ''}
-                    onClick={() => handleSortByOption('name')}
-                  >
-                    Name
-                    {sortBy === 'name' && <span><Check size={20} strokeWidth={2.5} /></span>}
-                  </button>
-                  <button
-                    className={sortBy === 'size' ? style.active : ''}
-                    onClick={() => handleSortByOption('size')}
-                  >
-                    File Size
-                    {sortBy === 'size' && <span><Check size={20} strokeWidth={2.5} /></span>}
-                  </button>
-                  <button
-                    className={sortBy === 'modified' ? style.active : ''}
-                    onClick={() => handleSortByOption('modified')}
-                  >
-                    Modified Date
-                    {sortBy === 'modified' && <span><Check size={20} strokeWidth={2.5} /></span>}
-                  </button>
-                  <button
-                    className={sortBy === 'type' ? style.active : ''}
-                    onClick={() => handleSortByOption('type')}
-                  >
-                    File Type
-                    {sortBy === 'type' && <span><Check size={20} strokeWidth={2.5} /></span>}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
 
-          {/* New Folder Popup */}
-          {showNewFolderPopup && (
-            <div className={style.popupOverlay} onClick={cancelNewFolder}>
-              <div className={style.popup} onClick={(e) => e.stopPropagation()}>
-                <h3>New folder</h3>
-                <input
-                  type="text"
-                  placeholder="Enter new folder name"
-                  value={newFolderName}
-                  onChange={(e) => setNewFolderName(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && createNewFolder()}
-                  autoFocus
-                />
-                <div className={style.popupButtons}>
-                  <button className={style.cancelButton} onClick={cancelNewFolder}>
-                    Cancel
-                  </button>
-                  <button className={style.createButton} onClick={createNewFolder}>
-                    Create folder
-                  </button>
-                </div>
+                {(favorites.files.length > 0 || favorites.folders.length > 0) && (
+                  <div
+                    className={style.storageItem}
+                    onClick={() => setCurrentPath('favorites')}
+                  >
+                    <div className={style.storageIcon}>
+                      ⭐
+                    </div>
+                    <div className={style.storageInfo}>
+                      <span className={style.storageName}>Favourites</span>
+                      <span className={style.storageSize}>
+                        {favorites.files.length + favorites.folders.length} items
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
-          )}
-        </div>
-      )}
-    </Layout>
+
+            {/* Mobile file explorer overlay */}
+            {currentPath !== undefined && (
+              <div className={`${style.mobileExplorerContainer} ${style.active}`}>
+                <div className={style.mobileExplorerHeader}>
+                  <div className={style.headerContent}>
+                    <div className={style.folderNameBack}>
+                      <button className={style.backButton} onClick={() => setCurrentPath(undefined)}><ArrowLeft size={20} /></button>
+                      <h3 className={style.explorerTitle}>
+                        {currentPath === '' ? 'Main Storage' : currentPath === 'favorites' ? 'Favourites' : currentPath.split('/').pop() || 'Files'}
+                      </h3>
+                    </div>
+                    <div className={style.explorerControls}>
+                      <button className={style.viewToggleButton} onClick={toggleViewMode}>
+                        {viewMode === 'list' ? <LayoutGrid /> : <List />}
+                      </button>
+                      <button
+                        className={style.menuButton}
+                        onClick={() => setShowSortMenu(true)}
+                      >
+                        <EllipsisVertical size={18} />
+                      </button>
+                    </div>
+                  </div>
+                  <div className={style.breadcrumbs}>
+                    {getBreadcrumbs().map((breadcrumb, index) => {
+                      const isLast = index === getBreadcrumbs().length - 1;
+                      return (
+                        <span key={breadcrumb.path} className={style.breadcrumbItem}>
+                          {index > 0 && <span className={style.breadcrumbSeparator}>›</span>}
+                          {isLast ? (
+                            <span className={style.breadcrumbCurrent}>{breadcrumb.name}</span>
+                          ) : (
+                            <button
+                              className={style.breadcrumbLink}
+                              onClick={() => navigateToBreadcrumb(breadcrumb.path)}
+                            >
+                              {breadcrumb.name}
+                            </button>
+                          )}
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+                <div className={style.mobileFileListContainer}>
+                  <FileList
+                    ref={fileListRef}
+                    socket={socket}
+                    currentPath={currentPath}
+                    onFolderDoubleClick={handleFolderDoubleClick}
+                    onSelectionChange={handleSelectionChange}
+                    onFilesUpload={handleFilesUpload}
+                    sortBy={sortBy}
+                    viewMode={viewMode}
+                    user={user}
+                    mobile={isMobile}
+                  />
+                </div>
+
+                <button className={style.floatingAddButton} onClick={handleNewFolder}>
+                  <Plus size={35} />
+                </button>
+              </div>
+            )}
+
+            {/* Sort Menu */}
+            {showSortMenu && (
+              <div className={style.sortMenuOverlay} onClick={() => setShowSortMenu(false)}>
+                <div className={style.sortMenu} onClick={(e) => e.stopPropagation()}>
+                  <div className={style.sortMenuHeader}>
+                    <h3>Options</h3>
+                    <button onClick={() => setShowSortMenu(false)}>×</button>
+                  </div>
+                  <div className={style.sortMenuOptions}>
+                    <button onClick={() => {
+                      setShowSortMenu(false);
+                      handleSelectAll();
+                    }}>Select All</button>
+                    <button onClick={() => {
+                      setShowSortMenu(false);
+                      setShowSortOptionsMenu(true);
+                    }}>Sort By</button>
+                    <button onClick={() => {
+                      setShowSortMenu(false);
+                      handleNewFolder();
+                    }}>Add New Folder</button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Sort Options Menu */}
+            {showSortOptionsMenu && (
+              <div className={style.popupModalMenuOverlay} onClick={() => {
+                setShowSortOptionsMenu(false);
+                setSortMenuSwipePosition(0);
+                setSortMenuInitialY(0);
+              }}>
+                <div
+                  className={style.popupModalMenu}
+                  style={{
+                    transform: `translateY(${sortMenuSwipePosition}%)`
+                  }}
+                  onTouchStart={handleSortMenuTouchStart}
+                  onTouchMove={handleSortMenuTouchMove}
+                  onTouchEnd={handleSortMenuTouchEnd}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className={style.popupModalMenuHeader}>
+                    <div className={style.dragHandle}></div>
+                    <div>
+                      <h3>Sort By</h3>
+                      <button onClick={() => {
+                        setShowSortOptionsMenu(false);
+                        setSortMenuSwipePosition(0);
+                        setSortMenuInitialY(0);
+                      }}><X /></button>
+                    </div>
+                  </div>
+                  <div className={style.popupModalMenuOptions}>
+                    <button
+                      className={sortBy === 'name' ? style.active : ''}
+                      onClick={() => handleSortByOption('name')}
+                    >
+                      Name
+                      {sortBy === 'name' && <span><Check size={20} strokeWidth={2.5} /></span>}
+                    </button>
+                    <button
+                      className={sortBy === 'size' ? style.active : ''}
+                      onClick={() => handleSortByOption('size')}
+                    >
+                      File Size
+                      {sortBy === 'size' && <span><Check size={20} strokeWidth={2.5} /></span>}
+                    </button>
+                    <button
+                      className={sortBy === 'modified' ? style.active : ''}
+                      onClick={() => handleSortByOption('modified')}
+                    >
+                      Modified Date
+                      {sortBy === 'modified' && <span><Check size={20} strokeWidth={2.5} /></span>}
+                    </button>
+                    <button
+                      className={sortBy === 'type' ? style.active : ''}
+                      onClick={() => handleSortByOption('type')}
+                    >
+                      File Type
+                      {sortBy === 'type' && <span><Check size={20} strokeWidth={2.5} /></span>}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* New Folder Popup */}
+            {showNewFolderPopup && (
+              <div className={style.popupOverlay} onClick={cancelNewFolder}>
+                <div className={style.popup} onClick={(e) => e.stopPropagation()}>
+                  <h3>New folder</h3>
+                  <input
+                    type="text"
+                    placeholder="Enter new folder name"
+                    value={newFolderName}
+                    onChange={(e) => setNewFolderName(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && createNewFolder()}
+                    autoFocus
+                  />
+                  <div className={style.popupButtons}>
+                    <button className={style.cancelButton} onClick={cancelNewFolder}>
+                      Cancel
+                    </button>
+                    <button className={style.createButton} onClick={createNewFolder}>
+                      Create folder
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </Layout>
     </div>
   );
 }

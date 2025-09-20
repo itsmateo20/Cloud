@@ -61,7 +61,7 @@ export async function POST(req) {
             const fileName = file.name;
             const filePath = path.join(targetFolder, fileName);
             if (!filePath.startsWith(userFolder)) return NextResponse.json({ success: false, code: "explorer_invalid_path" }, { status: 400 });
-            
+
             let finalPath = filePath;
             let counter = 1;
             while (true) {
@@ -75,7 +75,7 @@ export async function POST(req) {
                     break;
                 }
             }
-            
+
             const arrayBuffer = await file.arrayBuffer();
             const buffer = Buffer.from(arrayBuffer);
             await fs.writeFile(finalPath, buffer);

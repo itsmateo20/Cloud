@@ -62,17 +62,17 @@ export async function POST(req) {
         try {
             // Assemble file from chunks
             const finalPath = uploadSession.finalPath;
-            
+
             // Ensure the user upload directory exists first
             const pathResult = await ensureUserUploadPath(uploadSession.userId);
             if (!pathResult.success) {
                 throw new Error(`Failed to create upload directory: ${pathResult.error}`);
             }
-            
+
             // Ensure the target directory exists
             const targetDir = path.dirname(finalPath);
             await fs.mkdir(targetDir, { recursive: true });
-            
+
             const writeStream = await fs.open(finalPath, 'w');
 
             let assembledSize = 0;

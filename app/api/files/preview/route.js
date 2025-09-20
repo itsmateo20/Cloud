@@ -68,123 +68,123 @@ export async function GET(req) {
             }, { status: 400 });
         }
 
-    try {
+        try {
 
-        const stat = await fs.stat(requestedPath);
-        if (stat.isDirectory()) {
+            const stat = await fs.stat(requestedPath);
+            if (stat.isDirectory()) {
+                return NextResponse.json({
+                    success: false,
+                    code: "cannot_preview_directory"
+                }, { status: 400 });
+            }
+
+
+            const fileBuffer = await fs.readFile(requestedPath);
+
+
+            const ext = path.extname(filePath).toLowerCase();
+            let contentType = 'application/octet-stream';
+
+            switch (ext) {
+                case '.jpg':
+                case '.jpeg':
+                    contentType = 'image/jpeg';
+                    break;
+                case '.png':
+                    contentType = 'image/png';
+                    break;
+                case '.gif':
+                    contentType = 'image/gif';
+                    break;
+                case '.svg':
+                    contentType = 'image/svg+xml';
+                    break;
+                case '.webp':
+                    contentType = 'image/webp';
+                    break;
+                case '.bmp':
+                    contentType = 'image/bmp';
+                    break;
+                case '.pdf':
+                    contentType = 'application/pdf';
+                    break;
+                case '.mp4':
+                    contentType = 'video/mp4';
+                    break;
+                case '.webm':
+                    contentType = 'video/webm';
+                    break;
+                case '.ogg':
+                    contentType = 'video/ogg';
+                    break;
+                case '.mov':
+                    contentType = 'video/quicktime';
+                    break;
+                case '.avi':
+                    contentType = 'video/x-msvideo';
+                    break;
+                case '.mp3':
+                    contentType = 'audio/mpeg';
+                    break;
+                case '.wav':
+                    contentType = 'audio/wav';
+                    break;
+                case '.txt':
+                    contentType = 'text/plain';
+                    break;
+                case '.html':
+                    contentType = 'text/html';
+                    break;
+                case '.css':
+                    contentType = 'text/css';
+                    break;
+                case '.js':
+                    contentType = 'application/javascript';
+                    break;
+                case '.json':
+                    contentType = 'application/json';
+                    break;
+                default:
+
+                    if (fileRecord?.type) {
+                        contentType = fileRecord.type;
+                    }
+            }
+
+
+            return new Response(fileBuffer, {
+                headers: {
+                    'Content-Type': contentType,
+                    'Content-Length': stat.size.toString(),
+                    'Cache-Control': 'public, max-age=3600',
+                    'Content-Security-Policy': "default-src 'self'",
+                    'X-File-Name': encodeURIComponent(fileRecord?.name || path.basename(filePath))
+                }
+            });
+
+        } catch (fileError) {
+            console.error("File preview error:", fileError);
             return NextResponse.json({
                 success: false,
-                code: "cannot_preview_directory"
-            }, { status: 400 });
+                code: "file_not_accessible",
+                message: "Could not read file"
+            }, { status: 404 });
         }
 
+    } catch (error) {
+        console.error("Preview route error:", error);
 
-        const fileBuffer = await fs.readFile(requestedPath);
-
-
-        const ext = path.extname(filePath).toLowerCase();
-        let contentType = 'application/octet-stream';
-
-        switch (ext) {
-            case '.jpg':
-            case '.jpeg':
-                contentType = 'image/jpeg';
-                break;
-            case '.png':
-                contentType = 'image/png';
-                break;
-            case '.gif':
-                contentType = 'image/gif';
-                break;
-            case '.svg':
-                contentType = 'image/svg+xml';
-                break;
-            case '.webp':
-                contentType = 'image/webp';
-                break;
-            case '.bmp':
-                contentType = 'image/bmp';
-                break;
-            case '.pdf':
-                contentType = 'application/pdf';
-                break;
-            case '.mp4':
-                contentType = 'video/mp4';
-                break;
-            case '.webm':
-                contentType = 'video/webm';
-                break;
-            case '.ogg':
-                contentType = 'video/ogg';
-                break;
-            case '.mov':
-                contentType = 'video/quicktime';
-                break;
-            case '.avi':
-                contentType = 'video/x-msvideo';
-                break;
-            case '.mp3':
-                contentType = 'audio/mpeg';
-                break;
-            case '.wav':
-                contentType = 'audio/wav';
-                break;
-            case '.txt':
-                contentType = 'text/plain';
-                break;
-            case '.html':
-                contentType = 'text/html';
-                break;
-            case '.css':
-                contentType = 'text/css';
-                break;
-            case '.js':
-                contentType = 'application/javascript';
-                break;
-            case '.json':
-                contentType = 'application/json';
-                break;
-            default:
-
-                if (fileRecord?.type) {
-                    contentType = fileRecord.type;
-                }
+        if (error.code === 'P2025') {
+            return NextResponse.json({
+                success: false,
+                code: "not_found"
+            }, { status: 404 });
         }
 
-
-        return new Response(fileBuffer, {
-            headers: {
-                'Content-Type': contentType,
-                'Content-Length': stat.size.toString(),
-                'Cache-Control': 'public, max-age=3600',
-                'Content-Security-Policy': "default-src 'self'",
-                'X-File-Name': encodeURIComponent(fileRecord?.name || path.basename(filePath))
-            }
-        });
-
-    } catch (fileError) {
-        console.error("File preview error:", fileError);
         return NextResponse.json({
             success: false,
-            code: "file_not_accessible",
-            message: "Could not read file"
-        }, { status: 404 });
-    }
-
-} catch (error) {
-    console.error("Preview route error:", error);
-
-    if (error.code === 'P2025') {
-        return NextResponse.json({
-            success: false,
-            code: "not_found"
-        }, { status: 404 });
-    }
-
-    return NextResponse.json({
-        success: false,
-        code: "internal_server_error",
-        message: "Failed to preview file"
-    }, { status: 500 });
+            code: "internal_server_error",
+            message: "Failed to preview file"
+        }, { status: 500 });
     }
 }

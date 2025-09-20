@@ -14,13 +14,13 @@ export function readFileMetadata(file) {
         type: file.type,
         lastModified: file.lastModified,
         lastModifiedDate: file.lastModifiedDate,
-        
+
         // Convert to ISO strings for transmission
         lastModifiedISO: new Date(file.lastModified).toISOString(),
-        
+
         // WebkitRelativePath for directory uploads
         webkitRelativePath: file.webkitRelativePath || '',
-        
+
         // Additional metadata that may be available
         ...(file.lastModifiedDate && {
             lastModifiedDateISO: file.lastModifiedDate.toISOString()

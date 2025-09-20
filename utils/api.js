@@ -79,7 +79,7 @@ async function makeRequest(method, url, body = null, customHeaders = null) {
         // Determine if body is FormData or needs JSON serialization
         const isFormData = body instanceof FormData;
         const isBlob = body instanceof Blob;
-        
+
         let headers = { ...customHeaders };
         let processedBody = body;
 

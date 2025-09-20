@@ -353,7 +353,7 @@ export class DownloadManager {
         const link = document.createElement('a');
         link.href = url;
         link.download = fileName;
-        
+
         // Set file date if supported
         if (lastModified && 'download' in link) {
             try {
@@ -363,7 +363,7 @@ export class DownloadManager {
                 // Ignore if not supported
             }
         }
-        
+
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -620,7 +620,7 @@ export const downloadManager = new DownloadManager();
 
 // Convenience functions
 export const downloadFile = (filePath, fileName, chunked = false, preserveDate = true) => {
-    return chunked 
+    return chunked
         ? downloadManager.downloadFileChunked(filePath, fileName, preserveDate)
         : downloadManager.downloadFile(filePath, fileName);
 };
