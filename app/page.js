@@ -20,6 +20,7 @@ import SoftLoading from "@/components/SoftLoading";
 
 import { downloadFile, downloadFolder } from "@/utils/downloadUtils";
 import { api } from "@/utils/api";
+import { appendMetadataToFormData } from "@/utils/fileMetadata.client";
 import { useIsMobile } from "@/utils/useIsMobile";
 
 import { Resizable } from "re-resizable";
@@ -48,6 +49,11 @@ export default function Page() {
   const [showNewFolderPopup, setShowNewFolderPopup] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
   const [confirmState, setConfirmState] = useState({ open: false, title: '', message: '', action: '' });
+  
+  // Global drag & drop state
+  const [isGlobalDragOver, setIsGlobalDragOver] = useState(false);
+  const [isDragInvalid, setIsDragInvalid] = useState(false);
+  const dragCounterRef = useRef(0);
   const [propertiesState, setPropertiesState] = useState({ open: false, items: [] });
 
   const isMobile = useIsMobile();
@@ -491,24 +497,133 @@ export default function Page() {
   const uploadFiles = async (files) => {
     if (!files || files.length === 0) return;
 
+    // Validate files before upload
+    const maxFileSize = 500 * 1024 * 1024; // 500MB per file
+    const oversizedFiles = files.filter(file => file.size > maxFileSize);
+    if (oversizedFiles.length > 0) {
+      toast.addError(`Files too large: ${oversizedFiles.map(f => f.name).join(', ')}. Max size: 500MB`);
+      return;
+    }
+
     try {
       const formData = new FormData();
       formData.append('path', currentPath);
 
+      // Add file size validation and progress tracking
+      let totalSize = 0;
       for (const file of files) {
         formData.append('files', file);
+        totalSize += file.size;
       }
 
-      const result = await api.post('/api/files/upload', formData);
+      // Append metadata to preserve file properties
+      appendMetadataToFormData(formData, files);
+
+      // Show immediate feedback
+      const sizeText = totalSize > 1024 * 1024 
+        ? `${(totalSize / (1024 * 1024)).toFixed(1)}MB`
+        : `${(totalSize / 1024).toFixed(1)}KB`;
+      
+      toast.addInfo(`Uploading ${files.length} file${files.length > 1 ? 's' : ''} (${sizeText})...`);
+
+      // Use enhanced api.upload for FormData handling
+      const result = await api.upload('/api/files/upload', formData);
+      
       if (result.success) {
-        toast.addSuccess(`${files.length} file${files.length > 1 ? 's' : ''} uploaded`);
-        if (fileListRef.current) fileListRef.current.refresh();
+        // Show detailed success message
+        const uploadedNames = result.files?.map(f => f.name).join(', ') || 'files';
+        toast.addSuccess(`✅ Uploaded: ${uploadedNames}`);
+        
+        // Refresh file list
+        if (fileListRef.current) {
+          fileListRef.current.refresh();
+        }
       } else {
-        toast.addError(`Upload failed: ${result.message}`);
+        // Show specific error based on error code
+        let errorMsg = 'Upload failed';
+        switch (result.code) {
+          case 'no_files':
+            errorMsg = 'No files selected for upload';
+            break;
+          case 'folder_auth_failed':
+            errorMsg = 'Permission denied for current folder';
+            break;
+          case 'explorer_invalid_path':
+            errorMsg = 'Invalid file path detected';
+            break;
+          default:
+            errorMsg = result.message || 'Unknown upload error';
+        }
+        toast.addError(errorMsg);
       }
 
     } catch (error) {
-      toast.addError('Upload failed: network error');
+      console.error('Upload error:', error);
+      
+      if (error.name === 'AbortError') {
+        toast.addWarning('Upload cancelled');
+      } else if (error.message?.includes('fetch')) {
+        toast.addError('Network error: Check your connection and try again');
+      } else {
+        toast.addError(`Upload failed: ${error.message || 'Unknown error'}`);
+      }
+    }
+  };
+
+  // Global drag & drop handlers
+  const handleGlobalDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // Check if drag contains files
+    const hasFiles = e.dataTransfer && Array.from(e.dataTransfer.types).includes('Files');
+    
+    if (!hasFiles) return;
+    
+    if (currentPath === 'favorites') {
+      setIsDragInvalid(true);
+      setIsGlobalDragOver(false);
+    } else {
+      setIsDragInvalid(false);
+      setIsGlobalDragOver(true);
+    }
+  };
+
+  const handleGlobalDragEnter = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounterRef.current++;
+  };
+
+  const handleGlobalDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounterRef.current--;
+    
+    // Only clear states when truly leaving the page
+    if (dragCounterRef.current === 0) {
+      setIsGlobalDragOver(false);
+      setIsDragInvalid(false);
+    }
+  };
+
+  const handleGlobalDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // Reset drag states
+    setIsGlobalDragOver(false);
+    setIsDragInvalid(false);
+    dragCounterRef.current = 0;
+
+    if (currentPath === 'favorites') {
+      toast?.addError('Cannot upload files to favorites');
+      return;
+    }
+
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length > 0) {
+      uploadFiles(files);
     }
   };
 
@@ -609,12 +724,7 @@ export default function Page() {
 
   const handleCreateItem = async ({ type, name }) => {
     try {
-      const res = await fetch('/api/files/create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, type, currentPath })
-      });
-      const data = await res.json();
+      const data = await api.post('/api/files/create', { name, type, currentPath });
       if (!data.success) {
         toast.addError(`Failed to create ${type}: ${data.message || data.code}`);
         return { success: false, error: data.message || data.code };
@@ -644,7 +754,56 @@ export default function Page() {
   if (!user) return null;
 
   return (
-    <Layout styleStyle={style.main} loading={loading} user={user} sideNav={true} currentPath={currentPath}>
+    <div
+      onDragOver={handleGlobalDragOver}
+      onDragEnter={handleGlobalDragEnter}
+      onDragLeave={handleGlobalDragLeave}
+      onDrop={handleGlobalDrop}
+      style={{ position: 'relative', height: '100%', width: '100%' }}
+    >
+      {/* Global drag overlay */}
+      {isGlobalDragOver && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.7)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '32px',
+          fontWeight: '600',
+          color: 'white',
+          zIndex: 9999,
+          pointerEvents: 'none'
+        }}>
+          Drop files here to upload
+        </div>
+      )}
+      {isDragInvalid && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(220, 53, 69, 0.8)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '32px',
+          fontWeight: '600',
+          color: 'white',
+          zIndex: 9999,
+          pointerEvents: 'none'
+        }}>
+          Cannot upload to favorites
+        </div>
+      )}
+      
+      <Layout styleStyle={style.main} loading={loading} user={user} sideNav={true} currentPath={currentPath}>
       <ConfirmModal
         open={confirmState.open}
         title={confirmState.title}
@@ -1011,5 +1170,6 @@ export default function Page() {
         </div>
       )}
     </Layout>
+    </div>
   );
 }

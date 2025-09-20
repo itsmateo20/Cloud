@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { verifyFolderOwnership } from "@/lib/folderAuth";
 import fs from "fs";
 import path from "path";
+import { getUserUploadPath } from "@/lib/paths";
 
 export async function POST(req) {
     try {
@@ -46,8 +47,7 @@ export async function POST(req) {
                 message: "File not found or access denied"
             }, { status: 404 });
         }
-        const uploadsPath = path.join(process.cwd(), 'uploads');
-        const userFolder = path.join(uploadsPath, String(session.user.id));
+        const userFolder = getUserUploadPath(session.user.id);
         const absoluteFilePath = path.join(userFolder, filePath);
         if (!absoluteFilePath.startsWith(userFolder)) {
             return NextResponse.json({

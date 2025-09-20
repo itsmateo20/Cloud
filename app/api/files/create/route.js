@@ -3,6 +3,7 @@ import path from 'path';
 import fs from 'fs/promises';
 import { verifyFolderOwnership, initializeUserFolder } from '@/lib/folderAuth';
 import { getSession } from '@/lib/session';
+import { getUserUploadPath, ensureUserUploadPath } from '@/lib/paths';
 
 // Helper to sanitize and validate name
 function validateName(name) {
@@ -44,7 +45,7 @@ export async function POST(req) {
             }
         }
 
-        const userBase = path.join(process.cwd(), 'uploads', String(userId));
+        const userBase = getUserUploadPath(userId);
         // currentPath may be '' or nested relative path; normalize
         const targetDir = path.join(userBase, currentPath);
 

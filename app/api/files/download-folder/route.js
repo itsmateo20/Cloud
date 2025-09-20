@@ -5,6 +5,7 @@ import { verifyFolderOwnership } from "@/lib/folderAuth";
 import fs from "fs/promises";
 import path from "path";
 import archiver from "archiver";
+import { getUserUploadPath } from "@/lib/paths";
 
 export async function GET(req) {
     const session = await getSession();
@@ -31,7 +32,7 @@ export async function GET(req) {
     }
 
     try {
-        const userFolder = path.join(process.cwd(), "uploads", String(userId));
+        const userFolder = getUserUploadPath(userId);
         const targetPath = path.join(userFolder, folderPath);
 
         if (!targetPath.startsWith(userFolder)) {

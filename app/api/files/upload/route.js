@@ -5,6 +5,8 @@ import fs from "fs/promises";
 import path from "path";
 import { getSession } from "@/lib/session";
 import { verifyFolderOwnership } from "@/lib/folderAuth";
+import { preserveFileMetadata } from "@/utils/fileMetadata.server";
+import { getUserUploadPath, ensureUserUploadPath } from "@/lib/paths";
 
 export async function POST(req) {
     const session = await getSession();
@@ -22,21 +24,44 @@ export async function POST(req) {
         const formData = await req.formData();
         const targetPath = formData.get("path") || "";
         const files = formData.getAll("files");
+        const metadataString = formData.get("metadata");
 
         if (!files || files.length === 0) return NextResponse.json({ success: false, code: "no_files" }, { status: 400 });
 
-        const userFolder = path.join(process.cwd(), "uploads", String(id));
+        // Parse metadata if provided
+        let metadata = [];
+        if (metadataString) {
+            try {
+                metadata = JSON.parse(metadataString);
+            } catch (error) {
+                console.warn('Failed to parse metadata:', error);
+            }
+        }
+
+        // Ensure user upload directory exists first
+        const pathResult = await ensureUserUploadPath(id);
+        if (!pathResult.success) {
+            return NextResponse.json({
+                success: false,
+                code: "directory_error",
+                message: `Failed to create upload directory: ${pathResult.error}`
+            }, { status: 500 });
+        }
+
+        const userFolder = pathResult.path;
         const targetFolder = path.join(userFolder, targetPath);
         await fs.mkdir(targetFolder, { recursive: true });
 
         const uploadedFiles = [];
 
-        for (const file of files) {
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
             if (!file || typeof file === 'string') continue;
 
             const fileName = file.name;
             const filePath = path.join(targetFolder, fileName);
             if (!filePath.startsWith(userFolder)) return NextResponse.json({ success: false, code: "explorer_invalid_path" }, { status: 400 });
+            
             let finalPath = filePath;
             let counter = 1;
             while (true) {
@@ -50,14 +75,27 @@ export async function POST(req) {
                     break;
                 }
             }
+            
             const arrayBuffer = await file.arrayBuffer();
             const buffer = Buffer.from(arrayBuffer);
             await fs.writeFile(finalPath, buffer);
 
+            // Apply metadata if available for this file
+            const fileMetadata = metadata[i];
+            if (fileMetadata) {
+                try {
+                    const metadataResult = await preserveFileMetadata(finalPath, fileMetadata);
+                    console.log(`Metadata preservation for ${fileName}:`, metadataResult);
+                } catch (error) {
+                    console.warn(`Failed to preserve metadata for ${fileName}:`, error);
+                }
+            }
+
             uploadedFiles.push({
                 name: path.basename(finalPath),
                 path: path.relative(userFolder, finalPath).replace(/\\/g, '/'),
-                size: buffer.length
+                size: buffer.length,
+                metadataPreserved: !!fileMetadata
             });
         }
         global.io?.emit("file-updated", {

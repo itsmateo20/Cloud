@@ -69,7 +69,7 @@ export default function Page({ searchParams }) {
     return (
         <Layout mainStyle={style.main} loading={loading} user={user}>
             <h1 className={style.title}>Google Login Issue</h1>
-            <h2 className={style.subtitle}>The Google account you"re trying to use isn't linked to any registered account. Please enter your credentials to link it.</h2>
+            <h2 className={style.subtitle}>The Google account you're trying to use isn't linked to any registered account. Please enter your credentials to link it.</h2>
             <fieldset className={style.inputWithText}>
                 <legend>Email</legend>
                 <input

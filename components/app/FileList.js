@@ -259,7 +259,6 @@ const FileList = forwardRef(({
         column: null
     });
 
-    const [isDragOver, setIsDragOver] = useState(false);
     const [renaming, setRenaming] = useState({ active: false, items: [], value: "" });
     const [qrModal, setQrModal] = useState({ visible: false, type: '', qrCode: '', items: [] });
     const renameInputRef = useRef(null);
@@ -1066,32 +1065,6 @@ const FileList = forwardRef(({
                 break;
         }
     };
-    const handleDragOver = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        if (currentPath !== 'favorites') setIsDragOver(true);
-    };
-
-    const handleDragLeave = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        if (!e.currentTarget.contains(e.relatedTarget)) {
-            setIsDragOver(false);
-        }
-    };
-
-    const handleDrop = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setIsDragOver(false);
-
-        if (currentPath === 'favorites') return;
-
-        const files = Array.from(e.dataTransfer.files);
-        if (files.length > 0 && onFilesUpload) {
-            onFilesUpload(files);
-        }
-    };
 
     const formatFileSize = (bytes) => {
         if (!bytes || bytes === 0) return '0 B';
@@ -1154,10 +1127,7 @@ const FileList = forwardRef(({
 
     return (
         <div
-            className={`${styles.fileList} ${isDragOver ? styles.dragOver : ''} ${mobile ? styles.mobile : ''}`}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
+            className={`${styles.fileList} ${mobile ? styles.mobile : ''}`}
         >
             {/* Header - only show in list and details view */}
             {viewMode === 'details' && (
@@ -1189,11 +1159,7 @@ const FileList = forwardRef(({
                 </div>
             )}
 
-            <div className={`${styles.content} ${styles[viewMode]}`}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
-            >
+            <div className={`${styles.content} ${styles[viewMode]}`}>
                 {sortedFolders.map(folder => {
                     const isIconView = ['extraLargeIcons', 'largeIcons', 'mediumIcons', 'smallIcons'].includes(viewMode);
                     const isTilesView = viewMode === 'tiles';
@@ -1554,14 +1520,6 @@ const FileList = forwardRef(({
             {loading && (
                 <div className={styles.loadingOverlay}>
                     <div className={styles.spinner}></div>
-                </div>
-            )}
-
-            {isDragOver && (
-                <div className={styles.dragOverlay}>
-                    <div className={styles.dragMessage}>
-                        Drop files here to upload
-                    </div>
                 </div>
             )}
 

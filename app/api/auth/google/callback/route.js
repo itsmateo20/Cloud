@@ -59,8 +59,8 @@ export async function GET(req) {
         const response = await authenticationWithGoogle(googleUser.email, type);
         if (!response.success) {
             if (type === "login") {
-                if (response.code === "user_already_exists_link_google") return NextResponse.redirect(`/link-account/google?email=${encodeURIComponent(googleUser.email)}&signature=${signEmail(googleUser.email)}`);
-                else if (response.code === "user_not_found") return NextResponse.redirect(`/login/google?email=${encodeURIComponent(googleUser.email)}&signature=${signEmail(googleUser.email)}`);
+                if (response.code === "user_already_exists_link_google") return NextResponse.redirect(`${siteUrl}/link-account/google?email=${encodeURIComponent(googleUser.email)}&signature=${signEmail(googleUser.email)}`);
+                else if (response.code === "user_not_found") return NextResponse.redirect(`${siteUrl}/login/google?email=${encodeURIComponent(googleUser.email)}&signature=${signEmail(googleUser.email)}`);
             } else if (type === "signup") {
                 if (response.code === "user_already_exists_linked") {
                     const loginResponse = await authenticationWithGoogle(googleUser.email, "login");

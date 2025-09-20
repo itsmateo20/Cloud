@@ -6,6 +6,7 @@ import path from "path";
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/db";
 import { verifyFolderOwnership } from "@/lib/folderAuth";
+import { getUserUploadPath, getUserFileUrl } from "@/lib/paths";
 
 export async function GET(req) {
     const session = await getSession();
@@ -26,7 +27,7 @@ export async function GET(req) {
     const url = new URL(req.url);
     const requestedPath = url.searchParams.get("path") || "";
 
-    const userFolder = path.join(process.cwd(), "uploads", String(userId));
+    const userFolder = getUserUploadPath(userId);
     const targetPath = path.join(userFolder, requestedPath);
 
     if (!targetPath.startsWith(userFolder)) {
@@ -156,7 +157,7 @@ export async function GET(req) {
                         type: "file",
                         size: Number(stat.size),
                         modified: stat.mtime,
-                        url: `/uploads/${String(userId)}/${relativePath}`,
+                        url: getUserFileUrl(userId, relativePath),
                         isFavorited: file.favoritedBy.length > 0
                     });
                 }
@@ -213,7 +214,7 @@ export async function POST(req) {
         const { action, path: targetPath, name } = await req.json();
 
         if (action === 'create_folder') {
-            const userFolder = path.join(process.cwd(), "uploads", String(userId));
+            const userFolder = getUserUploadPath(userId);
             const folderPath = path.join(userFolder, targetPath || "", name);
             if (!folderPath.startsWith(userFolder)) {
                 return NextResponse.json({ success: false, code: "explorer_invalid_path" }, { status: 400 });
@@ -261,7 +262,7 @@ export async function POST(req) {
 
         if (action === 'create_file') {
             const { content = '' } = await req.json();
-            const userFolder = path.join(process.cwd(), "uploads", String(userId));
+            const userFolder = getUserUploadPath(userId);
             const filePath = path.join(userFolder, targetPath || "", name);
             if (!filePath.startsWith(userFolder)) {
                 return NextResponse.json({ success: false, code: "explorer_invalid_path" }, { status: 400 });

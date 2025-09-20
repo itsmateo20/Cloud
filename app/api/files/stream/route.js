@@ -7,6 +7,7 @@ import { NextResponse } from "next/server";
 import fs from "fs/promises";
 import { createReadStream } from "fs";
 import path from "path";
+import { getUserUploadPath } from "@/lib/paths";
 
 export async function GET(req) {
     try {
@@ -35,7 +36,7 @@ export async function GET(req) {
             }, { status: 400 });
         }
 
-        const userFolder = path.join(process.cwd(), "uploads", String(userId));
+        const userFolder = getUserUploadPath(userId);
         const requestedPath = path.join(userFolder, filePath);
         if (!requestedPath.startsWith(userFolder)) {
             return NextResponse.json({

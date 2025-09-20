@@ -10,10 +10,8 @@ async function getBaseUrl() {
     return await getSiteUrl();
 }
 
-
 async function safeJsonParse(response) {
     const text = await response.text();
-
 
     if (!text) {
         return {
@@ -35,9 +33,7 @@ async function safeJsonParse(response) {
     }
 }
 
-
 async function handleResponse(response) {
-
     if (!response.ok) {
         let errorData;
         try {
@@ -50,164 +46,141 @@ async function handleResponse(response) {
             };
         }
 
-
         return errorData;
     }
 
     return await safeJsonParse(response);
 }
 
+async function handleBlobResponse(response) {
+    if (!response.ok) {
+        try {
+            const errorData = await safeJsonParse(response);
+            return { success: false, ...errorData };
+        } catch {
+            return {
+                success: false,
+                code: `http_${response.status}`,
+                message: `HTTP ${response.status}: ${response.statusText}`
+            };
+        }
+    }
+
+    const blob = await response.blob();
+    return { success: true, blob };
+}
+
+// Core request function that handles all HTTP methods
+async function makeRequest(method, url, body = null, customHeaders = null) {
+    try {
+        const baseUrl = await getBaseUrl();
+        const fullUrl = url.startsWith('http') ? url : `${baseUrl}${url}`;
+
+        // Determine if body is FormData or needs JSON serialization
+        const isFormData = body instanceof FormData;
+        const isBlob = body instanceof Blob;
+        
+        let headers = { ...customHeaders };
+        let processedBody = body;
+
+        // Only set Content-Type if not FormData/Blob (browser handles it automatically)
+        if (body && !isFormData && !isBlob && !headers['Content-Type']) {
+            headers['Content-Type'] = 'application/json';
+            processedBody = JSON.stringify(body);
+        }
+
+        const response = await fetch(fullUrl, {
+            method,
+            headers: Object.keys(headers).length > 0 ? headers : undefined,
+            credentials: "same-origin",
+            body: processedBody,
+        });
+
+        return response;
+    } catch (error) {
+        throw {
+            success: false,
+            code: 'network_error',
+            message: error.message || 'Network request failed',
+            error: error.name
+        };
+    }
+}
+
 export const api = {
-    post: async (url, body) => {
+    // Standard JSON API calls
+    post: async (url, body = null, headers = null) => {
         try {
-            const baseUrl = await getBaseUrl();
-            const fullUrl = url.startsWith('http') ? url : `${baseUrl}${url}`;
-
-            const response = await fetch(fullUrl, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                credentials: "same-origin",
-                body: JSON.stringify(body),
-            });
-
+            const response = await makeRequest('POST', url, body, headers);
             return await handleResponse(response);
         } catch (error) {
-            return {
-                success: false,
-                code: 'network_error',
-                message: error.message || 'Network request failed',
-                error: error.name
-            };
+            return error;
         }
     },
 
-    get: async (url, options = {}) => {
+    get: async (url, headers = null) => {
         try {
-            const baseUrl = await getBaseUrl();
-            const fullUrl = url.startsWith('http') ? url : `${baseUrl}${url}`;
-
-            const response = await fetch(fullUrl, {
-                method: "GET",
-                credentials: "same-origin",
-                ...options
-            });
-
+            const response = await makeRequest('GET', url, null, headers);
             return await handleResponse(response);
         } catch (error) {
-            return {
-                success: false,
-                code: 'network_error',
-                message: error.message || 'Network request failed',
-                error: error.name
-            };
+            return error;
         }
     },
 
-    put: async (url, body) => {
+    put: async (url, body = null, headers = null) => {
         try {
-            const baseUrl = await getBaseUrl();
-            const fullUrl = url.startsWith('http') ? url : `${baseUrl}${url}`;
-
-            const response = await fetch(fullUrl, {
-                method: "PUT",
-                headers: { "Content-Type": "application/json" },
-                credentials: "same-origin",
-                body: JSON.stringify(body),
-            });
-
+            const response = await makeRequest('PUT', url, body, headers);
             return await handleResponse(response);
         } catch (error) {
-            return {
-                success: false,
-                code: 'network_error',
-                message: error.message || 'Network request failed',
-                error: error.name
-            };
+            return error;
         }
     },
 
-    delete: async (url) => {
+    patch: async (url, body = null, headers = null) => {
         try {
-            const baseUrl = await getBaseUrl();
-            const fullUrl = url.startsWith('http') ? url : `${baseUrl}${url}`;
-
-            const response = await fetch(fullUrl, {
-                method: "DELETE",
-                credentials: "same-origin",
-            });
-
+            const response = await makeRequest('PATCH', url, body, headers);
             return await handleResponse(response);
         } catch (error) {
-            return {
-                success: false,
-                code: 'network_error',
-                message: error.message || 'Network request failed',
-                error: error.name
-            };
+            return error;
         }
     },
 
-    upload: async (url, formData) => {
+    delete: async (url, headers = null) => {
         try {
-            const baseUrl = await getBaseUrl();
-            const fullUrl = url.startsWith('http') ? url : `${baseUrl}${url}`;
-
-            const response = await fetch(fullUrl, {
-                method: "POST",
-                credentials: "same-origin",
-                body: formData,
-            });
-
+            const response = await makeRequest('DELETE', url, null, headers);
             return await handleResponse(response);
         } catch (error) {
-            return {
-                success: false,
-                code: 'network_error',
-                message: error.message || 'Network request failed',
-                error: error.name
-            };
+            return error;
         }
     },
 
-    downloadBlob: async (url, body = null) => {
+    // File upload (FormData)
+    upload: async (url, formData, headers = null) => {
         try {
-            const baseUrl = await getBaseUrl();
-            const fullUrl = url.startsWith('http') ? url : `${baseUrl}${url}`;
-
-            const fetchOptions = {
-                method: body ? "POST" : "GET",
-                credentials: "same-origin",
-            };
-
-            if (body) {
-                fetchOptions.headers = { "Content-Type": "application/json" };
-                fetchOptions.body = JSON.stringify(body);
-            }
-
-            const response = await fetch(fullUrl, fetchOptions);
-
-            if (!response.ok) {
-                try {
-                    const errorData = await safeJsonParse(response);
-                    return { success: false, ...errorData };
-                } catch {
-                    return {
-                        success: false,
-                        code: `http_${response.status}`,
-                        message: `HTTP ${response.status}: ${response.statusText}`
-                    };
-                }
-            }
-
-            const blob = await response.blob();
-            return { success: true, blob };
+            const response = await makeRequest('POST', url, formData, headers);
+            return await handleResponse(response);
         } catch (error) {
-            return {
-                success: false,
-                code: 'network_error',
-                message: error.message || 'Network request failed',
-                error: error.name
-            };
+            return error;
+        }
+    },
+
+    // Download blob responses
+    downloadBlob: async (url, body = null, headers = null) => {
+        try {
+            const method = body ? 'POST' : 'GET';
+            const response = await makeRequest(method, url, body, headers);
+            return await handleBlobResponse(response);
+        } catch (error) {
+            return error;
+        }
+    },
+
+    // Raw response (for when you need the Response object)
+    raw: async (method, url, body = null, headers = null) => {
+        try {
+            return await makeRequest(method, url, body, headers);
+        } catch (error) {
+            throw error;
         }
     }
 };

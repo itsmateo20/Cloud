@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server';
 import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { prisma } from '@/lib/db';
+import { getUserUploadPath, ensureUserUploadPath } from '@/lib/paths';
 
 export async function POST(request) {
     try {
@@ -63,8 +64,17 @@ export async function POST(request) {
             }, { status: 400 });
         }
 
+        // Ensure user upload directory exists first
+        const pathResult = await ensureUserUploadPath(userId);
+        if (!pathResult.success) {
+            return NextResponse.json({
+                success: false,
+                message: `Failed to create upload directory: ${pathResult.error}`
+            }, { status: 500 });
+        }
+
         // Create upload directory if it doesn't exist
-        const uploadDir = join(process.cwd(), 'uploads', String(userId), targetPath || '');
+        const uploadDir = join(pathResult.path, targetPath || '');
         try {
             await mkdir(uploadDir, { recursive: true });
         } catch (error) {

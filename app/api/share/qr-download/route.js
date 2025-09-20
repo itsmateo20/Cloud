@@ -6,6 +6,7 @@ import { join } from 'path';
 import { prisma } from '@/lib/db';
 import archiver from 'archiver';
 import { Readable } from 'stream';
+import { getUploadBasePath } from '@/lib/paths';
 
 export async function POST(request) {
     try {
@@ -70,7 +71,7 @@ export async function POST(request) {
                 // Add files to archive
                 data.items.forEach(async (item) => {
                     try {
-                        const filePath = join(process.cwd(), 'uploads', item.path);
+                        const filePath = join(getUploadBasePath(), item.path);
                         const fileBuffer = await readFile(filePath);
                         archive.append(fileBuffer, { name: item.name });
                     } catch (error) {
@@ -99,7 +100,7 @@ export async function POST(request) {
             }
 
             try {
-                const filePath = join(process.cwd(), 'uploads', item.path);
+                const filePath = join(getUploadBasePath(), item.path);
                 const fileBuffer = await readFile(filePath);
 
                 return new Response(fileBuffer, {

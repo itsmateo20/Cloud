@@ -6,6 +6,7 @@ import { verifyFolderOwnership } from "@/lib/folderAuth";
 import { NextResponse } from "next/server";
 import fs from "fs/promises";
 import path from "path";
+import { getUserUploadPath } from "@/lib/paths";
 
 export async function GET(req) {
     try {
@@ -49,26 +50,23 @@ export async function GET(req) {
                 }, { status: 404 });
             }
         }
-    }
 
         if (!filePath || !userId) {
-        return NextResponse.json({
-            success: false,
-            code: "invalid_parameters"
-        }, { status: 400 });
-    }
+            return NextResponse.json({
+                success: false,
+                code: "invalid_parameters"
+            }, { status: 400 });
+        }
 
+        const userFolder = getUserUploadPath(userId);
+        const requestedPath = path.join(userFolder, filePath);
 
-    const userFolder = path.join(process.cwd(), "uploads", String(userId));
-    const requestedPath = path.join(userFolder, filePath);
-
-
-    if (!requestedPath.startsWith(userFolder)) {
-        return NextResponse.json({
-            success: false,
-            code: "invalid_path"
-        }, { status: 400 });
-    }
+        if (!requestedPath.startsWith(userFolder)) {
+            return NextResponse.json({
+                success: false,
+                code: "invalid_path"
+            }, { status: 400 });
+        }
 
     try {
 
@@ -188,4 +186,5 @@ export async function GET(req) {
         code: "internal_server_error",
         message: "Failed to preview file"
     }, { status: 500 });
+    }
 }

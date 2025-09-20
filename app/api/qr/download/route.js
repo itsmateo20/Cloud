@@ -5,6 +5,7 @@ import { readFile } from 'fs/promises';
 import { join } from 'path';
 import { prisma } from '@/lib/db';
 import archiver from 'archiver';
+import { getUserUploadPath } from '@/lib/paths';
 
 export async function POST(request) {
     try {
@@ -78,7 +79,7 @@ export async function POST(request) {
                     // Add files to archive sequentially
                     for (const item of data.items) {
                         try {
-                            const filePath = join(process.cwd(), 'uploads', String(userId), item.path);
+                            const filePath = join(getUserUploadPath(userId), item.path);
                             console.log(`Attempting to read file: ${filePath}`); // Debug log
                             const fileBuffer = await readFile(filePath);
                             archive.append(fileBuffer, { name: item.name });
@@ -113,7 +114,7 @@ export async function POST(request) {
             }
 
             try {
-                const filePath = join(process.cwd(), 'uploads', String(userId), item.path);
+                const filePath = join(getUserUploadPath(userId), item.path);
                 const fileBuffer = await readFile(filePath);
 
                 return new Response(fileBuffer, {

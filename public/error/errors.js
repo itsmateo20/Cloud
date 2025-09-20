@@ -13,7 +13,7 @@ export function getError(code, options = { detailed: false, lang: "en" }) {
 
     if (!selectedLanguage[code]) {
         return {
-            message: selectedLanguage.unknown_failed[detailed ? "long" : "short"],
+            message: selectedLanguage.unknown_error[detailed ? "long" : "short"],
             code
         };
     }

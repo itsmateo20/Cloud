@@ -7,6 +7,7 @@ import { NextResponse } from "next/server";
 import fs from "fs/promises";
 import path from "path";
 import crypto from "crypto";
+import { getUserUploadPath, ensureUserUploadPath } from "@/lib/paths";
 
 export async function POST(req) {
     try {
@@ -49,15 +50,25 @@ export async function POST(req) {
             }, { status: 400 });
         }
 
-        const userFolder = path.join(process.cwd(), "uploads", String(userId));
+        // Ensure user upload directory exists first
+        const pathResult = await ensureUserUploadPath(userId);
+        if (!pathResult.success) {
+            return NextResponse.json({
+                success: false,
+                code: 'directory_error',
+                message: `Failed to create upload directory: ${pathResult.error}`
+            }, { status: 500 });
+        }
+
+        const userFolder = pathResult.path;
         const targetDir = currentPath ? path.join(userFolder, currentPath) : userFolder;
         const finalPath = path.join(targetDir, fileName);
 
-        // Ensure target directory exists
+        // Ensure target directory exists (for subdirectories)
         try {
             await fs.mkdir(targetDir, { recursive: true });
         } catch (error) {
-            console.error('Directory creation error:', error);
+            console.error('Target directory creation error:', error);
             return NextResponse.json({
                 success: false,
                 code: 'directory_error',

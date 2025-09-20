@@ -6,6 +6,7 @@ import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
 import SoftLoading from '@/components/SoftLoading';
 import { CodeEditor } from './CodeEditor';
 import { downloadFile } from '@/utils/downloadUtils';
+import { api } from '@/utils/api';
 import { useIsMobile } from '@/utils/useIsMobile';
 import Prism from 'prismjs';
 import 'prismjs/themes/prism-tomorrow.css';
@@ -693,7 +694,7 @@ export function FileViewer({
 
         if (['text', 'code'].includes(fileType)) {
             try {
-                const response = await fetch(getDownloadUrl(file));
+                const response = await api.raw('GET', getDownloadUrl(file));
                 if (!response.ok) throw new Error('Failed to load file');
 
                 const text = await response.text();

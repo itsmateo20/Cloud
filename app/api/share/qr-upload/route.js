@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server';
 import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { db } from '@/lib/db';
+import { getUploadBasePath, ensureUploadBasePath } from '@/lib/paths';
 
 export async function POST(request) {
     try {
@@ -53,8 +54,17 @@ export async function POST(request) {
             }, { status: 400 });
         }
 
+        // Ensure base upload directory exists first
+        const basePathResult = await ensureUploadBasePath();
+        if (!basePathResult.success) {
+            return NextResponse.json({
+                success: false,
+                message: `Failed to create upload directory: ${basePathResult.error}`
+            }, { status: 500 });
+        }
+
         // Create upload directory if it doesn't exist
-        const uploadDir = join(process.cwd(), 'uploads', targetPath || '');
+        const uploadDir = join(basePathResult.path, targetPath || '');
         try {
             await mkdir(uploadDir, { recursive: true });
         } catch (error) {

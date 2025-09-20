@@ -4,6 +4,7 @@ import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/db";
 import { verifyFolderOwnership } from "@/lib/folderAuth";
 import { getMimeType, shouldForceDownload } from "@/lib/mimeTypes";
+import { getUserUploadPath } from "@/lib/paths";
 import { NextResponse } from "next/server";
 import fs from "fs/promises";
 import { createReadStream } from "fs";
@@ -42,7 +43,7 @@ export async function GET(req) {
             }, { status: 400 });
         }
 
-        const userFolder = path.join(process.cwd(), "uploads", String(userId));
+        const userFolder = getUserUploadPath(userId);
         const requestedPath = path.join(userFolder, filePath);
 
         if (!requestedPath.startsWith(userFolder)) {

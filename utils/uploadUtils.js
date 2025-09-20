@@ -1,8 +1,8 @@
-// utils/enhancedUploadUtils.js
+// utils/uploadUtils.js
 
 import { api } from './api';
 
-export class EnhancedUploader {
+export class Uploader {
     constructor() {
         this.uploadQueue = new Map();
         this.CHUNK_SIZE = 25 * 1024 * 1024; // 25MB chunks
@@ -55,18 +55,12 @@ export class EnhancedUploader {
         formData.append('file', file);
         formData.append('currentPath', currentPath);
 
-        const response = await fetch('/api/files', {
-            method: 'POST',
-            body: formData,
-            signal
-        });
+        const result = await api.upload('/api/files', formData, { signal });
 
         // Simulate progress for regular upload
         if (onProgress) {
             onProgress(file.size, file.size, 100);
         }
-
-        const result = await response.json();
 
         if (!result.success) {
             throw new Error(result.message || 'Upload failed');
@@ -162,22 +156,15 @@ export class EnhancedUploader {
      * Initialize chunked upload session
      */
     async initializeChunkedUpload(file, currentPath, signal) {
-        const response = await fetch('/api/files/upload/init', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                fileName: file.name,
-                fileSize: file.size,
-                chunkCount: Math.ceil(file.size / this.CHUNK_SIZE),
-                currentPath: currentPath,
-                lastModified: file.lastModified
-            }),
-            signal
-        });
+        const response = await api.post('/api/files/upload/init', {
+            fileName: file.name,
+            fileSize: file.size,
+            chunkCount: Math.ceil(file.size / this.CHUNK_SIZE),
+            currentPath: currentPath,
+            lastModified: file.lastModified
+        }, { signal });
 
-        return await response.json();
+        return response;
     }
 
     /**
@@ -264,36 +251,24 @@ export class EnhancedUploader {
         formData.append('chunkNumber', chunk.number.toString());
         formData.append('uploadToken', uploadToken);
 
-        const response = await fetch('/api/files/upload/chunk', {
-            method: 'POST',
-            body: formData,
-            signal
-        });
+        const result = await api.upload('/api/files/upload/chunk', formData, { signal });
 
-        if (!response.ok) {
-            const error = await response.json().catch(() => ({}));
-            throw new Error(error.message || `Chunk ${chunk.number} upload failed`);
+        if (!result.success) {
+            throw new Error(result.message || `Chunk ${chunk.number} upload failed`);
         }
 
-        return await response.json();
+        return result;
     }
 
     /**
      * Complete chunked upload
      */
     async completeChunkedUpload(uploadToken, signal) {
-        const response = await fetch('/api/files/upload/complete', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                uploadToken
-            }),
-            signal
-        });
+        const result = await api.post('/api/files/upload/complete', {
+            uploadToken
+        }, { signal });
 
-        return await response.json();
+        return result;
     }
 
     /**
@@ -301,14 +276,8 @@ export class EnhancedUploader {
      */
     async abortChunkedUpload(uploadToken) {
         try {
-            await fetch('/api/files/upload/abort', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    uploadToken
-                })
+            await api.post('/api/files/upload/abort', {
+                uploadToken
             });
         } catch (error) {
             console.warn('Failed to abort upload:', error);
@@ -429,13 +398,13 @@ export class EnhancedUploader {
 }
 
 // Create singleton instance
-export const enhancedUploader = new EnhancedUploader();
+export const uploader = new Uploader();
 
 // Utility functions for compatibility
 export const uploadFile = (file, currentPath, onProgress, signal) => {
-    return enhancedUploader.uploadFile(file, currentPath, onProgress, signal);
+    return uploader.uploadFile(file, currentPath, onProgress, signal);
 };
 
 export const uploadFiles = (files, currentPath, onProgress, signal) => {
-    return enhancedUploader.uploadFiles(files, currentPath, onProgress, signal);
+    return uploader.uploadFiles(files, currentPath, onProgress, signal);
 };

@@ -7,6 +7,7 @@ import fs from "fs/promises";
 import { createReadStream } from "fs";
 import path from "path";
 import archiver from "archiver";
+import { getUserUploadPath } from "@/lib/paths";
 
 export async function POST(req) {
     try {
@@ -42,7 +43,7 @@ export async function POST(req) {
 
         console.log(`ZIP request for ${files.length} files:`, files);
 
-        const userFolder = path.join(process.cwd(), "uploads", String(userId));
+        const userFolder = getUserUploadPath(userId);
         const sanitizedZipName = (zipName || 'download').replace(/[^a-zA-Z0-9_-]/g, '_') + '.zip';
 
         // Validate all file paths

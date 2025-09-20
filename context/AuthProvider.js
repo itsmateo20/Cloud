@@ -54,7 +54,7 @@ export const AuthProvider = ({ children, locked = true }) => {
                 setLoading(true);
 
 
-                const routeRes = await fetch(pathname);
+                const routeRes = await api.raw('GET', pathname);
                 if (routeRes.status === 404) {
                     setLoading(false);
                     return;

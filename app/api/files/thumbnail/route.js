@@ -6,6 +6,7 @@ import path from "path";
 import { getSession } from "@/lib/session";
 import sharp from "sharp";
 import fsSync from 'fs';
+import { getUserUploadPath } from "@/lib/paths";
 
 /**
  * Image thumbnail strategy:
@@ -31,7 +32,7 @@ export async function GET(req) {
 
     try {
         const { id: userId } = session.user;
-        const userFolder = path.join(process.cwd(), "uploads", String(userId));
+        const userFolder = getUserUploadPath(userId);
         const fullPath = path.join(userFolder, filePath);
         if (!fullPath.startsWith(userFolder)) {
             return NextResponse.json({ error: "Invalid file path" }, { status: 403 });

@@ -66,8 +66,15 @@ export default function Page({ searchParams }) {
         } else {
             if (passwordRequirements.uppercase && passwordRequirements.lowercase && passwordRequirements.number && passwordRequirements.special && passwordRequirements.minLength && passwordRequirements.matching) {
                 const response = await signupwiththirdparty(email, password, "google", signatureValue);
-                const errorMsg = await getError(response.code, { detailed: false, lang: "en" });
-                setError(errorMsg.message);
+                if (response.success) {
+                    // Success case - no need to show error
+                    setError("");
+                } else {
+                    // Error case - use code if available, otherwise use generic error
+                    const errorCode = response.code || "unknown_error";
+                    const errorMsg = await getError(errorCode, { detailed: false, lang: "en" });
+                    setError(errorMsg.message);
+                }
             } else {
                 const errorMsg = await getError("password_requirements_false", { detailed: false, lang: "en" });
                 setError(errorMsg.message);

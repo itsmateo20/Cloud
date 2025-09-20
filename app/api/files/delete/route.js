@@ -6,6 +6,7 @@ import path from "path";
 import { getSession } from "@/lib/session";
 import { verifyFolderOwnership } from "@/lib/folderAuth";
 import { prisma } from "@/lib/db";
+import { getUserUploadPath } from "@/lib/paths";
 
 export async function POST(req) {
     try {
@@ -34,7 +35,7 @@ export async function POST(req) {
             }, { status: 403 });
         }
 
-        const userFolder = path.join(process.cwd(), "uploads", String(id));
+        const userFolder = getUserUploadPath(id);
         const deletedItems = [];
 
         for (const itemPath of paths) {
