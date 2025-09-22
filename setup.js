@@ -89,8 +89,8 @@ async function main() {
     const paths = await ensurePaths();
     console.log(`> Upload base: ${paths.upload}`);
     console.log(`> Temp base:   ${paths.temp}`);
-        const dbFile = path.join(process.cwd(), 'prisma', 'database.sqlite');
-        console.log(`> SQLite file: ${dbFile}`);
+    const dbFile = path.join(process.cwd(), 'prisma', 'database.sqlite');
+    console.log(`> SQLite file: ${dbFile}`);
 
     console.log('> Applying Prisma migrations...');
     await prismaMigrate();
