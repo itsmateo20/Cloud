@@ -7,7 +7,7 @@ import { NextResponse } from "next/server";
 import fs from "fs/promises";
 import path from "path";
 import crypto from "crypto";
-import { getUserUploadPath, ensureUserUploadPath } from "@/lib/paths";
+import { ensureUserUploadPath, ensureTempBasePath, getTempDirForToken } from "@/lib/paths";
 
 export async function POST(req) {
     try {
@@ -90,7 +90,16 @@ export async function POST(req) {
 
         // Generate upload token
         const uploadToken = crypto.randomUUID();
-        const tempDir = path.join(process.cwd(), 'temp', uploadToken);
+        // Ensure temp base exists and derive per-token directory
+        const tempBase = await ensureTempBasePath();
+        if (!tempBase.success) {
+            return NextResponse.json({
+                success: false,
+                code: 'temp_directory_error',
+                message: `Failed to create temp base directory: ${tempBase.error}`
+            }, { status: 500 });
+        }
+        const tempDir = getTempDirForToken(uploadToken);
 
         // Create temporary directory for chunks
         try {
