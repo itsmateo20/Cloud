@@ -8,9 +8,7 @@ export default async function robots() {
     return {
         rules: {
             userAgent: "*",
-            allow: "/",
-            disallow: ["/private/", "/admin/"],
+            disallow: "/",
         },
-        sitemap: `${siteURL}/sitemap.xml`,
     }
 }

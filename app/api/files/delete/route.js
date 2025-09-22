@@ -97,7 +97,7 @@ export async function POST(req) {
         return NextResponse.json({ success: true, code: "explorer_delete_success" }, { status: 200 });
 
     } catch (error) {
-        console.error('Error in delete operation:', error);
+
         return NextResponse.json({
             success: false,
             code: "explorer_delete_failed",

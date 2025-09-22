@@ -57,7 +57,6 @@ export async function GET(req) {
         }
 
         const items = (await fs.readdir(targetPath))
-            // Hide internal thumbnail cache directory
             .filter(name => name !== '.thumbnails');
         const folders = [];
         const files = [];
@@ -185,7 +184,7 @@ export async function GET(req) {
         }, { status: 200 });
 
     } catch (error) {
-        console.error("Explorer error:", error);
+
         return NextResponse.json({
             success: false,
             code: "explorer_directory_unreadable",
@@ -319,7 +318,7 @@ export async function POST(req) {
         return NextResponse.json({ success: false, code: "invalid_action" }, { status: 400 });
 
     } catch (error) {
-        console.error("Folder creation error:", error);
+
         return NextResponse.json({
             success: false,
             code: "folder_creation_failed",

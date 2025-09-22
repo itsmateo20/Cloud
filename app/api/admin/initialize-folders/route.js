@@ -1,7 +1,6 @@
 // app/api/admin/initialize-folders/route.js
 
 import { getSession } from "@/lib/session";
-import { prisma } from "@/lib/db";
 import { initializeUserFolder } from "@/lib/folderAuth";
 import { NextResponse } from "next/server";
 
@@ -31,7 +30,7 @@ export async function POST() {
             }, { status: 500 });
         }
     } catch (error) {
-        console.error('Error initializing folder:', error);
+
         return NextResponse.json({
             success: false,
             message: "Internal server error"

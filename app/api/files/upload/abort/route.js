@@ -27,7 +27,6 @@ export async function POST(req) {
             }, { status: 400 });
         }
 
-        // Get upload session
         const uploadSession = uploadSessionManager.getSession(uploadToken);
         if (!uploadSession) {
             return NextResponse.json({
@@ -36,7 +35,6 @@ export async function POST(req) {
             });
         }
 
-        // Verify user owns this session
         if (uploadSession.userId !== session.user.id) {
             return NextResponse.json({
                 success: false,
@@ -46,7 +44,6 @@ export async function POST(req) {
         }
 
         try {
-            // Clean up and remove session
             uploadSessionManager.deleteSession(uploadToken);
 
             return NextResponse.json({
@@ -55,9 +52,7 @@ export async function POST(req) {
             });
 
         } catch (cleanupError) {
-            console.error('Cleanup error during abort:', cleanupError);
 
-            // Still remove the session even if cleanup failed
             uploadSessionManager.deleteSession(uploadToken);
 
             return NextResponse.json({
@@ -67,7 +62,7 @@ export async function POST(req) {
         }
 
     } catch (error) {
-        console.error('Upload abort error:', error);
+
         return NextResponse.json({
             success: false,
             code: 'internal_error',

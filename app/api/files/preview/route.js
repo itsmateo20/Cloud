@@ -78,9 +78,7 @@ export async function GET(req) {
                 }, { status: 400 });
             }
 
-
             const fileBuffer = await fs.readFile(requestedPath);
-
 
             const ext = path.extname(filePath).toLowerCase();
             let contentType = 'application/octet-stream';
@@ -151,7 +149,6 @@ export async function GET(req) {
                     }
             }
 
-
             return new Response(fileBuffer, {
                 headers: {
                     'Content-Type': contentType,
@@ -163,7 +160,7 @@ export async function GET(req) {
             });
 
         } catch (fileError) {
-            console.error("File preview error:", fileError);
+
             return NextResponse.json({
                 success: false,
                 code: "file_not_accessible",
@@ -172,7 +169,6 @@ export async function GET(req) {
         }
 
     } catch (error) {
-        console.error("Preview route error:", error);
 
         if (error.code === 'P2025') {
             return NextResponse.json({

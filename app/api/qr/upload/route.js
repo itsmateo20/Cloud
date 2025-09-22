@@ -20,7 +20,6 @@ export async function POST(request) {
             }, { status: 400 });
         }
 
-        // Verify token
         const qrToken = await prisma.qrToken.findUnique({
             where: { token }
         });
@@ -64,7 +63,6 @@ export async function POST(request) {
             }, { status: 400 });
         }
 
-        // Ensure user upload directory exists first
         const pathResult = await ensureUserUploadPath(userId);
         if (!pathResult.success) {
             return NextResponse.json({
@@ -73,12 +71,10 @@ export async function POST(request) {
             }, { status: 500 });
         }
 
-        // Create upload directory if it doesn't exist
         const uploadDir = join(pathResult.path, targetPath || '');
         try {
             await mkdir(uploadDir, { recursive: true });
         } catch (error) {
-            // Directory might already exist, that's fine
         }
 
         const uploadedFiles = [];
@@ -87,7 +83,6 @@ export async function POST(request) {
             const bytes = await file.arrayBuffer();
             const buffer = Buffer.from(bytes);
 
-            // Generate unique filename to avoid conflicts
             const timestamp = Date.now();
             const originalName = file.name;
             const ext = originalName.includes('.') ? originalName.substring(originalName.lastIndexOf('.')) : '';
@@ -97,40 +92,34 @@ export async function POST(request) {
             let filePath = join(uploadDir, fileName);
             let counter = 1;
 
-            // Check if file exists and generate unique name
             while (true) {
                 try {
                     await import('fs').then(fs => fs.promises.access(filePath));
-                    // File exists, try next name
                     fileName = `${baseName} (${counter})${ext}`;
                     filePath = join(uploadDir, fileName);
                     counter++;
                 } catch {
-                    // File doesn't exist, use this name
                     break;
                 }
             }
 
             await writeFile(filePath, buffer);
 
-            // Save file info to database
             const relativePath = join(targetPath || '', fileName).replace(/\\/g, '/');
 
-            // Create file record in database using the userId from token
             try {
                 await prisma.file.create({
                     data: {
                         name: fileName,
                         path: relativePath,
                         size: BigInt(buffer.length),
-                        ownerId: userId, // Use the userId from the QR token
+                        ownerId: userId,
                         createdAt: new Date(),
                         updatedAt: new Date()
                     }
                 });
             } catch (dbError) {
-                console.error('Error saving file to database:', dbError);
-                // Continue even if database save fails
+
             }
 
             uploadedFiles.push({
@@ -140,7 +129,6 @@ export async function POST(request) {
             });
         }
 
-        // Emit socket event to update the file list for the user
         try {
             if (global.io) {
                 global.io.emit('fileUploadedViaQR', {
@@ -148,11 +136,10 @@ export async function POST(request) {
                     path: targetPath || '',
                     files: uploadedFiles
                 });
-                console.log(`Emitted fileUploadedViaQR event for user ${userId} in path: ${targetPath || '/'}`);
+
             }
         } catch (socketError) {
-            console.error('Error emitting socket event:', socketError);
-            // Don't fail the upload if socket emission fails
+
         }
 
         return NextResponse.json({
@@ -162,7 +149,7 @@ export async function POST(request) {
         });
 
     } catch (error) {
-        console.error('Error uploading files via QR:', error);
+
         return NextResponse.json({
             success: false,
             message: 'Failed to upload files'

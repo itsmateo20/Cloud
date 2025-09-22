@@ -50,7 +50,6 @@ export default function Page() {
   const [newFolderName, setNewFolderName] = useState('');
   const [confirmState, setConfirmState] = useState({ open: false, title: '', message: '', action: '' });
 
-  // Global drag & drop state
   const [isGlobalDragOver, setIsGlobalDragOver] = useState(false);
   const [isDragInvalid, setIsDragInvalid] = useState(false);
   const dragCounterRef = useRef(0);
@@ -78,7 +77,6 @@ export default function Page() {
     };
 
     const handleFileUpdated = (payload) => {
-      // Payloads emitted from rename endpoint provide parent path in path
       if (!fileListRef.current) return;
       const current = currentPath || '';
       switch (payload.action) {
@@ -88,7 +86,6 @@ export default function Page() {
         case 'upload':
         case 'refresh':
         default:
-          // For now just refresh if parent path matches
           if ((payload.path || '') === current) {
             schedule('refresh-current', () => fileListRef.current?.refresh?.());
           }
@@ -98,7 +95,6 @@ export default function Page() {
 
     const handleFolderStructure = (payload) => {
       if (!fileListRef.current) return;
-      // If action pertains to current path (creation in current folder or rename affecting it) refresh
       if (payload?.path === currentPath || payload?.oldPath?.startsWith(currentPath || '') || payload?.newPath?.startsWith(currentPath || '')) {
         schedule('refresh-structure', () => fileListRef.current?.refresh?.());
       } else if (currentPath === '' && (payload?.path === '' || !payload?.path)) {
@@ -127,7 +123,6 @@ export default function Page() {
         });
       }
     } catch (error) {
-      console.error('Failed to load favorites:', error);
     }
   };
 
@@ -142,7 +137,6 @@ export default function Page() {
         });
       }
     } catch (error) {
-      console.error('Failed to load storage info:', error);
       setStorageInfo({
         totalSize: 0,
         totalFiles: 0
@@ -303,7 +297,6 @@ export default function Page() {
     const isVideo = ['mp4', 'avi', 'mov', 'webm', 'mkv', 'wmv'].includes(ext);
 
     if (isImage || isVideo) {
-      // Use thumbnail API endpoint instead of full file download
       const thumbnailUrl = `/api/files/thumbnail?path=${encodeURIComponent(file.path)}`;
       return thumbnailUrl;
     }
@@ -357,14 +350,13 @@ export default function Page() {
     try {
       const result = await api.post('/api/files', JSON.stringify({
         action: 'create_folder',
-        path: currentPath === 'favorites' ? '' : currentPath, // Create in root if on favorites page
+        path: currentPath === 'favorites' ? '' : currentPath,
         name: newFolderName
       }));
 
       if (result.success) {
         setShowNewFolderPopup(false);
         setNewFolderName('');
-        // Refresh the file list
         if (fileListRef.current) {
           fileListRef.current.refresh();
         }
@@ -374,7 +366,6 @@ export default function Page() {
       }
 
     } catch (error) {
-      console.error('Folder creation error:', error);
       alert('Folder creation failed: Network error');
     }
   };
@@ -416,10 +407,9 @@ export default function Page() {
     const currentY = touch.clientY;
     const deltaY = currentY - sortMenuInitialY;
 
-    // Only allow downward swipes (positive deltaY)
     if (deltaY > 0) {
       const containerHeight = window.innerHeight;
-      const maxSwipe = containerHeight * 0.3; // Max 30% of screen height
+      const maxSwipe = containerHeight * 0.3;
       const normalizedPosition = Math.min(deltaY / maxSwipe, 1) * 100;
       setSortMenuSwipePosition(normalizedPosition);
     } else {
@@ -430,13 +420,11 @@ export default function Page() {
   const handleSortMenuTouchEnd = (e) => {
     setIsSwipingSort(false);
 
-    // If swiped down more than 25%, close the menu
     if (sortMenuSwipePosition > 25) {
       setShowSortOptionsMenu(false);
       setSortMenuSwipePosition(0);
       setSortMenuInitialY(0);
     } else {
-      // Snap back to original position
       setSortMenuSwipePosition(0);
     }
   }; const handleNewFile = async () => {
@@ -456,7 +444,6 @@ export default function Page() {
       else alert(`File creation failed: ${result.message}`);
 
     } catch (error) {
-      console.error('File creation error:', error);
       alert('File creation failed: Network error');
     }
   };
@@ -497,8 +484,7 @@ export default function Page() {
   const uploadFiles = async (files) => {
     if (!files || files.length === 0) return;
 
-    // Validate files before upload
-    const maxFileSize = 500 * 1024 * 1024; // 500MB per file
+    const maxFileSize = 500 * 1024 * 1024;
     const oversizedFiles = files.filter(file => file.size > maxFileSize);
     if (oversizedFiles.length > 0) {
       toast.addError(`Files too large: ${oversizedFiles.map(f => f.name).join(', ')}. Max size: 500MB`);
@@ -509,37 +495,30 @@ export default function Page() {
       const formData = new FormData();
       formData.append('path', currentPath);
 
-      // Add file size validation and progress tracking
       let totalSize = 0;
       for (const file of files) {
         formData.append('files', file);
         totalSize += file.size;
       }
 
-      // Append metadata to preserve file properties
       appendMetadataToFormData(formData, files);
 
-      // Show immediate feedback
       const sizeText = totalSize > 1024 * 1024
         ? `${(totalSize / (1024 * 1024)).toFixed(1)}MB`
         : `${(totalSize / 1024).toFixed(1)}KB`;
 
       toast.addInfo(`Uploading ${files.length} file${files.length > 1 ? 's' : ''} (${sizeText})...`);
 
-      // Use enhanced api.upload for FormData handling
       const result = await api.upload('/api/files/upload', formData);
 
       if (result.success) {
-        // Show detailed success message
         const uploadedNames = result.files?.map(f => f.name).join(', ') || 'files';
         toast.addSuccess(`✅ Uploaded: ${uploadedNames}`);
 
-        // Refresh file list
         if (fileListRef.current) {
           fileListRef.current.refresh();
         }
       } else {
-        // Show specific error based on error code
         let errorMsg = 'Upload failed';
         switch (result.code) {
           case 'no_files':
@@ -558,8 +537,6 @@ export default function Page() {
       }
 
     } catch (error) {
-      console.error('Upload error:', error);
-
       if (error.name === 'AbortError') {
         toast.addWarning('Upload cancelled');
       } else if (error.message?.includes('fetch')) {
@@ -570,12 +547,10 @@ export default function Page() {
     }
   };
 
-  // Global drag & drop handlers
   const handleGlobalDragOver = (e) => {
     e.preventDefault();
     e.stopPropagation();
 
-    // Check if drag contains files
     const hasFiles = e.dataTransfer && Array.from(e.dataTransfer.types).includes('Files');
 
     if (!hasFiles) return;
@@ -600,7 +575,6 @@ export default function Page() {
     e.stopPropagation();
     dragCounterRef.current--;
 
-    // Only clear states when truly leaving the page
     if (dragCounterRef.current === 0) {
       setIsGlobalDragOver(false);
       setIsDragInvalid(false);
@@ -611,7 +585,6 @@ export default function Page() {
     e.preventDefault();
     e.stopPropagation();
 
-    // Reset drag states
     setIsGlobalDragOver(false);
     setIsDragInvalid(false);
     dragCounterRef.current = 0;
@@ -628,11 +601,9 @@ export default function Page() {
   };
 
   const handleDownload = () => {
-    console.log(selectedItems)
     if (!selectedItems || selectedItems.length === 0) return;
 
     selectedItems.forEach(item => {
-      console.log(item)
       if (item.type === 'file') downloadFile(item.path, item.name);
       else if (item.type === 'folder') downloadFolder(item.path, item.name);
       else return
@@ -652,10 +623,8 @@ export default function Page() {
   };
 
   const handleRename = () => {
-    // Delegate to FileList's inline rename logic by emitting a custom event that FileList can listen for via ref
     if (!selectedItems || selectedItems.length !== 1) return;
     if (fileListRef.current) {
-      // Implemented in FileList: expose a startRename method through useImperativeHandle
       fileListRef.current.startRename?.(selectedItems[0]);
     }
   };
@@ -711,7 +680,6 @@ export default function Page() {
     uploadFiles(files);
   };
 
-  // New item modal state & logic
   const [newItemModalOpen, setNewItemModalOpen] = useState(false);
   const [newItemInitialType, setNewItemInitialType] = useState('folder');
 
@@ -738,7 +706,6 @@ export default function Page() {
     }
   };
 
-  // Lightweight handler passed to FileViewer to avoid full list refresh on save
   const handleFileViewerAction = (action, payload) => {
     if (action === 'content-updated') {
       const { file, content, saved } = payload || {};

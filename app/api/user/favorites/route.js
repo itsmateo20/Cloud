@@ -56,12 +56,12 @@ export async function GET() {
         success: true,
         files: validFiles.map(file => ({
             ...file,
-            type: 'file', // Add type property for download system
+            type: 'file',
             size: file.size ? file.size.toString() : null
         })),
         folders: validFolders.map(folder => ({
             ...folder,
-            type: 'folder' // Add type property for download system
+            type: 'folder'
         }))
     });
 }

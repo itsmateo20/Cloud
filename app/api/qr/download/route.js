@@ -18,7 +18,6 @@ export async function POST(request) {
             }, { status: 400 });
         }
 
-        // Verify token
         const qrToken = await prisma.qrToken.findUnique({
             where: { token }
         });
@@ -46,7 +45,7 @@ export async function POST(request) {
         }
 
         const data = JSON.parse(qrToken.data);
-        const { userId } = data; // Extract userId from token data
+        const { userId } = data;
 
         if (!userId) {
             return NextResponse.json({
@@ -56,10 +55,8 @@ export async function POST(request) {
         }
 
         if (downloadAll) {
-            // Create a ZIP file with all items
             const archive = archiver('zip', { zlib: { level: 9 } });
 
-            // Collect chunks in a buffer
             const chunks = [];
 
             return new Promise(async (resolve, reject) => {
@@ -76,20 +73,18 @@ export async function POST(request) {
                 archive.on('error', (err) => reject(err));
 
                 try {
-                    // Add files to archive sequentially
                     for (const item of data.items) {
                         try {
                             const filePath = join(getUserUploadPath(userId), item.path);
-                            console.log(`Attempting to read file: ${filePath}`); // Debug log
+
                             const fileBuffer = await readFile(filePath);
                             archive.append(fileBuffer, { name: item.name });
-                            console.log(`Added file to archive: ${item.name}`); // Debug log
+
                         } catch (error) {
-                            console.error(`Error adding file ${item.name} to archive:`, error);
+
                         }
                     }
 
-                    // Finalize after all files are added
                     archive.finalize();
                 } catch (error) {
                     reject(error);
@@ -97,7 +92,6 @@ export async function POST(request) {
             });
 
         } else {
-            // Download single file
             if (!path) {
                 return NextResponse.json({
                     success: false,
@@ -125,7 +119,7 @@ export async function POST(request) {
                 });
 
             } catch (error) {
-                console.error('Error reading file:', error);
+
                 return NextResponse.json({
                     success: false,
                     message: 'File not found or cannot be read'
@@ -134,7 +128,7 @@ export async function POST(request) {
         }
 
     } catch (error) {
-        console.error('Error downloading files via QR:', error);
+
         return NextResponse.json({
             success: false,
             message: 'Failed to download files'

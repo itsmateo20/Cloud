@@ -1,4 +1,4 @@
-// app/api/auth/login.js
+// app/api/auth/login/route.js
 
 import { NextResponse } from "next/server";
 import { signIn } from "@/lib/auth";

@@ -6,8 +6,8 @@ import { api } from '@/utils/api';
 export class DownloadManager {
     static instance = null;
     activeDownloads = new Map();
-    chunkSize = 25 * 1024 * 1024; // 25MB chunks
-    maxConcurrentChunks = 4; // Number of simultaneous chunk downloads
+    chunkSize = 25 * 1024 * 1024;
+    maxConcurrentChunks = 4;
 
     constructor() {
         if (DownloadManager.instance) {
@@ -20,7 +20,6 @@ export class DownloadManager {
         return Math.random().toString(36).substr(2, 9) + Date.now().toString(36);
     }
 
-    // Basic file download with progress tracking
     async downloadFile(filePath, fileName, type = 'file') {
         const downloadId = this.generateId();
         let progressTimeout;
@@ -61,7 +60,6 @@ export class DownloadManager {
                 }, 10000);
             };
 
-            // For folders (ZIP downloads), handle differently for better progress tracking
             if (type === 'folder') {
                 startProgressTimeout();
                 const response = await api.raw('GET', url, null, { signal: abortController.signal });
@@ -71,7 +69,6 @@ export class DownloadManager {
                     throw new Error(`Download failed: ${response.status} ${response.statusText}`);
                 }
 
-                // Get total size info from headers
                 const totalFiles = parseInt(response.headers.get('X-Total-Files') || '0');
                 const totalSize = parseInt(response.headers.get('X-Total-Size') || '0');
 
@@ -86,7 +83,6 @@ export class DownloadManager {
                     }
                 }));
 
-                // Stream the response
                 const reader = response.body.getReader();
                 const chunks = [];
                 let downloaded = 0;
@@ -128,7 +124,6 @@ export class DownloadManager {
                     }
                 }
 
-                // Create blob and download
                 const blob = new Blob(chunks);
                 const downloadUrl = URL.createObjectURL(blob);
                 const link = document.createElement('a');
@@ -140,7 +135,6 @@ export class DownloadManager {
                 URL.revokeObjectURL(downloadUrl);
 
             } else {
-                // Regular file download
                 const link = document.createElement('a');
                 link.href = url;
                 link.download = fileName;
@@ -169,7 +163,6 @@ export class DownloadManager {
                     }
                 }));
 
-                // Simulate progress completion for direct downloads
                 setTimeout(() => {
                     if (!isCompleted) {
                         window.dispatchEvent(new CustomEvent('downloadProgress', {
@@ -211,7 +204,6 @@ export class DownloadManager {
         }
     }
 
-    // Chunked download for large files with progress tracking
     async downloadFileChunked(filePath, fileName, preserveDate = true) {
         const downloadId = this.generateId();
         let isCompleted = false;
@@ -229,7 +221,6 @@ export class DownloadManager {
             const abortController = new AbortController();
             this.activeDownloads.set(downloadId, abortController);
 
-            // Get file metadata first
             const metadata = await api.get(`/api/files/metadata?path=${encodeURIComponent(filePath)}`, {
                 signal: abortController.signal
             });
@@ -253,7 +244,6 @@ export class DownloadManager {
 
             const url = `/api/files/download?path=${encodeURIComponent(filePath)}`;
 
-            // If file is small, use regular download
             if (fileSize < this.chunkSize) {
                 const response = await api.raw('GET', url, null, { signal: abortController.signal });
                 if (!response.ok) throw new Error(`Download failed: ${response.status}`);
@@ -261,7 +251,6 @@ export class DownloadManager {
                 const blob = await response.blob();
                 this.downloadBlob(blob, fileName, lastModified);
             } else {
-                // Use chunked download for large files
                 const chunks = [];
                 const totalChunks = Math.ceil(fileSize / this.chunkSize);
                 let downloadedBytes = 0;
@@ -298,7 +287,6 @@ export class DownloadManager {
                     lastTime = now;
                 }
 
-                // Combine chunks and download
                 const combinedArray = new Uint8Array(fileSize);
                 let offset = 0;
                 for (const chunk of chunks) {
@@ -333,7 +321,6 @@ export class DownloadManager {
         }
     }
 
-    // Download a single chunk
     async downloadChunk(url, start, end, signal) {
         const response = await api.raw('GET', url, null, {
             'Range': `bytes=${start}-${end}`,
@@ -347,20 +334,16 @@ export class DownloadManager {
         return response.arrayBuffer();
     }
 
-    // Download blob with proper filename and date
     downloadBlob(blob, fileName, lastModified = null) {
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
         link.download = fileName;
 
-        // Set file date if supported
         if (lastModified && 'download' in link) {
             try {
-                // This might not work in all browsers, but won't break anything
                 link.setAttribute('data-last-modified', lastModified.toISOString());
             } catch (e) {
-                // Ignore if not supported
             }
         }
 
@@ -370,7 +353,6 @@ export class DownloadManager {
         URL.revokeObjectURL(url);
     }
 
-    // Download multiple files as ZIP
     async downloadMultipleFilesAsZip(files, zipName = 'files.zip', preserveDates = true) {
         const downloadId = this.generateId();
         let isCompleted = false;
@@ -388,7 +370,6 @@ export class DownloadManager {
             const abortController = new AbortController();
             this.activeDownloads.set(downloadId, abortController);
 
-            // Use server-side ZIP creation for better performance
             const response = await api.raw('POST', '/api/files/zip', {
                 files: files.map(f => f.path),
                 zipName: zipName.replace(/\.zip$/i, '')
@@ -399,10 +380,8 @@ export class DownloadManager {
                 throw new Error(error.message || 'Failed to create ZIP file');
             }
 
-            // Get content length for progress tracking
             const contentLength = parseInt(response.headers.get('content-length') || '0');
 
-            // Stream the ZIP file
             const reader = response.body.getReader();
             const chunks = [];
             let downloadedBytes = 0;
@@ -417,7 +396,6 @@ export class DownloadManager {
                 chunks.push(value);
                 downloadedBytes += value.length;
 
-                // Update progress
                 const now = Date.now();
                 const timeDiff = (now - lastTime) / 1000;
 
@@ -444,10 +422,8 @@ export class DownloadManager {
                 }
             }
 
-            // Create blob and download
             const zipBlob = new Blob(chunks, { type: 'application/zip' });
 
-            // Download ZIP
             const url = URL.createObjectURL(zipBlob);
             const link = document.createElement('a');
             link.href = url;
@@ -480,7 +456,6 @@ export class DownloadManager {
         }
     }
 
-    // Download folder as ZIP
     async downloadFolder(folderPath, folderName) {
         const downloadId = this.generateId();
         let isCompleted = false;
@@ -500,7 +475,6 @@ export class DownloadManager {
             const abortController = new AbortController();
             this.activeDownloads.set(downloadId, abortController);
 
-            // Use server-side folder ZIP creation
             const response = await api.raw('POST', '/api/files/folder-zip', {
                 folderPath: folderPath,
                 zipName: folderName
@@ -511,15 +485,12 @@ export class DownloadManager {
                 throw new Error(error.message || 'Failed to create folder ZIP');
             }
 
-            // Get size info from headers for better progress tracking
             const contentLength = parseInt(response.headers.get('content-length') || '0');
             const totalFiles = parseInt(response.headers.get('X-Total-Files') || '0');
             const totalSize = parseInt(response.headers.get('X-Total-Size') || '0');
 
-            // Use totalSize if available, otherwise fallback to content-length
             const estimatedTotal = totalSize || contentLength;
 
-            // Stream the ZIP file
             const reader = response.body.getReader();
             const chunks = [];
             let downloadedBytes = 0;
@@ -534,7 +505,6 @@ export class DownloadManager {
                 chunks.push(value);
                 downloadedBytes += value.length;
 
-                // Update progress
                 const now = Date.now();
                 const timeDiff = (now - lastTime) / 1000;
 
@@ -563,7 +533,6 @@ export class DownloadManager {
                 }
             }
 
-            // Create and download ZIP
             const zipBlob = new Blob(chunks, { type: 'application/zip' });
             const url = URL.createObjectURL(zipBlob);
             const link = document.createElement('a');
@@ -597,7 +566,6 @@ export class DownloadManager {
         }
     }
 
-    // Cancel download
     cancelDownload(downloadId) {
         const abortController = this.activeDownloads.get(downloadId);
         if (abortController) {
@@ -606,7 +574,6 @@ export class DownloadManager {
         }
     }
 
-    // Cancel all downloads
     cancelAllDownloads() {
         for (const [id, abortController] of this.activeDownloads) {
             abortController.abort();
@@ -615,10 +582,8 @@ export class DownloadManager {
     }
 }
 
-// Singleton instance
 export const downloadManager = new DownloadManager();
 
-// Convenience functions
 export const downloadFile = (filePath, fileName, chunked = false, preserveDate = true) => {
     return chunked
         ? downloadManager.downloadFileChunked(filePath, fileName, preserveDate)

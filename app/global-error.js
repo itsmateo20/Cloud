@@ -1,3 +1,5 @@
+// app/global-error.js
+
 "use client";
 
 import errorStyles from "@/public/styles/error.module.css";

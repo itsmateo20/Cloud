@@ -70,20 +70,17 @@ async function handleBlobResponse(response) {
     return { success: true, blob };
 }
 
-// Core request function that handles all HTTP methods
 async function makeRequest(method, url, body = null, customHeaders = null) {
     try {
         const baseUrl = await getBaseUrl();
         const fullUrl = url.startsWith('http') ? url : `${baseUrl}${url}`;
 
-        // Determine if body is FormData or needs JSON serialization
         const isFormData = body instanceof FormData;
         const isBlob = body instanceof Blob;
 
         let headers = { ...customHeaders };
         let processedBody = body;
 
-        // Only set Content-Type if not FormData/Blob (browser handles it automatically)
         if (body && !isFormData && !isBlob && !headers['Content-Type']) {
             headers['Content-Type'] = 'application/json';
             processedBody = JSON.stringify(body);
@@ -108,7 +105,6 @@ async function makeRequest(method, url, body = null, customHeaders = null) {
 }
 
 export const api = {
-    // Standard JSON API calls
     post: async (url, body = null, headers = null) => {
         try {
             const response = await makeRequest('POST', url, body, headers);
@@ -154,7 +150,6 @@ export const api = {
         }
     },
 
-    // File upload (FormData)
     upload: async (url, formData, headers = null) => {
         try {
             const response = await makeRequest('POST', url, formData, headers);
@@ -164,7 +159,6 @@ export const api = {
         }
     },
 
-    // Download blob responses
     downloadBlob: async (url, body = null, headers = null) => {
         try {
             const method = body ? 'POST' : 'GET';
@@ -175,7 +169,6 @@ export const api = {
         }
     },
 
-    // Raw response (for when you need the Response object)
     raw: async (method, url, body = null, headers = null) => {
         try {
             return await makeRequest(method, url, body, headers);

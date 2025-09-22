@@ -5,10 +5,10 @@ import { api } from './api';
 export class Uploader {
     constructor() {
         this.uploadQueue = new Map();
-        this.CHUNK_SIZE = 25 * 1024 * 1024; // 25MB chunks
+        this.CHUNK_SIZE = 25 * 1024 * 1024;
         this.MAX_CONCURRENT_CHUNKS = 4;
         this.RETRY_ATTEMPTS = 3;
-        this.RETRY_DELAY = 1000; // 1 second
+        this.RETRY_DELAY = 1000;
     }
 
     /**
@@ -23,16 +23,13 @@ export class Uploader {
         const uploadId = crypto.randomUUID();
 
         try {
-            // For small files (< 50MB), use regular upload
             if (file.size < 50 * 1024 * 1024) {
                 return await this.uploadFileRegular(file, currentPath, onProgress, signal);
             }
 
-            // For large files, use chunked upload
             return await this.uploadFileChunked(file, currentPath, onProgress, signal, uploadId);
 
         } catch (error) {
-            console.error('Upload error:', error);
 
             if (error.name === 'AbortError') {
                 return { success: false, error: 'Upload cancelled' };
@@ -57,7 +54,6 @@ export class Uploader {
 
         const result = await api.upload('/api/files', formData, { signal });
 
-        // Simulate progress for regular upload
         if (onProgress) {
             onProgress(file.size, file.size, 100);
         }
@@ -77,7 +73,6 @@ export class Uploader {
         const uploadedChunks = new Set();
         let uploadedBytes = 0;
 
-        // Store upload state
         this.uploadQueue.set(uploadId, {
             file,
             chunks,
@@ -87,7 +82,6 @@ export class Uploader {
             signal
         });
 
-        // Initialize multipart upload
         const initResponse = await this.initializeChunkedUpload(file, currentPath, signal);
         if (!initResponse.success) {
             throw new Error(initResponse.message || 'Failed to initialize upload');
@@ -96,7 +90,6 @@ export class Uploader {
         const { uploadToken } = initResponse;
 
         try {
-            // Upload chunks concurrently
             await this.uploadChunksConcurrently(
                 chunks,
                 uploadToken,
@@ -110,7 +103,6 @@ export class Uploader {
                 signal
             );
 
-            // Complete the upload
             const completeResponse = await this.completeChunkedUpload(uploadToken, signal);
             if (!completeResponse.success) {
                 throw new Error(completeResponse.message || 'Failed to complete upload');
@@ -119,7 +111,6 @@ export class Uploader {
             return { success: true, fileName: file.name };
 
         } catch (error) {
-            // Cleanup on error
             await this.abortChunkedUpload(uploadToken).catch(() => { });
             throw error;
         }
@@ -213,9 +204,8 @@ export class Uploader {
                 } catch (error) {
                     if (chunk.retries < this.RETRY_ATTEMPTS) {
                         chunk.retries++;
-                        chunkIndex--; // Retry this chunk
+                        chunkIndex--;
 
-                        // Wait before retry
                         await new Promise(resolve =>
                             setTimeout(resolve, this.RETRY_DELAY * chunk.retries)
                         );
@@ -227,7 +217,6 @@ export class Uploader {
                     activeUploads.delete(chunk.number);
                 }
 
-                // Continue with next chunks
                 uploadNextChunk();
 
                 if (activeUploads.size === 0 && chunkIndex >= chunks.length) {
@@ -235,7 +224,6 @@ export class Uploader {
                 }
             };
 
-            // Start concurrent uploads
             for (let i = 0; i < this.MAX_CONCURRENT_CHUNKS; i++) {
                 uploadNextChunk();
             }
@@ -280,7 +268,7 @@ export class Uploader {
                 uploadToken
             });
         } catch (error) {
-            console.warn('Failed to abort upload:', error);
+
         }
     }
 
@@ -300,7 +288,6 @@ export class Uploader {
         let totalSize = 0;
         let uploadedSize = 0;
 
-        // Calculate total size
         for (const file of fileArray) {
             totalSize += file.size;
         }
@@ -397,10 +384,8 @@ export class Uploader {
     }
 }
 
-// Create singleton instance
 export const uploader = new Uploader();
 
-// Utility functions for compatibility
 export const uploadFile = (file, currentPath, onProgress, signal) => {
     return uploader.uploadFile(file, currentPath, onProgress, signal);
 };

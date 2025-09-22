@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useEffect, useCallback, useState } from 'react';
 import styles from './FilePropertiesModal.module.css';
 import { X, Copy, Star } from 'lucide-react';

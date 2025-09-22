@@ -1,4 +1,5 @@
 // components/app/FileViewer.js
+"use client";
 
 import style from './FileViewer.module.css';
 import mainStyle from '@/public/styles/main.module.css';
@@ -113,7 +114,6 @@ export function FileViewer({
     const lastFocusedElementRef = useRef(null);
     const dropdownRef = useRef(null);
 
-    // Video control functions
     const toggleVideoPlay = () => {
         if (videoRef.current) {
             if (isVideoPlaying) {
@@ -130,7 +130,6 @@ export function FileViewer({
             const currentTime = videoRef.current.currentTime;
             const duration = videoRef.current.duration || videoDuration;
 
-            // Ensure duration is valid
             if (!duration || isNaN(duration)) return;
 
             const newTime = Math.max(0, Math.min(currentTime + seconds, duration));
@@ -147,7 +146,6 @@ export function FileViewer({
     const goToNextVideo = () => {
         if (currentFileIndex < files.length - 1) {
             const nextIndex = currentFileIndex + 1;
-            // Find next video file
             for (let i = nextIndex; i < files.length; i++) {
                 if (getFileType(files[i].name) === 'video') {
                     onNavigate(i);
@@ -157,7 +155,6 @@ export function FileViewer({
         }
     };
 
-    // File navigation functions
     const goToPreviousFile = () => {
         if (currentFileIndex > 0) {
             onNavigate(currentFileIndex - 1);
@@ -216,7 +213,6 @@ export function FileViewer({
         setIsDraggingProgress(false);
     };
 
-    // Add global mouse event listeners for progress bar dragging
     useEffect(() => {
         if (isDraggingProgress) {
             const handleMouseMove = (e) => handleProgressBarMouseMove(e);
@@ -246,10 +242,9 @@ export function FileViewer({
     const toggleVideoFullscreen = () => {
         if (videoRef.current) {
             if (!isVideoFullscreen) {
-                // Enter fullscreen with default video controls
                 videoRef.current.controls = true;
                 setIsVideoFullscreen(true);
-                setShowControls(false); // Hide custom controls
+                setShowControls(false);
                 if (videoRef.current.requestFullscreen) {
                     videoRef.current.requestFullscreen();
                 } else if (videoRef.current.webkitRequestFullscreen) {
@@ -258,10 +253,9 @@ export function FileViewer({
                     videoRef.current.msRequestFullscreen();
                 }
             } else {
-                // Exit fullscreen
                 videoRef.current.controls = false;
                 setIsVideoFullscreen(false);
-                setShowControls(true); // Show custom controls
+                setShowControls(true);
                 if (document.exitFullscreen) {
                     document.exitFullscreen();
                 } else if (document.webkitExitFullscreen) {
@@ -273,12 +267,10 @@ export function FileViewer({
         }
     };
 
-    // Listen for fullscreen changes
     useEffect(() => {
         const handleFullscreenChange = () => {
             const isFullscreen = !!(document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement);
             if (!isFullscreen && isVideoFullscreen) {
-                // User exited fullscreen, reset our state
                 setIsVideoFullscreen(false);
                 setShowControls(true);
                 if (videoRef.current) {
@@ -309,7 +301,6 @@ export function FileViewer({
     };
 
     const toggleControls = () => {
-        // Only toggle controls for images and videos
         const fileType = getFileType(currentFile?.name);
         if (fileType === 'image' || fileType === 'video') {
             setShowControls(!showControls);
@@ -361,14 +352,11 @@ export function FileViewer({
         if (!isOpen) return;
 
         const handleKeyDown = (e) => {
-            // Suppress FileViewer shortcuts while code editor is open
             if (showCodeEditor) return;
-            console.log(e.key)
             switch (e.key) {
                 case 'Escape':
                     if (showFileInfoModal) {
                         setShowFileInfoModal(false);
-                        // Restore focus to the element that opened the panel
                         if (lastFocusedElementRef.current && lastFocusedElementRef.current.focus) {
                             lastFocusedElementRef.current.focus();
                         }
@@ -411,7 +399,6 @@ export function FileViewer({
                         resetZoom();
                     }
                     break;
-                // Video/Image controls
                 case 'f':
                 case 'F':
                     if (getFileType(currentFile?.name) === 'video') {
@@ -419,7 +406,7 @@ export function FileViewer({
                     }
                     break;
                 case ' ':
-                    e.preventDefault(); // Prevent page scroll
+                    e.preventDefault();
                     if (getFileType(currentFile?.name) === 'video') {
                         toggleVideoPlay();
                     }
@@ -485,13 +472,11 @@ export function FileViewer({
         };
     }, [isOpen, currentFileIndex, files.length, onClose, onNavigate, showFileInfoModal, showCodeEditor]);
 
-    // ResizeObserver to track side panel width -> CSS variable
     useEffect(() => {
         if (!sidePanelRef.current) return;
         const el = sidePanelRef.current;
         const updateWidth = () => {
             const w = el.getBoundingClientRect().width;
-            // Apply variable on container so transforms remain scoped
             if (containerRef.current) {
                 containerRef.current.style.setProperty('--fv-side-panel-width', w + 'px');
             }
@@ -502,7 +487,6 @@ export function FileViewer({
         return () => ro.disconnect();
     }, [showFileInfoModal]);
 
-    // Focus management when panel opens
     useEffect(() => {
         if (showFileInfoModal && sidePanelRef.current) {
             const heading = sidePanelRef.current.querySelector('h3');
@@ -519,14 +503,12 @@ export function FileViewer({
             setAutoFitImage(false);
             resetZoom();
 
-            // Reset video state when switching files
             setIsVideoPlaying(false);
             setVideoCurrentTime(0);
             setVideoDuration(0);
             setIsVideoMuted(false);
             setIsVideoFullscreen(false);
 
-            // Reset HTML preview state
             setIsHtmlPreview(false);
 
             if (currentFile) loadFileContent(currentFile);
@@ -550,7 +532,6 @@ export function FileViewer({
         }
     }, [imageScale]);
 
-    // File info menu touch handlers
     const handleFileInfoMenuTouchStart = (e) => {
         const touch = e.touches[0];
         setFileInfoMenuInitialY(touch.clientY);
@@ -572,7 +553,6 @@ export function FileViewer({
         setFileInfoMenuInitialY(0);
     };
 
-    // Delete menu touch handlers
     const handleDeleteMenuTouchStart = (e) => {
         const touch = e.touches[0];
         setDeleteMenuInitialY(touch.clientY);
@@ -594,7 +574,6 @@ export function FileViewer({
         setDeleteMenuInitialY(0);
     };
 
-    // File navigation swipe handlers
     const [swipeStartX, setSwipeStartX] = useState(0);
     const [swipeStartY, setSwipeStartY] = useState(0);
     const [isSwipingFile, setIsSwipingFile] = useState(false);
@@ -614,7 +593,6 @@ export function FileViewer({
             const deltaX = touch.clientX - swipeStartX;
             const deltaY = touch.clientY - swipeStartY;
 
-            // Only consider horizontal swipes (not vertical)
             if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 50) {
                 setIsSwipingFile(true);
             }
@@ -626,11 +604,9 @@ export function FileViewer({
             const touch = e.changedTouches[0];
             const deltaX = touch.clientX - swipeStartX;
 
-            // Swipe right to previous file
             if (deltaX > 100 && currentFileIndex > 0) {
                 goToPreviousFile();
             }
-            // Swipe left to next file
             else if (deltaX < -100 && currentFileIndex < files.length - 1) {
                 goToNextFile();
             }
@@ -683,7 +659,6 @@ export function FileViewer({
     };
 
     const loadFileContent = async (file) => {
-        // Check if file is empty (0 bytes) regardless of type
         if (file.size === 0) {
             setIsEmpty(true);
             setIsLoading(false);
@@ -699,7 +674,6 @@ export function FileViewer({
 
                 const text = await response.text();
 
-                // Check if file content is empty (just whitespace)
                 if (text.trim() === '') {
                     setFileContent('');
                     setIsEmpty(true);
@@ -710,7 +684,7 @@ export function FileViewer({
 
                 setIsLoading(false);
             } catch (error) {
-                console.error('Error loading text file:', error);
+
                 setFileError(true);
                 setIsLoading(false);
             }
@@ -773,7 +747,7 @@ export function FileViewer({
 
         const language = languageMap[ext] || 'text';
         if (language !== 'text' && !Prism.languages[language]) {
-            console.warn(`Language '${language}' not available, falling back to text`);
+
             return 'text';
         }
 
@@ -786,22 +760,18 @@ export function FileViewer({
     };
 
     const handleFileError = (e) => {
-        console.error('File loading error:', e);
+
         setIsLoading(false);
         setFileError(true);
-        // Reset video state on error
         setIsVideoPlaying(false);
         setVideoCurrentTime(0);
         setVideoDuration(0);
     };
 
     const handleVideoError = (e) => {
-        console.error('Video loading error:', e.target?.error || 'Unknown video error');
-        console.error('Video src:', e.target?.src || 'No source');
-        console.error('Video file size:', currentFile?.size ? `${(currentFile.size / (1024 * 1024)).toFixed(1)}MB` : 'Unknown size');
+
         setIsLoading(false);
         setFileError(true);
-        // Reset video state on error
         setIsVideoPlaying(false);
         setVideoCurrentTime(0);
         setVideoDuration(0);
@@ -815,7 +785,7 @@ export function FileViewer({
 
     const handleZoomIn = useCallback(() => {
         setImageScale(prev => {
-            const newScale = Math.min(prev * 1.2, 10); // 1000%
+            const newScale = Math.min(prev * 1.2, 10);
             updateImageTransform(newScale, imagePositionRef.current);
             return newScale;
         });
@@ -920,7 +890,6 @@ export function FileViewer({
 
     const handleCodeEditorSave = (newContent) => {
         setFileContent(newContent);
-        // Notify parent with lightweight payload; parent can decide if deeper refresh required
         onAction?.('content-updated', { file: currentFile, content: newContent });
     };
 
@@ -1022,7 +991,7 @@ export function FileViewer({
                                 onPlay={() => setIsVideoPlaying(true)}
                                 onPause={() => setIsVideoPlaying(false)}
                                 onLoadStart={() => {
-                                    console.log('Video load started for:', currentFile.name, 'Size:', currentFile.size ? `${(currentFile.size / (1024 * 1024)).toFixed(1)}MB` : 'Unknown');
+
                                 }}
                                 onClick={handleVideoClick}
                             >
@@ -1162,7 +1131,6 @@ export function FileViewer({
 
             case 'text':
             case 'code':
-                // Check if this is an HTML file and preview mode is enabled
                 if (isHtmlFile(currentFile?.name) && isHtmlPreview) {
                     return (
                         <div className={style.contentContainer}>
@@ -1201,7 +1169,7 @@ export function FileViewer({
                             .replace(/'/g, '&#39;');
                     }
                 } catch (error) {
-                    console.warn(`Failed to highlight ${language} code:`, error);
+
                     highlightedCode = fileContent
                         .replace(/&/g, '&amp;')
                         .replace(/</g, '&lt;')
@@ -1275,7 +1243,6 @@ export function FileViewer({
                         {showControls && (
                             <div className={`${style.header} ${mobile ? style.mobileHeader : ''}`}>
                                 {mobile ? (
-                                    // Mobile header layout: back button on left, actions on right
                                     <>
                                         <button
                                             className={style.mobileBackButton}
@@ -1351,7 +1318,6 @@ export function FileViewer({
                                         </div>
                                     </>
                                 ) : (
-                                    // Desktop header layout (existing)
                                     <>
                                         <div className={style.fileInfo}>
                                             <h3 className={style.fileName}>{currentFile.name}</h3>

@@ -1,4 +1,5 @@
 // components/app/ContextMenu.js
+"use client";
 
 import { useEffect, useRef, useState } from "react";
 import styles from "./ContextMenu.module.css";

@@ -1,5 +1,4 @@
 // utils/fileMetadata.client.js
-// Client-side file metadata utilities
 
 /**
  * Reads metadata from a File object on the client side
@@ -8,20 +7,16 @@
  */
 export function readFileMetadata(file) {
     const metadata = {
-        // Basic file properties
         name: file.name,
         size: file.size,
         type: file.type,
         lastModified: file.lastModified,
         lastModifiedDate: file.lastModifiedDate,
 
-        // Convert to ISO strings for transmission
         lastModifiedISO: new Date(file.lastModified).toISOString(),
 
-        // WebkitRelativePath for directory uploads
         webkitRelativePath: file.webkitRelativePath || '',
 
-        // Additional metadata that may be available
         ...(file.lastModifiedDate && {
             lastModifiedDateISO: file.lastModifiedDate.toISOString()
         })
@@ -52,15 +47,13 @@ export async function extractEXIFData(file) {
     }
 
     try {
-        // For now, we'll return basic image metadata
-        // In the future, this could be enhanced with a library like exif-js
         return {
             type: file.type,
             size: file.size,
             lastModified: file.lastModified
         };
     } catch (error) {
-        console.warn('Failed to extract EXIF data:', error);
+
         return null;
     }
 }

@@ -16,12 +16,8 @@ export async function POST(request) {
                 message: 'Invalid type. Must be "download" or "upload"'
             }, { status: 400 });
         }
-
-        // Generate a unique token for this QR code
         const token = crypto.randomBytes(32).toString('hex');
-        const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour from now
-
-        // Save the QR token to database
+        const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
         if (type === 'download') {
             if (!items || items.length === 0) {
                 return NextResponse.json({
@@ -46,7 +42,6 @@ export async function POST(request) {
                 }
             });
         } else {
-            // Upload QR code
             await prisma.qrToken.create({
                 data: {
                     token,
@@ -58,12 +53,8 @@ export async function POST(request) {
                 }
             });
         }
-
-        // Generate QR code URL
         const siteUrl = getSiteUrl();
         const qrUrl = `${siteUrl}/qr/${token}`;
-
-        // Generate QR code image
         const qrCodeDataUrl = await QRCode.toDataURL(qrUrl, {
             width: 200,
             margin: 1,
@@ -81,7 +72,7 @@ export async function POST(request) {
         });
 
     } catch (error) {
-        console.error('Error generating QR code:', error);
+
         return NextResponse.json({
             success: false,
             message: 'Failed to generate QR code'

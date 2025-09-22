@@ -80,7 +80,7 @@ export async function POST(req) {
         });
 
     } catch (error) {
-        console.error('Error saving file:', error);
+
         return NextResponse.json({
             success: false,
             code: "internal_error",

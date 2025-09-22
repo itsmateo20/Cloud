@@ -1,6 +1,3 @@
-// app/qr/[token]/page.js
-
-import { prisma } from '@/lib/db';
 import QRHandler from '@/components/qr/QRHandler';
 import styles from '@/components/qr/QRHandler.module.css';
 
@@ -8,7 +5,6 @@ export default async function page({ params }) {
     const { token } = await params;
 
     try {
-        // Find the QR token in the database
         const qrToken = await prisma.qrToken.findUnique({
             where: {
                 token: token
@@ -46,7 +42,7 @@ export default async function page({ params }) {
         return <QRHandler token={token} type={qrToken.type} data={data} />;
 
     } catch (error) {
-        console.error('Error processing QR code:', error);
+
         return (
             <div className={styles.errorContainer}>
                 <div className={styles.errorCard}>

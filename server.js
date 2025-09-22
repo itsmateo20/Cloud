@@ -1,9 +1,7 @@
 // server.js
 
-// --- Bun/Edge compatibility shims (must run before requiring "next") ---
 (() => {
     try {
-        // Prefer global TransformStream if present; fallback to Node's stream/web
         const TS = typeof TransformStream !== 'undefined'
             ? TransformStream
             : (require('stream/web').TransformStream);
@@ -32,12 +30,10 @@
                     const decoder = new _TextDecoder(label, options);
                     const transformer = new TS({
                         transform(chunk, controller) {
-                            // Accept Uint8Array or ArrayBuffer
                             const view = chunk instanceof Uint8Array ? chunk : new Uint8Array(chunk);
                             controller.enqueue(decoder.decode(view, { stream: true }));
                         },
                         flush(controller) {
-                            // Emit any trailing bytes
                             const tail = decoder.decode();
                             if (tail) controller.enqueue(tail);
                         }

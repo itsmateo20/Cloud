@@ -57,11 +57,9 @@ export async function GET(req) {
 
         if (isImage) {
             try {
-                // Prepare cache path
                 const thumbnailsDir = path.join(userFolder, '.thumbnails');
                 const relativeSafe = filePath.startsWith('/') ? filePath.slice(1) : filePath;
                 const cacheFile = path.join(thumbnailsDir, relativeSafe + '.thumb.jpg');
-                // Ensure directory exists
                 await fs.mkdir(path.dirname(cacheFile), { recursive: true });
 
                 let useCached = false;
@@ -85,12 +83,12 @@ export async function GET(req) {
                 return new NextResponse(fileStream, {
                     headers: {
                         'Content-Type': 'image/jpeg',
-                        'Cache-Control': 'public, max-age=604800, immutable', // 7 days; versioning via etag
+                        'Cache-Control': 'public, max-age=604800, immutable',
                         'ETag': etag
                     }
                 });
             } catch (error) {
-                console.error('Error generating image thumbnail:', error);
+
                 return NextResponse.json({ error: 'Failed to generate thumbnail' }, { status: 500 });
             }
         } else if (isVideo) {
@@ -112,7 +110,7 @@ export async function GET(req) {
         }
 
     } catch (error) {
-        console.error("Thumbnail generation error:", error);
+
         return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
 }

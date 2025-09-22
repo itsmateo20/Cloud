@@ -1,6 +1,7 @@
-'use client';
-
 // components/qr/QRHandler.js
+
+"use client";
+
 
 import { useState } from 'react';
 import { api } from '@/utils/api';
@@ -42,7 +43,7 @@ export default function QRHandler({ token, type, data }) {
                 setMessage(`Upload failed: ${result.message}`);
             }
         } catch (error) {
-            console.error('Upload error:', error);
+
             setMessage('Upload failed. Please try again.');
         } finally {
             setUploading(false);
@@ -70,7 +71,7 @@ export default function QRHandler({ token, type, data }) {
                 setMessage(`Download failed: ${result.message}`);
             }
         } catch (error) {
-            console.error('Download error:', error);
+
             setMessage('Download failed. Please try again.');
         } finally {
             setDownloading(false);
@@ -101,7 +102,7 @@ export default function QRHandler({ token, type, data }) {
                 setMessage(`Download failed: ${result.message}`);
             }
         } catch (error) {
-            console.error('Download error:', error);
+
             setMessage('Download failed. Please try again.');
         } finally {
             setDownloading(false);

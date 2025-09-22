@@ -29,7 +29,6 @@ export async function POST(req) {
             }, { status: 400 });
         }
 
-        // Get upload session
         const uploadSession = uploadSessionManager.getSession(uploadToken);
         if (!uploadSession) {
             return NextResponse.json({
@@ -39,7 +38,6 @@ export async function POST(req) {
             }, { status: 404 });
         }
 
-        // Verify user owns this session
         if (uploadSession.userId !== session.user.id) {
             return NextResponse.json({
                 success: false,
@@ -48,7 +46,6 @@ export async function POST(req) {
             }, { status: 403 });
         }
 
-        // Check if all chunks are uploaded
         if (uploadSession.uploadedChunks.size !== uploadSession.chunkCount) {
             return NextResponse.json({
                 success: false,
@@ -60,16 +57,13 @@ export async function POST(req) {
         }
 
         try {
-            // Assemble file from chunks
             const finalPath = uploadSession.finalPath;
 
-            // Ensure the user upload directory exists first
             const pathResult = await ensureUserUploadPath(uploadSession.userId);
             if (!pathResult.success) {
                 throw new Error(`Failed to create upload directory: ${pathResult.error}`);
             }
 
-            // Ensure the target directory exists
             const targetDir = path.dirname(finalPath);
             await fs.mkdir(targetDir, { recursive: true });
 
@@ -77,7 +71,6 @@ export async function POST(req) {
 
             let assembledSize = 0;
 
-            // Write chunks in order
             for (let i = 0; i < uploadSession.chunkCount; i++) {
                 const chunkPath = path.join(uploadSession.tempDir, `chunk_${i}`);
 
@@ -88,7 +81,6 @@ export async function POST(req) {
                 } catch (chunkError) {
                     await writeStream.close();
 
-                    // Clean up partial file
                     await fs.unlink(finalPath).catch(() => { });
 
                     throw new Error(`Failed to read chunk ${i}: ${chunkError.message}`);
@@ -97,10 +89,8 @@ export async function POST(req) {
 
             await writeStream.close();
 
-            // Verify file size
             const stats = await fs.stat(finalPath);
             if (stats.size !== uploadSession.fileSize) {
-                // Clean up incomplete file
                 await fs.unlink(finalPath).catch(() => { });
 
                 throw new Error(
@@ -108,21 +98,17 @@ export async function POST(req) {
                 );
             }
 
-            // Set file modification time if provided
             if (uploadSession.lastModified) {
                 try {
                     const modDate = new Date(uploadSession.lastModified);
                     await fs.utimes(finalPath, modDate, modDate);
                 } catch (utimeError) {
-                    console.warn('Failed to set file modification time:', utimeError);
-                    // Don't fail the upload for this
+
                 }
             }
 
-            // Clean up temporary directory
             await fs.rm(uploadSession.tempDir, { recursive: true, force: true });
 
-            // Remove session
             uploadSessionManager.deleteSession(uploadToken);
 
             return NextResponse.json({
@@ -133,9 +119,7 @@ export async function POST(req) {
             });
 
         } catch (assemblyError) {
-            console.error('File assembly error:', assemblyError);
 
-            // Clean up temp directory
             await fs.rm(uploadSession.tempDir, { recursive: true, force: true }).catch(() => { });
             uploadSessionManager.deleteSession(uploadToken);
 
@@ -147,7 +131,7 @@ export async function POST(req) {
         }
 
     } catch (error) {
-        console.error('Upload complete error:', error);
+
         return NextResponse.json({
             success: false,
             code: 'internal_error',

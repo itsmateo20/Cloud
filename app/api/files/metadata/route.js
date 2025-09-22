@@ -71,7 +71,6 @@ export async function GET(req) {
             });
 
         } catch (fileError) {
-            console.error("File metadata error:", fileError);
 
             if (fileError.code === 'ENOENT') {
                 return NextResponse.json({
@@ -90,7 +89,7 @@ export async function GET(req) {
         }
 
     } catch (error) {
-        console.error('Metadata route error:', error);
+
         return NextResponse.json({
             success: false,
             code: 'internal_error',

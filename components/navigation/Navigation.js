@@ -96,7 +96,6 @@ export function Navigation({ user, sideNav = false, currentPath }) {
         }
     };
 
-    // Touch events
     const handleTouchStart = (e) => {
         if (!isMobile) return;
         handleStart(e.touches[0].clientX);

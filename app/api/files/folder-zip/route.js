@@ -20,14 +20,13 @@ async function getAllFilesInDirectory(dirPath, basePath = '') {
             const relativePath = path.join(basePath, entry.name);
 
             if (entry.isDirectory()) {
-                // Recursively get files from subdirectory
                 const subFiles = await getAllFilesInDirectory(fullPath, relativePath);
                 files.push(...subFiles);
             } else if (entry.isFile()) {
                 const stat = await fs.stat(fullPath);
                 files.push({
                     fullPath,
-                    relativePath: relativePath.replace(/\\/g, '/'), // Normalize path separators
+                    relativePath: relativePath.replace(/\\/g, '/'),
                     name: entry.name,
                     size: stat.size,
                     mtime: stat.mtime
@@ -35,7 +34,7 @@ async function getAllFilesInDirectory(dirPath, basePath = '') {
             }
         }
     } catch (error) {
-        console.error(`Error reading directory ${dirPath}:`, error);
+
     }
 
     return files;
@@ -84,7 +83,6 @@ export async function POST(req) {
             }, { status: 400 });
         }
 
-        // Check if folder exists and is a directory
         try {
             const stat = await fs.stat(targetFolderPath);
             if (!stat.isDirectory()) {
@@ -105,7 +103,6 @@ export async function POST(req) {
             throw error;
         }
 
-        // Get all files in the folder recursively
         const allFiles = await getAllFilesInDirectory(targetFolderPath);
 
         if (allFiles.length === 0) {
@@ -116,25 +113,20 @@ export async function POST(req) {
             }, { status: 400 });
         }
 
-        // Calculate total uncompressed size for progress estimation
         const totalSize = allFiles.reduce((sum, file) => sum + file.size, 0);
-        console.log(`Creating ZIP for folder ${folderPath} with ${allFiles.length} files (${totalSize} bytes total)`);
 
         const sanitizedZipName = (zipName || path.basename(folderPath) || 'folder').replace(/[^a-zA-Z0-9_-]/g, '_') + '.zip';
 
-        // Create ZIP stream with faster compression for better speed
         const archive = archiver('zip', {
-            zlib: { level: 1 } // Faster compression for better speed
+            zlib: { level: 1 }
         });
 
         let archiveFinalized = false;
         let hasError = false;
         let processedBytes = 0;
 
-        // Set up readable stream
         const readableStream = new ReadableStream({
             start(controller) {
-                // Handle archive events
                 archive.on('data', (chunk) => {
                     if (!hasError) {
                         controller.enqueue(new Uint8Array(chunk));
@@ -148,29 +140,25 @@ export async function POST(req) {
                 });
 
                 archive.on('error', (error) => {
-                    console.error('Archive error:', error);
+
                     hasError = true;
                     controller.error(error);
                 });
 
                 archive.on('warning', (warning) => {
-                    console.warn('Archive warning:', warning);
+
                 });
 
-                // Add files to archive
                 const addFilesToArchive = async () => {
                     try {
                         for (const file of allFiles) {
                             if (hasError) break;
 
-                            console.log(`Adding file to ZIP: ${file.relativePath} (${file.size} bytes)`);
-
                             try {
                                 const stream = createReadStream(file.fullPath);
 
-                                // Handle stream errors
                                 stream.on('error', (streamError) => {
-                                    console.error(`Stream error for ${file.name}:`, streamError);
+
                                 });
 
                                 archive.append(stream, {
@@ -179,31 +167,28 @@ export async function POST(req) {
                                 });
 
                             } catch (fileError) {
-                                console.error(`Error adding file ${file.relativePath}:`, fileError);
-                                // Continue with next file
+
                             }
                         }
 
-                        // Finalize the archive
                         if (!hasError && !archiveFinalized) {
                             archiveFinalized = true;
-                            console.log('Finalizing folder ZIP archive...');
+
                             await archive.finalize();
                         }
 
                     } catch (error) {
-                        console.error('Error in addFilesToArchive:', error);
+
                         hasError = true;
                         controller.error(error);
                     }
                 };
 
-                // Start adding files
                 addFilesToArchive();
             },
 
             cancel() {
-                console.log('Folder ZIP stream cancelled');
+
                 hasError = true;
                 if (!archiveFinalized) {
                     archive.destroy();
@@ -223,7 +208,7 @@ export async function POST(req) {
         });
 
     } catch (error) {
-        console.error('Folder ZIP creation error:', error);
+
         return NextResponse.json({
             success: false,
             code: 'internal_error',
@@ -275,7 +260,6 @@ export async function GET(req) {
             }, { status: 400 });
         }
 
-        // Check if folder exists and is a directory
         try {
             const stat = await fs.stat(targetFolderPath);
             if (!stat.isDirectory()) {
@@ -296,7 +280,6 @@ export async function GET(req) {
             throw error;
         }
 
-        // Get all files in the directory recursively
         const files = await getAllFilesInDirectory(targetFolderPath, '');
 
         if (files.length === 0) {
@@ -310,23 +293,18 @@ export async function GET(req) {
         const folderName = path.basename(folderPath) || 'folder';
         const sanitizedZipName = folderName.replace(/[^a-zA-Z0-9_-]/g, '_') + '.zip';
 
-        // Calculate total uncompressed size for progress estimation
         const totalSize = files.reduce((sum, file) => sum + file.size, 0);
-        console.log(`Creating ZIP for folder: ${folderPath} with ${files.length} files (${totalSize} bytes total)`);
 
-        // Create ZIP stream with faster compression for better speed
         const archive = archiver('zip', {
-            zlib: { level: 1 } // Faster compression (was level 6)
+            zlib: { level: 1 }
         });
 
         let archiveFinalized = false;
         let hasError = false;
         let processedBytes = 0;
 
-        // Set up readable stream
         const readableStream = new ReadableStream({
             start(controller) {
-                // Handle archive events
                 archive.on('data', (chunk) => {
                     if (!hasError) {
                         controller.enqueue(new Uint8Array(chunk));
@@ -340,28 +318,25 @@ export async function GET(req) {
                 });
 
                 archive.on('error', (error) => {
-                    console.error('Archive error:', error);
+
                     hasError = true;
                     controller.error(error);
                 });
 
                 archive.on('warning', (warning) => {
-                    console.warn('Archive warning:', warning);
+
                 });
 
-                // Add files to archive sequentially
                 const addFilesToArchive = async () => {
                     try {
                         for (const file of files) {
                             if (hasError) break;
 
-                            console.log(`Adding to ZIP: ${file.relativePath}`);
-
                             try {
                                 const stream = createReadStream(file.fullPath);
 
                                 stream.on('error', (streamError) => {
-                                    console.error(`Stream error for ${file.relativePath}:`, streamError);
+
                                 });
 
                                 archive.append(stream, {
@@ -370,30 +345,28 @@ export async function GET(req) {
                                 });
 
                             } catch (fileError) {
-                                console.error(`Error adding file ${file.relativePath}:`, fileError);
+
                             }
                         }
 
-                        // Finalize the archive
                         if (!hasError && !archiveFinalized) {
                             archiveFinalized = true;
-                            console.log('Finalizing folder ZIP archive...');
+
                             await archive.finalize();
                         }
 
                     } catch (error) {
-                        console.error('Error in addFilesToArchive:', error);
+
                         hasError = true;
                         controller.error(error);
                     }
                 };
 
-                // Start adding files
                 addFilesToArchive();
             },
 
             cancel() {
-                console.log('Folder ZIP stream cancelled');
+
                 hasError = true;
                 if (!archiveFinalized) {
                     archive.destroy();
@@ -413,7 +386,7 @@ export async function GET(req) {
         });
 
     } catch (error) {
-        console.error('Folder ZIP creation error (GET):', error);
+
         return NextResponse.json({
             success: false,
             code: 'internal_error',

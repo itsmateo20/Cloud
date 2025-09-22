@@ -1,3 +1,5 @@
+// app/fonts.js
+
 import { Poppins, Rubik, Courier_Prime } from "next/font/google"
 
 export const poppins = Poppins({

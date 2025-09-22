@@ -1,4 +1,4 @@
-// components/Authentication/GoogleAuth.js
+// components/authentication/GoogleAuth.js
 
 import style from "@/components/authentication/GoogleAuth.module.css";
 import Image from "next/image";

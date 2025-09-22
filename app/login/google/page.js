@@ -30,13 +30,11 @@ export default function Page({ searchParams }) {
             api.post("/api/auth/validate", { email, signature })
                 .then(data => {
                     if (!data.success) {
-                        console.error(data.error);
-                        console.log("invalid-signature-redirect");
+
                         return redirect("/login");
                     }
                 }).catch(err => {
-                    console.error(err);
-                    console.log("invalid-signature-redirect");
+
                     return redirect("/login");
                 });
         }

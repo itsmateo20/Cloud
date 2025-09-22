@@ -50,7 +50,6 @@ export async function GET(req) {
         }
 
         if (!useCached) {
-            // Run ffmpeg to extract frame
             await new Promise((resolve, reject) => {
                 const args = [
                     '-ss', '0.5',
@@ -65,7 +64,6 @@ export async function GET(req) {
                 proc.on('close', async (code) => {
                     if (code !== 0) return reject(new Error('FFMPEG_FAILED'));
                     try {
-                        // Atomic rename
                         await fs.rename(outFile + '.tmp.jpg', outFile);
                     } catch (e) {
                         return reject(e);
@@ -86,7 +84,7 @@ export async function GET(req) {
     } catch (e) {
         if (e.message === 'NOT_FOUND') return NextResponse.json({ error: 'File not found' }, { status: 404 });
         if (e.message === 'FFMPEG_FAILED') return NextResponse.json({ error: 'Video frame extraction failed' }, { status: 500 });
-        console.error('Video thumbnail error', e);
+
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }

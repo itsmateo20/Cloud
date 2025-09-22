@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 
-// Minimal DB setup script: runs Prisma migrations (dev) and generates client
 const { spawn } = require('child_process');
 
 async function run(cmd, args, opts = {}) {

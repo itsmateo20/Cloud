@@ -41,7 +41,6 @@ export async function POST(req) {
             }, { status: 400 });
         }
 
-        // Validate file name
         if (fileName.includes('..') || fileName.includes('/') || fileName.includes('\\')) {
             return NextResponse.json({
                 success: false,
@@ -50,7 +49,6 @@ export async function POST(req) {
             }, { status: 400 });
         }
 
-        // Ensure user upload directory exists first
         const pathResult = await ensureUserUploadPath(userId);
         if (!pathResult.success) {
             return NextResponse.json({
@@ -64,11 +62,10 @@ export async function POST(req) {
         const targetDir = currentPath ? path.join(userFolder, currentPath) : userFolder;
         const finalPath = path.join(targetDir, fileName);
 
-        // Ensure target directory exists (for subdirectories)
         try {
             await fs.mkdir(targetDir, { recursive: true });
         } catch (error) {
-            console.error('Target directory creation error:', error);
+
             return NextResponse.json({
                 success: false,
                 code: 'directory_error',
@@ -76,7 +73,6 @@ export async function POST(req) {
             }, { status: 500 });
         }
 
-        // Check if file already exists
         try {
             await fs.access(finalPath);
             return NextResponse.json({
@@ -85,12 +81,9 @@ export async function POST(req) {
                 message: 'File already exists'
             }, { status: 409 });
         } catch (error) {
-            // File doesn't exist, which is what we want
         }
 
-        // Generate upload token
         const uploadToken = crypto.randomUUID();
-        // Ensure temp base exists and derive per-token directory
         const tempBase = await ensureTempBasePath();
         if (!tempBase.success) {
             return NextResponse.json({
@@ -101,11 +94,10 @@ export async function POST(req) {
         }
         const tempDir = getTempDirForToken(uploadToken);
 
-        // Create temporary directory for chunks
         try {
             await fs.mkdir(tempDir, { recursive: true });
         } catch (error) {
-            console.error('Temp directory creation error:', error);
+
             return NextResponse.json({
                 success: false,
                 code: 'temp_directory_error',
@@ -113,7 +105,6 @@ export async function POST(req) {
             }, { status: 500 });
         }
 
-        // Store upload session
         uploadSessionManager.createSession(uploadToken, {
             userId,
             fileName,
@@ -125,18 +116,18 @@ export async function POST(req) {
             finalPath,
             uploadedChunks: new Set(),
             createdAt: new Date(),
-            expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours
+            expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000)
         });
 
         return NextResponse.json({
             success: true,
             uploadToken,
-            chunkSize: 25 * 1024 * 1024, // 25MB
+            chunkSize: 25 * 1024 * 1024,
             expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
         });
 
     } catch (error) {
-        console.error('Upload init error:', error);
+
         return NextResponse.json({
             success: false,
             code: 'internal_error',

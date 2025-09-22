@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useEffect, useCallback, useState } from 'react';
 import styles from './ConfirmModal.module.css';
 
@@ -26,19 +28,16 @@ export function ConfirmModal({
     destructive = false,
     extraActions = null
 }) {
-    // Local visibility state to allow exit animation
     const [visible, setVisible] = useState(open);
     const [closing, setClosing] = useState(false);
 
-    // Watch open prop to trigger mount/unmount with animation
     useEffect(() => {
         if (open) {
             setVisible(true);
             setClosing(false);
         } else if (visible) {
-            // start closing animation
             setClosing(true);
-            const t = setTimeout(() => { setVisible(false); setClosing(false); }, 180); // match CSS duration
+            const t = setTimeout(() => { setVisible(false); setClosing(false); }, 180);
             return () => clearTimeout(t);
         }
     }, [open, visible]);
@@ -61,7 +60,6 @@ export function ConfirmModal({
             };
         }
         if (closing) {
-            // keep body scroll locked until animation finishes
             document.body.style.overflow = 'hidden';
             const t = setTimeout(() => { document.body.style.overflow = ''; }, 180);
             return () => clearTimeout(t);

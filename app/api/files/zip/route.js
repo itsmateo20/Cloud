@@ -41,23 +41,20 @@ export async function POST(req) {
             }, { status: 400 });
         }
 
-        console.log(`ZIP request for ${files.length} files:`, files);
-
         const userFolder = getUserUploadPath(userId);
         const sanitizedZipName = (zipName || 'download').replace(/[^a-zA-Z0-9_-]/g, '_') + '.zip';
 
-        // Validate all file paths
         const validatedFiles = [];
         for (const filePath of files) {
             if (!filePath || typeof filePath !== 'string') {
-                console.warn(`Invalid file path:`, filePath);
+
                 continue;
             }
 
             const requestedPath = path.join(userFolder, filePath);
 
             if (!requestedPath.startsWith(userFolder)) {
-                console.warn(`Path outside user folder: ${filePath}`);
+
                 return NextResponse.json({
                     success: false,
                     code: "invalid_path",
@@ -75,13 +72,12 @@ export async function POST(req) {
                         size: stat.size,
                         mtime: stat.mtime
                     });
-                    console.log(`Validated file: ${filePath} (${stat.size} bytes)`);
+
                 } else {
-                    console.warn(`Skipping non-file: ${filePath}`);
+
                 }
             } catch (error) {
-                console.warn(`File not accessible: ${filePath}`, error.code);
-                // Continue with other files instead of failing
+
             }
         }
 
@@ -93,18 +89,15 @@ export async function POST(req) {
             }, { status: 400 });
         }
 
-        // Create ZIP stream
         const archive = archiver('zip', {
-            zlib: { level: 6 } // Compression level
+            zlib: { level: 6 }
         });
 
         let archiveFinalized = false;
         let hasError = false;
 
-        // Set up readable stream
         const readableStream = new ReadableStream({
             start(controller) {
-                // Handle archive events
                 archive.on('data', (chunk) => {
                     if (!hasError) {
                         controller.enqueue(new Uint8Array(chunk));
@@ -118,33 +111,28 @@ export async function POST(req) {
                 });
 
                 archive.on('error', (error) => {
-                    console.error('Archive error:', error);
+
                     hasError = true;
                     controller.error(error);
                 });
 
                 archive.on('warning', (warning) => {
-                    console.warn('Archive warning:', warning);
+
                 });
 
-                // Add files to archive sequentially to avoid memory issues
                 const addFilesToArchive = async () => {
                     try {
                         for (const file of validatedFiles) {
                             if (hasError) break;
 
                             const fileName = path.basename(file.filePath);
-                            const relativePath = file.filePath.replace(/\\/g, '/'); // Normalize path separators
-
-                            console.log(`Adding file to ZIP: ${fileName} (${file.size} bytes)`);
+                            const relativePath = file.filePath.replace(/\\/g, '/');
 
                             try {
                                 const stream = createReadStream(file.fullPath);
 
-                                // Handle stream errors
                                 stream.on('error', (streamError) => {
-                                    console.error(`Stream error for ${fileName}:`, streamError);
-                                    // Continue with next file instead of failing entire archive
+
                                 });
 
                                 archive.append(stream, {
@@ -153,31 +141,28 @@ export async function POST(req) {
                                 });
 
                             } catch (fileError) {
-                                console.error(`Error adding file ${fileName}:`, fileError);
-                                // Continue with next file
+
                             }
                         }
 
-                        // Finalize the archive
                         if (!hasError && !archiveFinalized) {
                             archiveFinalized = true;
-                            console.log('Finalizing ZIP archive...');
+
                             await archive.finalize();
                         }
 
                     } catch (error) {
-                        console.error('Error in addFilesToArchive:', error);
+
                         hasError = true;
                         controller.error(error);
                     }
                 };
 
-                // Start adding files
                 addFilesToArchive();
             },
 
             cancel() {
-                console.log('ZIP stream cancelled');
+
                 hasError = true;
                 if (!archiveFinalized) {
                     archive.destroy();
@@ -194,7 +179,7 @@ export async function POST(req) {
         });
 
     } catch (error) {
-        console.error('ZIP creation error:', error);
+
         return NextResponse.json({
             success: false,
             code: 'internal_error',

@@ -1,6 +1,4 @@
 // app/signup/layout.js
-
-
 import "@/public/styles/globals.css";
 
 import { AuthProvider } from "@/context/AuthProvider";

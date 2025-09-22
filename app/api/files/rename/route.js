@@ -72,7 +72,7 @@ export async function POST(req) {
         return NextResponse.json({ success: true, code: "explorer_rename_success" }, { status: 200 });
 
     } catch (error) {
-        console.error('Error in rename operation:', error);
+
         return NextResponse.json({
             success: false,
             code: "explorer_rename_failed",

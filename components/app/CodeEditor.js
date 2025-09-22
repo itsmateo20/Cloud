@@ -1,3 +1,5 @@
+"use client";
+
 import { useState, useEffect, useRef } from 'react';
 import { Editor } from '@monaco-editor/react';
 import { api } from '@/utils/api';
@@ -32,16 +34,14 @@ export function CodeEditor({
 
     useEffect(() => {
         if (isMarkdown && showPreview) {
-            // Debounce markdown rendering to avoid constant updates while typing
             const timeoutId = setTimeout(() => {
                 renderMarkdown(editorContent);
-            }, 500); // Wait 500ms after user stops typing
+            }, 500);
 
             return () => clearTimeout(timeoutId);
         }
     }, [editorContent, isMarkdown, showPreview]);
 
-    // Handle unsaved changes warning when closing/refreshing tab
     useEffect(() => {
         const handleBeforeUnload = (e) => {
             if (hasChanges) {
@@ -158,7 +158,7 @@ export function CodeEditor({
 
             setMarkdownHtml(html);
         } catch (error) {
-            console.error('Error rendering markdown:', error);
+
             setMarkdownHtml('<p>Error rendering markdown</p>');
         }
     };
@@ -185,7 +185,7 @@ export function CodeEditor({
                 alert('Failed to save file: ' + response.message);
             }
         } catch (error) {
-            console.error('Error saving file:', error);
+
             alert('Error saving file');
         } finally {
             setSaving(false);

@@ -216,7 +216,6 @@ export function DownloadManager() {
     const overallProgress = getOverallProgress();
     const shouldShowButton = hasActiveDownloads || hasHistory;
 
-    // Notify others (like ToastProvider) about visibility / expansion changes
     useEffect(() => {
         if (shouldShowButton) {
             window.dispatchEvent(new CustomEvent('downloadManagerVisibility', { detail: { visible: true, expanded: isExpanded } }));

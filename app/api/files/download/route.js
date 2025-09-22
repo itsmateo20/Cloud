@@ -83,10 +83,9 @@ export async function GET(req) {
                     displayName = fileRecord.name;
                 }
             } catch (dbError) {
-                console.error('Could not fetch file record:', dbError);
+
             }
 
-            // Handle Range requests for chunked downloads
             const rangeHeader = req.headers.get('range');
             let start = 0;
             let end = fileSize - 1;
@@ -98,7 +97,6 @@ export async function GET(req) {
                 end = ranges[1] ? parseInt(ranges[1], 10) : fileSize - 1;
                 isPartialContent = true;
 
-                // Validate range
                 if (start < 0 || end >= fileSize || start > end) {
                     return new Response('Range Not Satisfiable', {
                         status: 416,
@@ -132,11 +130,9 @@ export async function GET(req) {
                 }
             });
 
-            // Determine MIME type and content disposition
             const mimeType = getMimeType(displayName);
             const forceDownload = shouldForceDownload(displayName);
 
-            // Use inline for viewable files, attachment for others
             const disposition = forceDownload ? 'attachment' : 'inline';
 
             const headers = {
@@ -159,7 +155,6 @@ export async function GET(req) {
             });
 
         } catch (fileError) {
-            console.error("File download error:", fileError);
 
             if (fileError.code === 'ENOENT') {
                 return NextResponse.json({
@@ -178,7 +173,7 @@ export async function GET(req) {
         }
 
     } catch (error) {
-        console.error('Download route error:', error);
+
         return NextResponse.json({
             success: false,
             code: 'internal_error',

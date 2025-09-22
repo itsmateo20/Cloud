@@ -48,7 +48,7 @@ export async function GET(req) {
         const zipFileName = `${folderName}.zip`;
 
         const archive = archiver('zip', {
-            zlib: { level: 9 } // Maximum compression
+            zlib: { level: 9 }
         });
 
         const headers = new Headers({
@@ -86,7 +86,7 @@ export async function GET(req) {
         return new Response(stream, { headers });
 
     } catch (error) {
-        console.error("Folder download error:", error);
+
         return NextResponse.json({
             success: false,
             code: "download_failed",
@@ -116,7 +116,7 @@ async function addFolderToArchive(archive, folderPath, relativePath) {
             }
         }
     } catch (error) {
-        console.error("Error adding folder to archive:", error);
+
         throw error;
     }
 }

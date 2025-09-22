@@ -1,5 +1,4 @@
 // utils/fileMetadata.server.js
-// Server-side file metadata utilities
 
 import fs from 'fs/promises';
 
@@ -14,17 +13,15 @@ export async function applyFileMetadata(filePath, metadata) {
     }
 
     try {
-        // Apply modification time if available
         if (metadata.lastModified) {
             const modTime = new Date(metadata.lastModified);
-            // Set both access time and modification time to the original modification time
             await fs.utimes(filePath, modTime, modTime);
             return true;
         }
 
         return false;
     } catch (error) {
-        console.warn('Failed to apply file metadata:', error);
+
         return false;
     }
 }
@@ -47,11 +44,9 @@ export async function preserveFileMetadata(filePath, metadata) {
     };
 
     try {
-        // Preserve modification time
         if (metadata.lastModified) {
             try {
                 const modTime = new Date(metadata.lastModified);
-                // Ensure the date is valid
                 if (!isNaN(modTime.getTime())) {
                     await fs.utimes(filePath, modTime, modTime);
                     results.operations.push('modification_time');
@@ -61,11 +56,6 @@ export async function preserveFileMetadata(filePath, metadata) {
             }
         }
 
-        // Future: Add support for extended attributes, EXIF data, etc.
-        // This could include:
-        // - Setting extended file attributes (on supported systems)
-        // - Preserving EXIF data for images
-        // - Maintaining creation time (where supported)
 
         results.success = results.operations.length > 0;
         return results;

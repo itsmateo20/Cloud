@@ -28,17 +28,15 @@ export async function POST(req) {
 
         if (!files || files.length === 0) return NextResponse.json({ success: false, code: "no_files" }, { status: 400 });
 
-        // Parse metadata if provided
         let metadata = [];
         if (metadataString) {
             try {
                 metadata = JSON.parse(metadataString);
             } catch (error) {
-                console.warn('Failed to parse metadata:', error);
+
             }
         }
 
-        // Ensure user upload directory exists first
         const pathResult = await ensureUserUploadPath(id);
         if (!pathResult.success) {
             return NextResponse.json({
@@ -80,14 +78,13 @@ export async function POST(req) {
             const buffer = Buffer.from(arrayBuffer);
             await fs.writeFile(finalPath, buffer);
 
-            // Apply metadata if available for this file
             const fileMetadata = metadata[i];
             if (fileMetadata) {
                 try {
                     const metadataResult = await preserveFileMetadata(finalPath, fileMetadata);
-                    console.log(`Metadata preservation for ${fileName}:`, metadataResult);
+
                 } catch (error) {
-                    console.warn(`Failed to preserve metadata for ${fileName}:`, error);
+
                 }
             }
 

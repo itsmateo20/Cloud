@@ -1,4 +1,5 @@
 // components/app/FileList.js
+"use client";
 
 import { useRef, useState, useEffect, forwardRef, useImperativeHandle, useCallback } from "react";
 import { api } from "@/utils/api";
@@ -8,7 +9,6 @@ import styles from "./FileList.module.css";
 import SoftLoading from "@/components/SoftLoading";
 import React from 'react';
 
-// Lightweight in-memory cache so previously loaded thumbnails don't show loader again
 const ThumbnailWithLoader = ({ src, alt, cacheRef }) => {
     const [loaded, setLoaded] = useState(() => cacheRef?.current?.has(src));
 
@@ -192,7 +192,6 @@ const isVideo = (filename) => {
 const getPreviewUrl = (file, currentPath) => {
     if (isImage(file.name)) {
         const fullPath = currentPath === '/' ? `/${file.name}` : `${currentPath}/${file.name}`;
-        // Attempt to use modified timestamp for cache busting
         const mod = file.modified || file.modifiedAt || file.updatedAt || file.createdAt || '';
         const v = mod ? new Date(mod).getTime() : '';
         return `/api/files/thumbnail?path=${encodeURIComponent(fullPath)}${v ? `&v=${v}` : ''}`;
@@ -223,7 +222,6 @@ const FileList = forwardRef(({
     mobile = false,
 }, ref) => {
     const toast = (() => { try { return useToast(); } catch { return null; } })();
-    // Holds successfully loaded thumbnail URLs for session-level memory cache
     const thumbnailCacheRef = useRef(new Set());
     const [folders, setFolders] = useState([]);
     const [files, setFiles] = useState([]);
@@ -244,7 +242,6 @@ const FileList = forwardRef(({
         files: []
     });
 
-    // Column width state for details view
     const [columnWidths, setColumnWidths] = useState({
         name: 40,
         dateModified: 25,
@@ -263,7 +260,6 @@ const FileList = forwardRef(({
     const [qrModal, setQrModal] = useState({ visible: false, type: '', qrCode: '', items: [] });
     const renameInputRef = useRef(null);
 
-    // Column resize functions
     const handleResizeStart = (e, column) => {
         e.preventDefault();
         setResizing({
@@ -295,7 +291,6 @@ const FileList = forwardRef(({
         });
     }, []);
 
-    // Add event listeners for column resizing
     useEffect(() => {
         if (resizing.isResizing) {
             document.addEventListener('mousemove', handleResizeMove);
@@ -307,7 +302,6 @@ const FileList = forwardRef(({
         }
     }, [resizing.isResizing, handleResizeMove, handleResizeEnd]);
 
-    // Rename functions
     const handleRenameInput = (e) => {
         setRenaming(prev => ({ ...prev, value: e.target.value }));
     };
@@ -353,7 +347,6 @@ const FileList = forwardRef(({
                     toast?.addError('Failed to rename');
                 }
             } else {
-                // Multi-rename logic
                 const baseName = newName;
                 for (let i = 0; i < items.length; i++) {
                     const item = items[i];
@@ -383,7 +376,7 @@ const FileList = forwardRef(({
                 toast?.addSuccess('Items renamed');
             }
         } catch (error) {
-            console.error('Error renaming:', error);
+
             toast?.addError('Error renaming');
         }
 
@@ -394,7 +387,6 @@ const FileList = forwardRef(({
         setRenaming({ active: false, items: [], value: "" });
     };
 
-    // QR Code functions
     const generateQRCode = async (type, items) => {
         try {
             const response = await api.post('/api/qr/generate', {
@@ -419,7 +411,7 @@ const FileList = forwardRef(({
                 toast?.addError('Failed to generate QR code');
             }
         } catch (error) {
-            console.error('Error generating QR code:', error);
+
             toast?.addError('Error generating QR code');
         }
     };
@@ -433,7 +425,7 @@ const FileList = forwardRef(({
             setSelectedItems(new Set());
             setLastSelectedItem(null);
         } catch (error) {
-            console.error('Error loading contents:', error);
+
             setFolders([]);
             setFiles([]);
         } finally {
@@ -471,7 +463,7 @@ const FileList = forwardRef(({
                 setSelectedItems(allPaths);
                 onSelectionChange?.(allItems);
             } catch (error) {
-                console.error('Error in selectAll:', error);
+
             }
         },
         startRename: (item) => {
@@ -500,7 +492,7 @@ const FileList = forwardRef(({
                                 }
                             }
                         } catch (error) {
-                            console.error('Error cleaning up orphaned favorites:', error);
+
                         }
                     }
                 });
@@ -597,7 +589,7 @@ const FileList = forwardRef(({
 
     const handleItemsAdd = (newItems) => {
         if (!newItems || !Array.isArray(newItems)) {
-            console.warn('handleItemsAdd called with invalid newItems:', newItems);
+
             loadContents();
             return;
         }
@@ -606,7 +598,6 @@ const FileList = forwardRef(({
             title={confirmState.title}
             message={confirmState.message}
             onCancel={() => {
-                // Special handling: if download choice modal canceled, treat as QR path
                 if (confirmState.action === 'context-download-mode') {
                     generateQRCode('download', confirmState.context);
                 }
@@ -664,18 +655,15 @@ const FileList = forwardRef(({
     }, [contextMenu.visible]);
 
     const handleItemClick = (item, event) => {
-        // On mobile, single click opens folders
         if (mobile && item.type === 'folder' && !event.ctrlKey && !event.metaKey && !event.shiftKey) {
             onFolderDoubleClick(item.path);
             return;
         }
 
-        // On mobile (both list and grid view), single click opens files in FileViewer
         if (mobile && item.type === 'file' && !event.ctrlKey && !event.metaKey && !event.shiftKey) {
             if (isViewableFile(item.name)) {
                 openFileViewer(item);
             } else {
-                // For non-viewable files, download them
                 downloadFile(item.path, item.name);
             }
             return;
@@ -767,7 +755,6 @@ const FileList = forwardRef(({
         }
     };
 
-    // Centralized confirmation modal state
     const [confirmState, setConfirmState] = useState({
         open: false,
         title: '',
@@ -813,7 +800,6 @@ const FileList = forwardRef(({
                     break;
                 }
                 case 'context-download-mode': {
-                    // user chose direct download inside modal
                     const items = context;
                     items.forEach(item => {
                         if (item.type === 'file') downloadFile(item.path, item.name);
@@ -888,7 +874,6 @@ const FileList = forwardRef(({
     const handleFileViewerAction = async (action, file) => {
         switch (action) {
             case 'rename':
-                // Trigger inline rename for the file in the viewer
                 setRenaming({ active: true, items: [file], value: file.name });
                 setFileViewer(prev => ({ ...prev, isOpen: false }));
                 break;
@@ -917,7 +902,7 @@ const FileList = forwardRef(({
                     ));
                     refreshContent();
                 } catch (error) {
-                    console.error('Error updating favorite status:', error);
+
                 }
                 break;
 
@@ -932,7 +917,6 @@ const FileList = forwardRef(({
     };
 
     const handleFileDoubleClick = (file) => {
-        // On desktop or if mobile double-click is somehow triggered, handle it
         if (isViewableFile(file.name)) {
             openFileViewer(file);
         } else {
@@ -1006,7 +990,7 @@ const FileList = forwardRef(({
 
                         refreshContent();
                     } catch (error) {
-                        console.error('Error updating favorite status:', error);
+
                         toast?.addError('Failed to update favorite');
                     }
                 } else {
@@ -1040,7 +1024,7 @@ const FileList = forwardRef(({
                                 ));
                             }
                         } catch (error) {
-                            console.error('Error adding to favorites:', error);
+
                         }
                     }
                 }
@@ -1090,15 +1074,12 @@ const FileList = forwardRef(({
                 case 'modified':
                     return new Date(b.modified || 0) - new Date(a.modified || 0);
                 case 'type':
-                    // For folders, always sort by name
                     if (a.type === 'folder' && b.type === 'folder') {
                         return a.name.localeCompare(b.name);
                     }
-                    // Folders come first
                     if (a.type === 'folder' && b.type !== 'folder') return -1;
                     if (a.type !== 'folder' && b.type === 'folder') return 1;
 
-                    // For files, sort by file extension first, then by name
                     const aExt = a.name.split('.').pop()?.toLowerCase() || '';
                     const bExt = b.name.split('.').pop()?.toLowerCase() || '';
 
@@ -1119,7 +1100,6 @@ const FileList = forwardRef(({
     if (loading) {
         return <SoftLoading />;
     }
-    // Safety filter: ensure internal .thumbnails cache never surfaces in UI even if backend missed it
     const filteredFolders = folders.filter(f => f.name !== '.thumbnails' && !f.path.endsWith('/.thumbnails'));
     const filteredFiles = files.filter(f => !f.path.includes('/.thumbnails/') && !f.name.startsWith('.thumbnails'));
     const sortedFolders = sortItems(filteredFolders, sortBy);

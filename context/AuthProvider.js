@@ -22,14 +22,11 @@ export const AuthProvider = ({ children, locked = true }) => {
         "/signup/google",
     ];
 
-    // Function to check if current path is a public route (including dynamic routes)
     const isPublicRoute = (currentPath) => {
-        // Check static routes
         if (staticPublicRoutes.includes(currentPath)) {
             return true;
         }
 
-        // Check dynamic QR routes
         if (currentPath.startsWith('/qr/') && currentPath.split('/').length === 3) {
             return true;
         }
@@ -37,14 +34,11 @@ export const AuthProvider = ({ children, locked = true }) => {
         return false;
     };
 
-    // Function to check if route should redirect authenticated users (exclude QR routes)
     const shouldRedirectAuthenticated = (currentPath) => {
-        // Don't redirect from QR routes even if authenticated
         if (currentPath.startsWith('/qr/') && currentPath.split('/').length === 3) {
             return false;
         }
 
-        // Redirect from other public routes if authenticated
         return staticPublicRoutes.includes(currentPath);
     };
 
@@ -53,13 +47,11 @@ export const AuthProvider = ({ children, locked = true }) => {
             try {
                 setLoading(true);
 
-
                 const routeRes = await api.raw('GET', pathname);
                 if (routeRes.status === 404) {
                     setLoading(false);
                     return;
                 }
-
 
                 const sessionRes = await api.post("/api/auth/session");
                 const isAuthenticated = sessionRes.success;
@@ -75,7 +67,6 @@ export const AuthProvider = ({ children, locked = true }) => {
                     setUser(null);
                 }
 
-
                 if (isPublicRoute(pathname)) {
                     return;
                 } else {
@@ -87,7 +78,7 @@ export const AuthProvider = ({ children, locked = true }) => {
                 }
 
             } catch (error) {
-                console.error("Auth check failed:", error);
+
             } finally {
                 setLoading(false);
             }
@@ -102,7 +93,6 @@ export const AuthProvider = ({ children, locked = true }) => {
             const data = await api.post("/api/auth/login", { email, password });
             if (!data.success) return { success: false, code: data.code };
             setUser(data.user);
-
 
             const urlParams = new URLSearchParams(window.location.search);
             const redirectTo = urlParams.get('redirect');

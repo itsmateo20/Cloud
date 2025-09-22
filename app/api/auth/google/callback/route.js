@@ -22,12 +22,12 @@ export async function GET(req) {
     const state = searchParams.get("state");
 
     if (error) {
-        console.error('Google OAuth error:', error);
+
         return NextResponse.redirect(`${await getSiteUrl()}/login?error=oauth_error`);
     }
 
     if (!code) {
-        console.error('No authorization code received from Google');
+
         return NextResponse.redirect(`${await getSiteUrl()}/login?error=no_code`);
     }
 
@@ -36,12 +36,11 @@ export async function GET(req) {
     const storedState = cookieStore.get("oauth_state")?.value;
 
     if (!state || state !== storedState) {
-        console.error('State parameter mismatch or missing');
+
         return NextResponse.redirect(`${await getSiteUrl()}/login?error=invalid_state`);
     }
 
     const siteUrl = await getSiteUrl();
-    console.log('Using site URL for OAuth callback:', siteUrl);
 
     try {
         const oauth2Client = new google.auth.OAuth2(
@@ -92,12 +91,7 @@ export async function GET(req) {
 
         return new NextResponse(JSON.stringify({ success: true, code: "authentication_success" }), { status: 301, headers: { Location: "/" } });
     } catch (error) {
-        console.error('Google OAuth callback error:', error);
-        console.error('Error details:', {
-            message: error.message,
-            stack: error.stack,
-            siteUrl: siteUrl
-        });
+
         return NextResponse.redirect(`${await getSiteUrl()}/login?error=oauth_callback_failed`);
     }
 }

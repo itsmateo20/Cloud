@@ -32,7 +32,6 @@ export function ToastProvider({ children, max = 5, duration = 4000 }) {
         return () => timers.forEach(clearTimeout);
     }, [toasts, duration, remove]);
 
-    // Listen for download manager visibility to offset toasts so they don't overlap the button
     useEffect(() => {
         const handler = (e) => {
             if (e?.detail) setDmState(e.detail);

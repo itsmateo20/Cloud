@@ -1,4 +1,6 @@
 // components/app/NewItemModal.js
+"use client";
+
 import React, { useState, useEffect, useRef } from 'react';
 import styles from './NewItemModal.module.css';
 import { X, FolderPlus, FileIcon, FileText, AlertCircle } from 'lucide-react';
@@ -45,10 +47,8 @@ export function NewItemModal({ isOpen, onClose, onCreate, existingNames = [], in
         }
     }, [isOpen, initialType, name, visible]);
 
-    // Auto append .txt for text type if user did not specify extension
     useEffect(() => {
         if (lastTypeRef.current !== type && type === 'text') {
-            // If previous type wasn't text and current name has no dot, suggest base name
             if (name && !name.includes('.')) {
                 setName(prev => prev + '.txt');
             }
@@ -60,9 +60,7 @@ export function NewItemModal({ isOpen, onClose, onCreate, existingNames = [], in
         const trimmed = raw.trim();
         if (!trimmed) return 'Name required';
         if (ILLEGAL.test(trimmed)) return 'Name contains illegal characters ( \\ / : * ? " < > | )';
-        // Disallow path segments
         if (trimmed.includes('..')) return 'Name cannot contain ..';
-        // Duplicate (case-insensitive)
         if (existingNames.map(n => n.toLowerCase()).includes(trimmed.toLowerCase())) return 'An item with that name already exists';
         if (trimmed.length > 255) return 'Name too long';
         return '';
@@ -94,9 +92,7 @@ export function NewItemModal({ isOpen, onClose, onCreate, existingNames = [], in
     const pristineBaseRef = useRef('');
     const [userModified, setUserModified] = useState(false);
 
-    // Track user manual edits
     useEffect(() => {
-        // When modal opens reset pristine tracking
         if (isOpen && !visible) {
             pristineBaseRef.current = '';
             setUserModified(false);
@@ -110,7 +106,6 @@ export function NewItemModal({ isOpen, onClose, onCreate, existingNames = [], in
     };
 
     const setTypeAndMaybeAdjustName = (next) => {
-        // If switching into text type: only append .txt if user hasn't already provided an extension
         if (next === 'text') {
             setName(prev => {
                 if (!prev) {
@@ -119,19 +114,18 @@ export function NewItemModal({ isOpen, onClose, onCreate, existingNames = [], in
                 }
                 const hasDot = /\.[^.]+$/.test(prev);
                 if (!hasDot) {
-                    pristineBaseRef.current = prev; // remember base for potential reversal
+                    pristineBaseRef.current = prev;
                     return prev + '.txt';
                 }
                 return prev;
             });
         } else if (type === 'text' && next !== 'text') {
-            // Leaving text: only strip .txt if it matches the pristine base we recorded (not if user customized)
             setName(prev => {
                 if (/\.txt$/i.test(prev)) {
                     const base = prev.replace(/\.txt$/i, '');
-                    if (base === pristineBaseRef.current) return base; // revert
+                    if (base === pristineBaseRef.current) return base;
                 }
-                return prev; // keep user custom naming (like my.note.txt)
+                return prev;
             });
         }
         setType(next);

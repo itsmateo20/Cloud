@@ -1,7 +1,5 @@
 // components/Loading.js
 
-import style from "@/public/styles/loading.module.css";
-
 import { Loader2 } from "lucide-react";
 
 export default function Loading() {

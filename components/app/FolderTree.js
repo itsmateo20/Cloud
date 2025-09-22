@@ -1,4 +1,6 @@
 // components/app/FolderTree.js
+"use client";
+
 import { useEffect, useState } from "react";
 import styles from "./FolderTree.module.css";
 import { api } from "@/utils/api";
@@ -80,7 +82,7 @@ export default function FolderTree({
 
     useEffect(() => {
         loadFolderContents("");
-        checkTabVisibility(); // Load favorites visibility on mount
+        checkTabVisibility();
     }, []);
 
     const handleFolderStructureUpdate = (payload) => {

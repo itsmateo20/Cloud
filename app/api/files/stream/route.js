@@ -49,7 +49,7 @@ export async function GET(req) {
         return await streamFile(req, requestedPath);
 
     } catch (error) {
-        console.error("Stream error:", error);
+
         return NextResponse.json({
             success: false,
             code: "explorer_stream_failed",
@@ -98,7 +98,7 @@ async function streamFile(req, filePath, fileName = null) {
             '.pdf': 'application/pdf'
         }; const contentType = mimeTypes[ext] || 'application/octet-stream';
         const isVideo = contentType.startsWith('video/');
-        const isSmallVideo = isVideo && fileSize < 50 * 1024 * 1024; // 50MB threshold
+        const isSmallVideo = isVideo && fileSize < 50 * 1024 * 1024;
 
         if (range && !isSmallVideo) {
             const parts = range.replace(/bytes=/, "").split("-");
@@ -167,7 +167,6 @@ async function streamFile(req, filePath, fileName = null) {
         }
 
     } catch (fileError) {
-        console.error("File streaming error:", fileError);
 
         if (fileError.code === 'ENOENT') {
             return NextResponse.json({

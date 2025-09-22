@@ -1,6 +1,6 @@
 // app/api/qr/generate/route.js
 
-import { NextResponse } from 'next/server';
+import { NextResponse } from "next/server";
 import QRCode from 'qrcode';
 import crypto from 'crypto';
 import { prisma } from '@/lib/db';
@@ -26,12 +26,8 @@ export async function POST(request) {
                 message: 'Invalid type. Must be "download" or "upload"'
             }, { status: 400 });
         }
-
-        // Generate a unique token for this QR code
         const token = crypto.randomBytes(32).toString('hex');
-        const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour from now
-
-        // Save the QR token to database
+        const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
         if (type === 'download') {
             if (!items || items.length === 0) {
                 return NextResponse.json({
@@ -45,7 +41,7 @@ export async function POST(request) {
                     token,
                     type: 'download',
                     data: JSON.stringify({
-                        userId, // Add userId to the data
+                        userId,
                         items: items.map(item => ({
                             path: item.path,
                             name: item.name,
@@ -57,31 +53,25 @@ export async function POST(request) {
                 }
             });
         } else {
-            // Upload QR code
             await prisma.qrToken.create({
                 data: {
                     token,
                     type: 'upload',
                     data: JSON.stringify({
-                        userId, // Add userId to the data
+                        userId,
                         targetPath: currentPath
                     }),
                     expiresAt
                 }
             });
         }
-
-        // Generate QR code URL
         let siteUrl;
         try {
             siteUrl = await getSiteUrl();
         } catch (error) {
-            // Fallback for development or when headers are not available
             siteUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
         }
         const qrUrl = `${siteUrl}/qr/${token}`;
-
-        // Generate QR code image
         const qrCodeDataUrl = await QRCode.toDataURL(qrUrl, {
             width: 200,
             margin: 1,
@@ -99,7 +89,7 @@ export async function POST(request) {
         });
 
     } catch (error) {
-        console.error('Error generating QR code:', error);
+
         return NextResponse.json({
             success: false,
             message: 'Failed to generate QR code'

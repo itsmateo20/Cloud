@@ -11,7 +11,6 @@ export async function GET() {
 
         const { id: userId } = session.user;
 
-        // Get all files for the user to calculate total storage
         const files = await prisma.file.findMany({
             where: {
                 ownerId: userId
@@ -38,7 +37,7 @@ export async function GET() {
         });
 
     } catch (error) {
-        console.error('Error calculating storage info:', error);
+
         return NextResponse.json({
             success: false,
             code: "storage_calculation_failed",

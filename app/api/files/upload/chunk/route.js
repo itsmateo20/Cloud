@@ -30,7 +30,6 @@ export async function POST(req) {
             }, { status: 400 });
         }
 
-        // Get upload session
         const uploadSession = uploadSessionManager.getSession(uploadToken);
         if (!uploadSession) {
             return NextResponse.json({
@@ -40,7 +39,6 @@ export async function POST(req) {
             }, { status: 404 });
         }
 
-        // Verify user owns this session
         if (uploadSession.userId !== session.user.id) {
             return NextResponse.json({
                 success: false,
@@ -49,7 +47,6 @@ export async function POST(req) {
             }, { status: 403 });
         }
 
-        // Check if session is expired
         if (new Date() > uploadSession.expiresAt) {
             uploadSessionManager.deleteSession(uploadToken);
             return NextResponse.json({
@@ -59,7 +56,6 @@ export async function POST(req) {
             }, { status: 410 });
         }
 
-        // Validate chunk number
         if (chunkNumber < 0 || chunkNumber >= uploadSession.chunkCount) {
             return NextResponse.json({
                 success: false,
@@ -68,7 +64,6 @@ export async function POST(req) {
             }, { status: 400 });
         }
 
-        // Check if chunk already uploaded
         if (uploadSession.uploadedChunks.has(chunkNumber)) {
             return NextResponse.json({
                 success: true,
@@ -77,7 +72,6 @@ export async function POST(req) {
             });
         }
 
-        // Write chunk to temporary file
         const chunkPath = path.join(uploadSession.tempDir, `chunk_${chunkNumber}`);
 
         try {
@@ -86,7 +80,6 @@ export async function POST(req) {
 
             await fs.writeFile(chunkPath, buffer);
 
-            // Mark chunk as uploaded
             uploadSession.uploadedChunks.add(chunkNumber);
 
             return NextResponse.json({
@@ -98,7 +91,7 @@ export async function POST(req) {
             });
 
         } catch (error) {
-            console.error('Chunk write error:', error);
+
             return NextResponse.json({
                 success: false,
                 code: 'chunk_write_error',
@@ -107,7 +100,7 @@ export async function POST(req) {
         }
 
     } catch (error) {
-        console.error('Chunk upload error:', error);
+
         return NextResponse.json({
             success: false,
             code: 'internal_error',
