@@ -1,5 +1,55 @@
 // server.js
 
+// --- Bun/Edge compatibility shims (must run before requiring "next") ---
+(() => {
+    try {
+        // Prefer global TransformStream if present; fallback to Node's stream/web
+        const TS = typeof TransformStream !== 'undefined'
+            ? TransformStream
+            : (require('stream/web').TransformStream);
+
+        if (typeof global.TextEncoderStream === 'undefined' && TS) {
+            const _TextEncoder = typeof TextEncoder !== 'undefined' ? TextEncoder : require('util').TextEncoder;
+            global.TextEncoderStream = class TextEncoderStream {
+                constructor() {
+                    const encoder = new _TextEncoder();
+                    const transformer = new TS({
+                        transform(chunk, controller) {
+                            const bytes = typeof chunk === 'string' ? encoder.encode(chunk) : encoder.encode(String(chunk));
+                            controller.enqueue(bytes);
+                        }
+                    });
+                    this.readable = transformer.readable;
+                    this.writable = transformer.writable;
+                }
+            };
+        }
+
+        if (typeof global.TextDecoderStream === 'undefined' && TS) {
+            const _TextDecoder = typeof TextDecoder !== 'undefined' ? TextDecoder : require('util').TextDecoder;
+            global.TextDecoderStream = class TextDecoderStream {
+                constructor(label = 'utf-8', options) {
+                    const decoder = new _TextDecoder(label, options);
+                    const transformer = new TS({
+                        transform(chunk, controller) {
+                            // Accept Uint8Array or ArrayBuffer
+                            const view = chunk instanceof Uint8Array ? chunk : new Uint8Array(chunk);
+                            controller.enqueue(decoder.decode(view, { stream: true }));
+                        },
+                        flush(controller) {
+                            // Emit any trailing bytes
+                            const tail = decoder.decode();
+                            if (tail) controller.enqueue(tail);
+                        }
+                    });
+                    this.readable = transformer.readable;
+                    this.writable = transformer.writable;
+                }
+            };
+        }
+    } catch { /* best-effort polyfill; ignore if unavailable */ }
+})();
+
 const { createServer } = require("http");
 const { Server } = require("socket.io");
 const next = require("next");
