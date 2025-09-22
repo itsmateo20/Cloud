@@ -89,7 +89,7 @@ async function main() {
     const paths = await ensurePaths();
     console.log(`> Upload base: ${paths.upload}`);
     console.log(`> Temp base:   ${paths.temp}`);
-        console.log(`> DATABASE_URL: ${process.env.DATABASE_URL || '(not set)'}`);
+    console.log(`> DATABASE_URL: ${process.env.DATABASE_URL || '(not set)'}`);
 
     console.log('> Applying Prisma migrations...');
     await prismaMigrate();
