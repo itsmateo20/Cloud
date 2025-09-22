@@ -1,5 +1,7 @@
 // components/app/AppLayout.js
 
+"use client";
+
 import { Navigation } from "./navigation/Navigation";
 import Loading from "./Loading";
 

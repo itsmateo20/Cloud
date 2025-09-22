@@ -1,4 +1,7 @@
 // utils/useIsMobile.js
+"use client";
+
+import { useState, useEffect } from "react";
 
 export function useIsMobile() {
   const [isMobile, setIsMobile] = useState(null);
