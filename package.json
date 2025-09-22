@@ -25,6 +25,7 @@
         "dev2": "dotenvx run -- next dev --turbopack",
         "build": "dotenvx run -- next build",
         "start": "dotenvx run -- bun server.js",
+        "setup": "dotenvx run -- node setup.js",
         "lint": "next lint"
     },
     "dependencies": {
