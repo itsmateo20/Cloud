@@ -24,8 +24,39 @@ async function run(cmd, args, opts = {}) {
 }
 
 async function ensurePaths() {
-    // Use dynamic import to reuse project helpers without transpile
-    const { ensureUploadBasePath, ensureTempBasePath } = await import(path.join(process.cwd(), 'lib', 'paths.js'));
+    const fs = require('fs/promises');
+
+    const getUploadFolder = () => process.env.UPLOAD_FOLDER || 'uploads';
+    const getUploadBasePath = () => path.join(process.cwd(), getUploadFolder());
+
+    const ensureUploadBasePath = async () => {
+        const basePath = getUploadBasePath();
+        try {
+            await fs.mkdir(basePath, { recursive: true });
+            return { success: true, path: basePath };
+        } catch (error) {
+            return { success: false, path: basePath, error: error.message };
+        }
+    };
+
+    const getTempBasePath = () => {
+        const cfg = process.env.TEMP_FOLDER;
+        if (cfg && cfg.trim()) {
+            return path.isAbsolute(cfg) ? cfg : path.join(process.cwd(), cfg);
+        }
+        return path.join(getUploadBasePath(), '.temp');
+    };
+
+    const ensureTempBasePath = async () => {
+        const basePath = getTempBasePath();
+        try {
+            await fs.mkdir(basePath, { recursive: true });
+            return { success: true, path: basePath };
+        } catch (error) {
+            return { success: false, path: basePath, error: error.message };
+        }
+    };
+
     const upload = await ensureUploadBasePath();
     if (!upload.success) throw new Error(`Upload base path error: ${upload.error}`);
     const temp = await ensureTempBasePath();
@@ -41,9 +72,14 @@ async function prismaMigrate() {
 }
 
 async function pingDB() {
-    const { prisma } = await import(path.join(process.cwd(), 'lib', 'db.js'));
-    // A trivial query to ensure DB is reachable
-    await prisma.$queryRaw`SELECT 1`;
+    const { PrismaClient } = require('@prisma/client');
+    const prisma = new PrismaClient();
+    try {
+        await prisma.$connect();
+        await prisma.$queryRaw`SELECT 1`;
+    } finally {
+        await prisma.$disconnect();
+    }
 }
 
 async function main() {
