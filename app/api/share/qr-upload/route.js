@@ -3,8 +3,8 @@
 import { NextResponse } from 'next/server';
 import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
-import { db } from '@/lib/db';
-import { getUploadBasePath, ensureUploadBasePath } from '@/lib/paths';
+import { prisma } from '@/lib/db';
+import { ensureUploadBasePath } from '@/lib/paths';
 
 export async function POST(request) {
     try {
@@ -21,7 +21,7 @@ export async function POST(request) {
         }
 
         // Verify token
-        const qrToken = await db.qrToken.findUnique({
+        const qrToken = await prisma.qrToken.findUnique({
             where: { token }
         });
 
@@ -33,7 +33,7 @@ export async function POST(request) {
         }
 
         if (new Date() > qrToken.expiresAt) {
-            await db.qrToken.delete({ where: { id: qrToken.id } });
+            await prisma.qrToken.delete({ where: { id: qrToken.id } });
             return NextResponse.json({
                 success: false,
                 message: 'Token expired'
@@ -108,7 +108,7 @@ export async function POST(request) {
 
             // Create file record in database (for QR uploads, we don't require a user)
             try {
-                await db.file.create({
+                await prisma.file.create({
                     data: {
                         name: fileName,
                         path: relativePath,
