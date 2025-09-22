@@ -12,3 +12,17 @@
     flex-direction: column;
     font-weight: bolder;
 }
+
+.button {
+    margin-top: 12px;
+    padding: 8px 14px;
+    border: none;
+    border-radius: 6px;
+    background: #1f6feb;
+    color: white;
+    cursor: pointer;
+}
+
+.button:hover {
+    background: #1a61d0;
+}

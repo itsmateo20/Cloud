@@ -1,7 +1,6 @@
 // app/not-found.js
 
 import error from "@/public/styles/error.module.css";
-import "@/public/styles/globals.css";
 
 import Link from "next/link"
 
