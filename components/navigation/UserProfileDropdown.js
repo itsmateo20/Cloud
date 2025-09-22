@@ -4,14 +4,15 @@
 
 import { useAuth } from "@/context/AuthProvider";
 
-import { useEffect, Suspense, useState, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import gravatar from "gravatar";
 
 import SoftLoading from "@/components/SoftLoading";
 
 import Image from "next/image";
 
-import nav from "@/components/navigation/UserProfileDropdown.module.css";
+import nav from "./UserProfileDropdown.module.css";
+
 import { LogOut, Settings } from "lucide-react";
 
 export default function UserProfileDropdown({ user, mobile }) {

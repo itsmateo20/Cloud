@@ -14,3 +14,13 @@ export async function POST() {
         return NextResponse.json({ success: false, code: "database_failed", error });
     }
 }
+
+export async function GET() {
+    try {
+        const response = await clear()
+        if (!response.success) return NextResponse.json({ success: false, code: "database_failed" })
+        return NextResponse.json({ success: true, code: "database_cleared" })
+    } catch (error) {
+        return NextResponse.json({ success: false, code: "database_failed", error });
+    }
+}

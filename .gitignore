@@ -5,3 +5,4 @@
 /prisma/migrations/*
 /uploads
 *.pdn
+/app/api/database/*

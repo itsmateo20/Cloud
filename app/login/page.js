@@ -16,7 +16,7 @@ import SoftLoading from "@/components/SoftLoading";
 import { getError } from "@/public/error/errors";
 
 export default function Page() {
-    const { loading, softLoading, user, login, authWithGoogle, clearDatabase } = useAuth();
+    const { loading, softLoading, user, login, authWithGoogle } = useAuth();
 
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
@@ -119,8 +119,6 @@ export default function Page() {
 
             <button onClick={handleLogin} type="button" className={style.loginButton} disabled={softLoading}>{softLoading ? <SoftLoading /> : "Log In"}</button>
             <Link href="/signup" className={style.signupLink}>Don't have an account yet? Sign Up</Link>
-
-            <button type="button" onClick={() => clearDatabase()}><span>clear</span></button>
 
             {error && <p className="error">{error}</p>}
         </Layout>

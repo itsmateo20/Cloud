@@ -21,10 +21,9 @@
     },
     "homepage": "https://github.com/itsmateo20/Cloud#readme",
     "scripts": {
-        "dev": "dotenvx run -- node server.js",
-        "dev2": "dotenvx run -- next dev --turbopack",
+        "dev": "dotenvx run -- bun server.js",
         "build": "dotenvx run -- next build",
-        "start": "dotenvx run -- bun server.js",
+        "start": "dotenvx run -- cross-env NODE_ENV=production bun server.js",
         "setup": "dotenvx run -- node setup.js",
         "lint": "next lint"
     },
@@ -58,7 +57,8 @@
         "url": "^0.11.4"
     },
     "devDependencies": {
-        "@types/bun": "latest"
+        "@types/bun": "latest",
+        "cross-env": "^10.0.0"
     },
     "peerDependencies": {
         "typescript": "^5.6.3"

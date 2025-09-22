@@ -1,9 +1,7 @@
 // components/Navigation.js
 "use client";
 
-// import style from "@/components/navigation/Navigation.module.css";
-// Temporary fix for build issue
-const style = {};
+import style from "./Navigation.module.css";
 
 import { Suspense, useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";

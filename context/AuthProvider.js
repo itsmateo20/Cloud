@@ -187,17 +187,6 @@ export const AuthProvider = ({ children, locked = true }) => {
         window.location.href = `/api/auth/google/auth?type=${type}`;
     };
 
-    const clearDatabase = async () => {
-        try {
-            const res = await api.post("/api/database/clear");
-            if (!res.success) return { success: false, code: res.code, error: res.error };
-            router.refresh();
-            return { success: true };
-        } catch (error) {
-            return { success: false, code: "clear_database_failed", error };
-        }
-    };
-
     return (
         <AuthContext.Provider
             value={{
@@ -209,8 +198,7 @@ export const AuthProvider = ({ children, locked = true }) => {
                 signupwiththirdparty,
                 signout,
                 linkAccount,
-                authWithGoogle,
-                clearDatabase,
+                authWithGoogle
             }}
         >
             {children}
