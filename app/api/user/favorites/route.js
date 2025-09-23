@@ -285,7 +285,7 @@ export async function POST(req) {
             }, { status: 200 });
         }
 
-    return NextResponse.json({ success: true }, { status: 200 });
+        return NextResponse.json({ success: true }, { status: 200 });
     }
     else {
         const { fileId, folderId, action } = body;
@@ -318,6 +318,6 @@ export async function POST(req) {
             }
         }
 
-    return NextResponse.json({ success: true }, { status: 200 });
+        return NextResponse.json({ success: true }, { status: 200 });
     }
 }

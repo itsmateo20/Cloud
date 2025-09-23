@@ -37,8 +37,8 @@ export async function GET(req) {
             if (parsed.id !== userId || parsed.email !== email) return NextResponse.json({ success: false, code: "explorer_unauthorized_folder_access" }, { status: 401 });
         } else await fs.writeFile(infoPath, JSON.stringify(infoData, null, 2), "utf8");
 
-    const pathExists = await fs.stat(targetPath).then(() => true).catch(() => false);
-    if (!pathExists) return NextResponse.json({ folders: [], files: [] }, { status: 200 });
+        const pathExists = await fs.stat(targetPath).then(() => true).catch(() => false);
+        if (!pathExists) return NextResponse.json({ folders: [], files: [] }, { status: 200 });
 
         const items = (await fs.readdir(targetPath))
             .filter(name => name !== '.thumbnails');

@@ -253,7 +253,7 @@ export class Uploader {
     async abortChunkedUpload(uploadToken) {
         try {
             await api.post('/api/files/upload/abort', { uploadToken });
-        } catch (error) {}
+        } catch (error) { }
     }
 
     /**

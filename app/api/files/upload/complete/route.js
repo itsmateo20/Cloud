@@ -102,7 +102,7 @@ export async function POST(req) {
                 try {
                     const modDate = new Date(uploadSession.lastModified);
                     await fs.utimes(finalPath, modDate, modDate);
-                } catch (utimeError) {}
+                } catch (utimeError) { }
             }
 
             await fs.rm(uploadSession.tempDir, { recursive: true, force: true });
