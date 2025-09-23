@@ -54,9 +54,7 @@ export class Uploader {
 
         const result = await api.upload('/api/files', formData, { signal });
 
-        if (onProgress) {
-            onProgress(file.size, file.size, 100);
-        }
+        if (onProgress) onProgress(file.size, file.size, 100);
 
         if (!result.success) {
             throw new Error(result.message || 'Upload failed');
@@ -171,9 +169,7 @@ export class Uploader {
         const activeUploads = new Set();
 
         return new Promise((resolve, reject) => {
-            signal.addEventListener('abort', () => {
-                reject(new Error('Upload cancelled'));
-            });
+            signal.addEventListener('abort', () => { reject(new Error('Upload cancelled')); });
 
             const uploadNextChunk = async () => {
                 if (signal.aborted) {
@@ -182,9 +178,7 @@ export class Uploader {
                 }
 
                 if (chunkIndex >= chunks.length) {
-                    if (activeUploads.size === 0) {
-                        resolve();
-                    }
+                    if (activeUploads.size === 0) resolve();
                     return;
                 }
 
@@ -197,18 +191,14 @@ export class Uploader {
                     uploadState.uploadedChunks.add(chunk.number);
                     uploadState.uploadedBytes += chunk.size;
 
-                    if (onProgress) {
-                        onProgress(uploadState.uploadedBytes, uploadState.totalSize);
-                    }
+                    if (onProgress) onProgress(uploadState.uploadedBytes, uploadState.totalSize);
 
                 } catch (error) {
                     if (chunk.retries < this.RETRY_ATTEMPTS) {
                         chunk.retries++;
                         chunkIndex--;
 
-                        await new Promise(resolve =>
-                            setTimeout(resolve, this.RETRY_DELAY * chunk.retries)
-                        );
+                        await new Promise(resolve => setTimeout(resolve, this.RETRY_DELAY * chunk.retries));
                     } else {
                         reject(error);
                         return;
@@ -219,9 +209,7 @@ export class Uploader {
 
                 uploadNextChunk();
 
-                if (activeUploads.size === 0 && chunkIndex >= chunks.length) {
-                    resolve();
-                }
+                if (activeUploads.size === 0 && chunkIndex >= chunks.length) resolve();
             };
 
             for (let i = 0; i < this.MAX_CONCURRENT_CHUNKS; i++) {
@@ -264,12 +252,8 @@ export class Uploader {
      */
     async abortChunkedUpload(uploadToken) {
         try {
-            await api.post('/api/files/upload/abort', {
-                uploadToken
-            });
-        } catch (error) {
-
-        }
+            await api.post('/api/files/upload/abort', { uploadToken });
+        } catch (error) {}
     }
 
     /**
@@ -370,9 +354,7 @@ export class Uploader {
      */
     getUploadProgress(uploadId) {
         const uploadState = this.uploadQueue.get(uploadId);
-        if (!uploadState) {
-            return null;
-        }
+        if (!uploadState) return null;
 
         return {
             uploadedBytes: uploadState.uploadedBytes,

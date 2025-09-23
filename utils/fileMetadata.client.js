@@ -42,9 +42,7 @@ export function appendMetadataToFormData(formData, files) {
  * @returns {Promise<Object>} Promise resolving to EXIF data
  */
 export async function extractEXIFData(file) {
-    if (!file.type.startsWith('image/')) {
-        return null;
-    }
+    if (!file.type.startsWith('image/')) return null;
 
     try {
         return {
@@ -52,8 +50,5 @@ export async function extractEXIFData(file) {
             size: file.size,
             lastModified: file.lastModified
         };
-    } catch (error) {
-
-        return null;
-    }
+    } catch (error) { return null; }
 }

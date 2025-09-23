@@ -8,32 +8,12 @@ export async function POST() {
     try {
         const session = await getSession();
 
-        if (!session) {
-            return NextResponse.json({
-                success: false,
-                code: "unauthorized"
-            }, { status: 401 });
-        }
+        if (!session) return NextResponse.json({ success: false, code: "unauthorized" }, { status: 401 });
         const result = await initializeUserFolder(session.user.id);
 
-        if (result.success) {
-            return NextResponse.json({
-                success: true,
-                message: "Folder initialized successfully",
-                folderToken: result.folderToken
-            });
-        } else {
-            return NextResponse.json({
-                success: false,
-                message: "Failed to initialize folder",
-                error: result.error
-            }, { status: 500 });
-        }
+        if (result.success) return NextResponse.json({ success: true, message: "Folder initialized successfully", folderToken: result.folderToken });
+        else return NextResponse.json({ success: false, message: "Failed to initialize folder", error: result.error }, { status: 500 });
     } catch (error) {
-
-        return NextResponse.json({
-            success: false,
-            message: "Internal server error"
-        }, { status: 500 });
+        return NextResponse.json({ success: false, message: "Internal server error" }, { status: 500 });
     }
 }

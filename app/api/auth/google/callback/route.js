@@ -21,24 +21,15 @@ export async function GET(req) {
     const error = searchParams.get("error");
     const state = searchParams.get("state");
 
-    if (error) {
+    if (error) return NextResponse.redirect(`${await getSiteUrl()}/login?error=oauth_error`);
 
-        return NextResponse.redirect(`${await getSiteUrl()}/login?error=oauth_error`);
-    }
-
-    if (!code) {
-
-        return NextResponse.redirect(`${await getSiteUrl()}/login?error=no_code`);
-    }
+    if (!code) return NextResponse.redirect(`${await getSiteUrl()}/login?error=no_code`);
 
     const cookieStore = await cookies();
     const type = cookieStore.get("auth_type")?.value || "login";
     const storedState = cookieStore.get("oauth_state")?.value;
 
-    if (!state || state !== storedState) {
-
-        return NextResponse.redirect(`${await getSiteUrl()}/login?error=invalid_state`);
-    }
+    if (!state || state !== storedState) return NextResponse.redirect(`${await getSiteUrl()}/login?error=invalid_state`);
 
     const siteUrl = await getSiteUrl();
 
@@ -91,7 +82,6 @@ export async function GET(req) {
 
         return new NextResponse(JSON.stringify({ success: true, code: "authentication_success" }), { status: 301, headers: { Location: "/" } });
     } catch (error) {
-
         return NextResponse.redirect(`${await getSiteUrl()}/login?error=oauth_callback_failed`);
     }
 }

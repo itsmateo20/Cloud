@@ -64,13 +64,11 @@ export async function POST(req) {
             }, { status: 400 });
         }
 
-        if (uploadSession.uploadedChunks.has(chunkNumber)) {
-            return NextResponse.json({
-                success: true,
-                message: 'Chunk already uploaded',
-                chunkNumber
-            });
-        }
+        if (uploadSession.uploadedChunks.has(chunkNumber)) return NextResponse.json({
+            success: true,
+            message: 'Chunk already uploaded',
+            chunkNumber
+        });
 
         const chunkPath = path.join(uploadSession.tempDir, `chunk_${chunkNumber}`);
 

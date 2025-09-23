@@ -10,19 +10,11 @@ import { getUserUploadPath, getUserFileUrl } from "@/lib/paths";
 
 export async function GET(req) {
     const session = await getSession();
-    if (!session) {
-        return NextResponse.json({ success: false, code: "unauthorized" }, { status: 401 });
-    }
+    if (!session) return NextResponse.json({ success: false, code: "unauthorized" }, { status: 401 });
 
     const { id: userId, email } = session.user;
     const folderVerification = await verifyFolderOwnership(userId);
-    if (!folderVerification.isValid) {
-        return NextResponse.json({
-            success: false,
-            code: "folder_auth_failed",
-            message: "Folder authentication failed: " + folderVerification.error
-        }, { status: 403 });
-    }
+    if (!folderVerification.isValid) return NextResponse.json({ success: false, code: "folder_auth_failed", message: "Folder authentication failed: " + folderVerification.error }, { status: 403 });
 
     const url = new URL(req.url);
     const requestedPath = url.searchParams.get("path") || "";
@@ -30,9 +22,7 @@ export async function GET(req) {
     const userFolder = getUserUploadPath(userId);
     const targetPath = path.join(userFolder, requestedPath);
 
-    if (!targetPath.startsWith(userFolder)) {
-        return NextResponse.json({ success: false, code: "explorer_invalid_path" }, { status: 400 });
-    }
+    if (!targetPath.startsWith(userFolder)) return NextResponse.json({ success: false, code: "explorer_invalid_path" }, { status: 400 });
 
     const infoPath = path.join(userFolder, "USRINF.INF");
     const infoData = { id: userId, email };
@@ -44,17 +34,11 @@ export async function GET(req) {
         if (fileExists) {
             const raw = await fs.readFile(infoPath, "utf8");
             const parsed = JSON.parse(raw);
-            if (parsed.id !== userId || parsed.email !== email) {
-                return NextResponse.json({ success: false, code: "explorer_unauthorized_folder_access" }, { status: 401 });
-            }
-        } else {
-            await fs.writeFile(infoPath, JSON.stringify(infoData, null, 2), "utf8");
-        }
+            if (parsed.id !== userId || parsed.email !== email) return NextResponse.json({ success: false, code: "explorer_unauthorized_folder_access" }, { status: 401 });
+        } else await fs.writeFile(infoPath, JSON.stringify(infoData, null, 2), "utf8");
 
-        const pathExists = await fs.stat(targetPath).then(() => true).catch(() => false);
-        if (!pathExists) {
-            return NextResponse.json({ folders: [], files: [] });
-        }
+    const pathExists = await fs.stat(targetPath).then(() => true).catch(() => false);
+    if (!pathExists) return NextResponse.json({ folders: [], files: [] }, { status: 200 });
 
         const items = (await fs.readdir(targetPath))
             .filter(name => name !== '.thumbnails');
@@ -184,7 +168,6 @@ export async function GET(req) {
         }, { status: 200 });
 
     } catch (error) {
-
         return NextResponse.json({
             success: false,
             code: "explorer_directory_unreadable",
@@ -256,7 +239,7 @@ export async function POST(req) {
                     type: "folder"
                 },
                 message: "Folder created successfully"
-            });
+            }, { status: 200 });
         }
 
         if (action === 'create_file') {
@@ -312,7 +295,7 @@ export async function POST(req) {
                     size: file.size
                 },
                 message: "File created successfully"
-            });
+            }, { status: 200 });
         }
 
         return NextResponse.json({ success: false, code: "invalid_action" }, { status: 400 });

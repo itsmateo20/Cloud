@@ -8,9 +8,7 @@ import fs from 'fs/promises';
  * @param {Object} metadata - Metadata object from client
  */
 export async function applyFileMetadata(filePath, metadata) {
-    if (!metadata || typeof metadata !== 'object') {
-        return false;
-    }
+    if (!metadata || typeof metadata !== 'object') return false;
 
     try {
         if (metadata.lastModified) {
@@ -18,12 +16,8 @@ export async function applyFileMetadata(filePath, metadata) {
             await fs.utimes(filePath, modTime, modTime);
             return true;
         }
-
         return false;
-    } catch (error) {
-
-        return false;
-    }
+    } catch (error) { return false; }
 }
 
 /**
@@ -33,9 +27,7 @@ export async function applyFileMetadata(filePath, metadata) {
  * @param {Object} metadata - Complete metadata object
  */
 export async function preserveFileMetadata(filePath, metadata) {
-    if (!metadata || typeof metadata !== 'object') {
-        return { success: false, reason: 'No metadata provided' };
-    }
+    if (!metadata || typeof metadata !== 'object') return { success: false, reason: 'No metadata provided' };
 
     const results = {
         success: false,

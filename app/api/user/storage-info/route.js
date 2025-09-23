@@ -34,7 +34,7 @@ export async function GET() {
             success: true,
             totalSize,
             totalFiles
-        });
+        }, { status: 200 });
 
     } catch (error) {
 

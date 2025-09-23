@@ -123,7 +123,7 @@ export async function POST(request) {
             success: true,
             message: `Successfully uploaded ${uploadedFiles.length} file(s)`,
             files: uploadedFiles
-        });
+        }, { status: 200 });
 
     } catch (error) {
 

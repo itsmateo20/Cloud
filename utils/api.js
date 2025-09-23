@@ -3,9 +3,7 @@
 import { getSiteUrl } from "@/lib/getSiteUrl";
 
 async function getBaseUrl() {
-    if (typeof window !== 'undefined') {
-        return window.location.origin;
-    }
+    if (typeof window !== 'undefined') return window.location.origin;
 
     return await getSiteUrl();
 }
@@ -13,13 +11,11 @@ async function getBaseUrl() {
 async function safeJsonParse(response) {
     const text = await response.text();
 
-    if (!text) {
-        return {
-            success: false,
-            code: 'empty_response',
-            message: 'Server returned empty response'
-        };
-    }
+    if (!text) return {
+        success: false,
+        code: 'empty_response',
+        message: 'Server returned empty response'
+    };
 
     try {
         return JSON.parse(text);
@@ -45,7 +41,6 @@ async function handleResponse(response) {
                 message: `HTTP ${response.status}: ${response.statusText}`
             };
         }
-
         return errorData;
     }
 

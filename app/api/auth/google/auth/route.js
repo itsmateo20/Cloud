@@ -1,4 +1,6 @@
 // app/api/auth/google/auth/route.js
+
+import { NextResponse } from "next/server";
 import { google } from "googleapis";
 import { cookies } from "next/headers";
 import { getSiteUrl } from "@/lib/getSiteUrl";

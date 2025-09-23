@@ -69,7 +69,7 @@ export async function POST(request) {
             qrCode: qrCodeDataUrl,
             token,
             expiresAt: expiresAt.toISOString()
-        });
+        }, { status: 200 });
 
     } catch (error) {
 

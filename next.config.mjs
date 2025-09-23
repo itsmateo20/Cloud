@@ -42,9 +42,12 @@ const nextConfig = {
     },
 
     allowedDevOrigins: [
-        'localhost',
-        'itspi20.ddns.net',
+        'localhost'
     ],
+
+    experimental: {
+        browserDebugInfoInTerminal: true,
+    },
 };
 
 export default nextConfig;

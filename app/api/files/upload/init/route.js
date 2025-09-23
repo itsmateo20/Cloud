@@ -65,7 +65,6 @@ export async function POST(req) {
         try {
             await fs.mkdir(targetDir, { recursive: true });
         } catch (error) {
-
             return NextResponse.json({
                 success: false,
                 code: 'directory_error',
@@ -97,7 +96,6 @@ export async function POST(req) {
         try {
             await fs.mkdir(tempDir, { recursive: true });
         } catch (error) {
-
             return NextResponse.json({
                 success: false,
                 code: 'temp_directory_error',

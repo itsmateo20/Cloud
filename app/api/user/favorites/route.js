@@ -63,7 +63,7 @@ export async function GET() {
             ...folder,
             type: 'folder'
         }))
-    });
+    }, { status: 200 });
 }
 
 export async function POST(req) {
@@ -282,10 +282,10 @@ export async function POST(req) {
                 success: true,
                 cleaned: orphanedFileIds.length + orphanedFolderIds.length,
                 message: `Removed ${orphanedFileIds.length + orphanedFolderIds.length} orphaned favorites`
-            });
+            }, { status: 200 });
         }
 
-        return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true }, { status: 200 });
     }
     else {
         const { fileId, folderId, action } = body;
@@ -318,6 +318,6 @@ export async function POST(req) {
             }
         }
 
-        return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true }, { status: 200 });
     }
 }

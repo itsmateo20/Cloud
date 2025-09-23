@@ -128,15 +128,11 @@ export async function POST(req) {
         const readableStream = new ReadableStream({
             start(controller) {
                 archive.on('data', (chunk) => {
-                    if (!hasError) {
-                        controller.enqueue(new Uint8Array(chunk));
-                    }
+                    if (!hasError) controller.enqueue(new Uint8Array(chunk));
                 });
 
                 archive.on('end', () => {
-                    if (!hasError) {
-                        controller.close();
-                    }
+                    if (!hasError) controller.close();
                 });
 
                 archive.on('error', (error) => {
@@ -158,7 +154,6 @@ export async function POST(req) {
                                 const stream = createReadStream(file.fullPath);
 
                                 stream.on('error', (streamError) => {
-
                                 });
 
                                 archive.append(stream, {
@@ -188,11 +183,8 @@ export async function POST(req) {
             },
 
             cancel() {
-
                 hasError = true;
-                if (!archiveFinalized) {
-                    archive.destroy();
-                }
+                if (!archiveFinalized) archive.destroy();
             }
         });
 
@@ -306,15 +298,11 @@ export async function GET(req) {
         const readableStream = new ReadableStream({
             start(controller) {
                 archive.on('data', (chunk) => {
-                    if (!hasError) {
-                        controller.enqueue(new Uint8Array(chunk));
-                    }
+                    if (!hasError) controller.enqueue(new Uint8Array(chunk));
                 });
 
                 archive.on('end', () => {
-                    if (!hasError) {
-                        controller.close();
-                    }
+                    if (!hasError) controller.close();
                 });
 
                 archive.on('error', (error) => {
@@ -336,7 +324,6 @@ export async function GET(req) {
                                 const stream = createReadStream(file.fullPath);
 
                                 stream.on('error', (streamError) => {
-
                                 });
 
                                 archive.append(stream, {
@@ -366,11 +353,8 @@ export async function GET(req) {
             },
 
             cancel() {
-
                 hasError = true;
-                if (!archiveFinalized) {
-                    archive.destroy();
-                }
+                if (!archiveFinalized) archive.destroy();
             }
         });
 
