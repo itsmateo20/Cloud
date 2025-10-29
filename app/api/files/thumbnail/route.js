@@ -63,7 +63,7 @@ export async function GET(req) {
                         if (cacheStat.mtimeMs >= sourceMTimeMs) {
                             useCached = true;
                         }
-                    } catch { /* ignore */ }
+                    } catch {  }
                 }
 
                 if (!useCached) {
@@ -77,7 +77,7 @@ export async function GET(req) {
                 return new NextResponse(fileStream, {
                     headers: {
                         'Content-Type': 'image/jpeg',
-                        'Cache-Control': 'public, max-age=2592000, immutable', // 30 days + immutable
+                        'Cache-Control': 'public, max-age=2592000, immutable',
                         'ETag': etag,
                         'Expires': new Date(Date.now() + 2592000000).toUTCString()
                     }
