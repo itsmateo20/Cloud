@@ -25,7 +25,6 @@
     transition: all 0.5s ease;
 }
 
-
 @media (prefers-color-scheme: dark) {
     .logo {
         filter: drop-shadow(9px 5px 6.5px rgba(255, 255, 255, 0.25));
@@ -75,8 +74,6 @@
     font-weight: 400;
     font-family: var(--font-rubik);
 }
-
-
 
 .navigation.mobile {
     transform: translate(-100%, 0);

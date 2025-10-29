@@ -24,11 +24,9 @@
     transition: padding-right 0.35s ease;
 }
 
-
 .containerWithPanelSpace {
     padding-right: var(--fv-side-panel-width, 400px);
 }
-
 
 .containerWithSidePanel {
     position: relative;
@@ -265,9 +263,6 @@
     padding-right: 200px;
 }
 
-
-
-
 .zoomActive {
     cursor: grab;
 }
@@ -311,7 +306,6 @@
     perspective: 1000px;
     -webkit-perspective: 1000px;
 }
-
 
 .autoFitImage {
     max-width: 90vw;
@@ -584,8 +578,6 @@
     z-index: 3000;
 }
 
-
-
 .zoomButton {
     background: none;
     border: none;
@@ -713,7 +705,6 @@
     }
 }
 
-
 .mobileOverlay {
     background: rgba(0, 0, 0, 1);
 }
@@ -794,7 +785,6 @@
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
 }
 
-
 .customVideoControls {
     position: fixed;
     bottom: clamp(12px, 3vw, 20px);
@@ -834,9 +824,6 @@
     
     max-width: 90vw;
 }
-
-
-
 
 @keyframes zoomPanelOpen {
     0% {
@@ -967,7 +954,6 @@
     outline: none;
 }
 
-
 .videoControlButton svg {
     width: clamp(18px, 4vw, 24px);
     
@@ -1032,7 +1018,6 @@
     }
 }
 
-
 .fileInfoItem {
     display: flex;
     justify-content: space-between;
@@ -1053,7 +1038,6 @@
     color: var(--text-color);
     word-break: break-all;
 }
-
 
 .htmlPreviewContainer {
     width: 100%;

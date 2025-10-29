@@ -533,7 +533,6 @@
     box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
 }
 
-
 .sortMenuOverlay {
     position: fixed;
     top: 0;
@@ -569,7 +568,6 @@
         opacity: 1;
     }
 }
-
 
 .popupModalMenuOverlay {
     position: fixed;
@@ -665,7 +663,6 @@
     background-color: var(--explorer-hover);
 }
 
-
 .popupModalMenuHeader {
     display: flex;
     flex-direction: column;
@@ -732,7 +729,6 @@
     background-color: var(--accent);
     color: white;
 }
-
 
 .popupOverlay {
     position: fixed;
@@ -829,7 +825,6 @@
     background-color: var(--accent);
     opacity: 0.9;
 }
-
 
 .thumbnailLoading {
     position: absolute;

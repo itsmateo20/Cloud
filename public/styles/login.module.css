@@ -129,7 +129,6 @@
     transition: all 0.5s ease;
 }
 
-
 .inputWithText:has(input:hover) button img,
 .inputWithText:has(input:focus) button img,
 .inputWithText:has(button:hover) button img,

@@ -1,6 +1,5 @@
 /* components/qr/QRHandler.module.css */
 
-
 .errorContainer {
     min-height: 100vh;
     display: flex;
@@ -27,7 +26,6 @@
 .errorMessage {
     color: var(--text-color-muted);
 }
-
 
 .container {
     min-height: 100vh;

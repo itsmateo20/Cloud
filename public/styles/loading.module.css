@@ -36,7 +36,6 @@
     width: 100%;
 }
 
-
 .softLoading svg {
     filter: invert(0%) sepia(100%) saturate(21%) hue-rotate(2deg) brightness(101%) contrast(107%);
     animation: spin 1s linear infinite;
@@ -58,7 +57,6 @@
     }
 }
 
-
 .lightFadeIn {
     animation: lightFadeInAnimation 0.6s ease-out forwards;
 }
@@ -67,7 +65,6 @@
     animation: darkFadeInAnimation 0.3s ease-out forwards;
 }
 
-
 .fadeOut.lightFade {
     animation: lightFadeOutAnimation 0.8s ease-in forwards;
 }
@@ -75,7 +72,6 @@
 .fadeOut.darkFade {
     animation: darkFadeOutAnimation 0.4s ease-in forwards;
 }
-
 
 @keyframes lightFadeInAnimation {
     from {
@@ -101,7 +97,6 @@
         visibility: hidden;
     }
 }
-
 
 @keyframes darkFadeInAnimation {
     from {
