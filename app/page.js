@@ -16,7 +16,9 @@ import NewItemModal from '@/components/app/NewItemModal';
 import FolderTree from "@/components/app/FolderTree";
 import FileList from "@/components/app/FileList";
 import Controls from "@/components/app/Controls";
+import Settings from "@/components/app/Settings";
 import SoftLoading from "@/components/SoftLoading";
+import Loading from "@/components/Loading";
 
 import { downloadFile, downloadFolder } from "@/utils/downloadUtils";
 import { api } from "@/utils/api";
@@ -37,7 +39,8 @@ export default function Page() {
   const [currentPath, setCurrentPath] = useState(undefined);
   const [selectedItems, setSelectedItems] = useState([]);
   const [sortBy, setSortBy] = useState("name");
-  const [viewMode, setViewMode] = useState("list");
+  const [desktopViewMode, setDesktopViewMode] = useState("details");
+  const [mobileViewMode, setMobileViewMode] = useState("list");
   const [favorites, setFavorites] = useState({ files: [], folders: [] });
   const [storageInfo, setStorageInfo] = useState({ totalSize: 0, totalFiles: 0 });
   const [storageLoading, setStorageLoading] = useState(false);
@@ -49,6 +52,8 @@ export default function Page() {
   const [showNewFolderPopup, setShowNewFolderPopup] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
   const [confirmState, setConfirmState] = useState({ open: false, title: '', message: '', action: '' });
+  const [showSettings, setShowSettings] = useState(false);
+  const [settingsLoaded, setSettingsLoaded] = useState(false);
 
   const [isGlobalDragOver, setIsGlobalDragOver] = useState(false);
   const [isDragInvalid, setIsDragInvalid] = useState(false);
@@ -56,6 +61,78 @@ export default function Page() {
   const [propertiesState, setPropertiesState] = useState({ open: false, items: [] });
 
   const isMobile = useIsMobile();
+
+  // Computed view mode based on device type
+  const viewMode = isMobile ? mobileViewMode : desktopViewMode;
+
+  // Load all settings (theme, view, sort) on page load
+  useEffect(() => {
+    const loadSettings = async () => {
+      let settings = null;
+
+      // Try to load settings from API if user is logged in and auth is not still loading
+      if (user && !loading) {
+        try {
+          const response = await api.get('/api/user/settings');
+          if (response.success && response.settings) {
+            settings = response.settings;
+          }
+        } catch (error) {
+          console.error('Failed to load settings from API:', error);
+        }
+      }
+
+      // Apply theme
+      let savedTheme = settings?.theme;
+      if (!savedTheme && typeof window !== 'undefined') {
+        savedTheme = localStorage.getItem('cloud-theme') || 'device';
+      }
+
+      if (savedTheme) {
+        const html = document.documentElement;
+
+        // Remove all theme-related attributes first
+        html.removeAttribute('data-theme');
+        html.removeAttribute('data-color-scheme');
+
+        switch (savedTheme) {
+          case 'light':
+            html.setAttribute('data-color-scheme', 'light');
+            break;
+          case 'dark':
+            html.setAttribute('data-color-scheme', 'dark');
+            break;
+          case 'high-contrast':
+            html.setAttribute('data-theme', 'high-contrast');
+            break;
+          case 'device':
+          default:
+            // Let the browser use its default behavior with prefers-color-scheme
+            break;
+        }
+      }
+
+      // Apply view and sort settings (only for desktop)
+      if (settings) {
+        setDesktopViewMode(settings.defaultView);
+        setSortBy(settings.defaultSort);
+      } else if (typeof window !== 'undefined') {
+        // Fallback to localStorage (only for desktop)
+        const savedView = localStorage.getItem('cloud-default-view') || 'details';
+        const savedSort = localStorage.getItem('cloud-default-sort') || 'name';
+        setDesktopViewMode(savedView);
+        setSortBy(savedSort);
+      }
+
+      // Mark settings as loaded
+      setSettingsLoaded(true);
+    };
+
+    // Load settings when auth is resolved (either user is loaded or confirmed not logged in)
+    if (!loading) {
+      loadSettings();
+    }
+  }, [user, loading]);
 
   useEffect(() => {
     if (!socket) socket = io();
@@ -67,6 +144,10 @@ export default function Page() {
       loadFavorites();
       loadStorageInfo();
     }
+  }, [isMobile, user]);
+
+  useEffect(() => {
+    if (!socket) return;
 
     const debounceMap = new Map();
 
@@ -102,16 +183,48 @@ export default function Page() {
       }
     };
 
-    socket?.on('file-updated', handleFileUpdated);
-    socket?.on('folder-structure-updated', handleFolderStructure);
+    if (user?.id) {
+      try { socket.emit('register-user', { userId: user.id }); } catch { }
+    }
+
+    const handleConnect = () => {
+      try {
+        if (user?.id) socket.emit('register-user', { userId: user.id });
+      } catch { }
+    };
+    socket.on('connect', handleConnect);
+
+    socket.on('file-updated', handleFileUpdated);
+    socket.on('folder-structure-updated', handleFolderStructure);
+    socket.on('favorites-updated', async (payload) => {
+      if (payload && user?.id && payload.userId && payload.userId !== user.id) return;
+      try {
+        const response = await api.get('/api/user/favorites');
+        if (response.success) {
+          setFavorites({ files: response.files || [], folders: response.folders || [] });
+          const hasAny = (response.files && response.files.length > 0) || (response.folders && response.folders.length > 0);
+          if (!hasAny && currentPath === 'favorites') setCurrentPath('');
+        }
+      } catch { }
+    });
 
     return () => {
-      socket?.off('folder-structure-updated', handleFolderStructure);
-      socket?.off('file-updated', handleFileUpdated);
+      socket.off('folder-structure-updated', handleFolderStructure);
+      socket.off('favorites-updated');
+      socket.off('file-updated', handleFileUpdated);
+      socket.off('connect', handleConnect);
       debounceMap.forEach(t => clearTimeout(t));
-      socket = null;
     };
-  }, [isMobile, user]);
+  }, [currentPath, user]);
+
+  useEffect(() => {
+    return () => {
+      if (socket) {
+        socket.disconnect();
+        socket = null;
+      }
+    };
+  }, []);
 
   const loadFavorites = async () => {
     try {
@@ -335,6 +448,32 @@ export default function Page() {
 
   const handleFolderSelect = (folderPath) => {
     navigateToFolder(folderPath);
+    setShowSettings(false);
+  };
+
+  const handleThemeChange = (newTheme) => {
+    // Apply theme immediately when changed in settings
+    const html = document.documentElement;
+
+    // Remove all theme-related attributes first
+    html.removeAttribute('data-theme');
+    html.removeAttribute('data-color-scheme');
+
+    switch (newTheme) {
+      case 'light':
+        html.setAttribute('data-color-scheme', 'light');
+        break;
+      case 'dark':
+        html.setAttribute('data-color-scheme', 'dark');
+        break;
+      case 'high-contrast':
+        html.setAttribute('data-theme', 'high-contrast');
+        break;
+      case 'device':
+      default:
+        // Let the browser use its default behavior with prefers-color-scheme
+        break;
+    }
   };
 
   const handleFolderDoubleClick = (folderPath) => {
@@ -382,7 +521,19 @@ export default function Page() {
   };
 
   const toggleViewMode = () => {
-    setViewMode(prevMode => prevMode === 'list' ? 'grid' : 'list');
+    if (isMobile) {
+      setMobileViewMode(prevMode => prevMode === 'list' ? 'grid' : 'list');
+    } else {
+      setDesktopViewMode(prevMode => {
+        // Desktop has more view options
+        switch (prevMode) {
+          case 'details': return 'list';
+          case 'list': return 'largeIcons';
+          case 'largeIcons': return 'details';
+          default: return 'details';
+        }
+      });
+    }
   };
 
   const handleSortByOption = (sortOption) => {
@@ -470,13 +621,20 @@ export default function Page() {
     }
   };
 
-  const handleUpload = () => {
+  const handleUpload = (files = null) => {
+    if (files && files.length > 0) {
+      // Files passed directly (e.g., from folder upload button)
+      uploadFiles(files);
+      return;
+    }
+
+    // Regular file upload
     const input = document.createElement('input');
     input.type = 'file';
     input.multiple = true;
     input.onchange = (e) => {
-      const files = Array.from(e.target.files);
-      if (files.length > 0) uploadFiles(files);
+      const fileList = Array.from(e.target.files);
+      if (fileList.length > 0) uploadFiles(fileList);
     };
     input.click();
   };
@@ -492,16 +650,97 @@ export default function Page() {
     }
 
     try {
-      const formData = new FormData();
-      formData.append('path', currentPath);
+      // Group files by their folder structure using webkitRelativePath
+      const folderStructure = new Map();
+      const foldersToCreate = new Set();
 
-      let totalSize = 0;
       for (const file of files) {
-        formData.append('files', file);
-        totalSize += file.size;
+        if (file.webkitRelativePath) {
+          // File is part of a folder drag - extract folder structure
+          const pathParts = file.webkitRelativePath.split('/');
+          const fileName = pathParts.pop(); // Remove filename
+          const folderPath = pathParts.join('/');
+
+          if (folderPath) {
+            // Track folders that need to be created (build full folder hierarchy)
+            let currentFolderPath = '';
+            for (const part of pathParts) {
+              currentFolderPath = currentFolderPath ? `${currentFolderPath}/${part}` : part;
+              foldersToCreate.add(currentFolderPath);
+            }
+
+            if (!folderStructure.has(folderPath)) {
+              folderStructure.set(folderPath, []);
+            }
+            folderStructure.get(folderPath).push({
+              file,
+              fileName
+            });
+          } else {
+            // File in root folder of the upload
+            if (!folderStructure.has('')) {
+              folderStructure.set('', []);
+            }
+            folderStructure.get('').push({
+              file,
+              fileName: file.name
+            });
+          }
+        } else {
+          // Regular file upload to current directory
+          if (!folderStructure.has('')) {
+            folderStructure.set('', []);
+          }
+          folderStructure.get('').push({
+            file,
+            fileName: file.name
+          });
+        }
       }
 
-      appendMetadataToFormData(formData, files);
+      // Create folders first if needed
+      if (foldersToCreate.size > 0) {
+        toast.addInfo(`Creating ${foldersToCreate.size} folder${foldersToCreate.size > 1 ? 's' : ''}...`);
+
+        // Sort folders by depth to create parent folders first
+        const sortedFolders = Array.from(foldersToCreate).sort((a, b) => {
+          return a.split('/').length - b.split('/').length;
+        });
+
+        for (const folderPath of sortedFolders) {
+          try {
+            const folderName = folderPath.split('/').pop();
+            const parentPath = folderPath.includes('/') ?
+              (currentPath ? `${currentPath}/${folderPath.substring(0, folderPath.lastIndexOf('/'))}` : folderPath.substring(0, folderPath.lastIndexOf('/'))) :
+              currentPath;
+
+            const result = await api.post('/api/files/create', {
+              name: folderName,
+              type: 'folder',
+              currentPath: parentPath
+            });
+
+            // Accept both success and "exists" as valid states
+            if (!result.success && result.code !== 'exists') {
+              console.warn(`Failed to create folder ${folderName}: ${result.message}`);
+              toast.addError(`Failed to create folder: ${folderName}`);
+              return; // Stop upload process if folder creation fails
+            }
+          } catch (error) {
+            console.warn(`Error creating folder ${folderPath}:`, error);
+            toast.addError(`Error creating folder: ${folderPath}`);
+            return; // Stop upload process on error
+          }
+        }
+
+        // Wait longer for folder creation to complete and filesystem to sync
+        await new Promise(resolve => setTimeout(resolve, 300));
+      }
+
+      // Upload files to their respective folders
+      let totalUploaded = 0;
+      let totalSize = 0;
+      files.forEach(file => totalSize += file.size);
 
       const sizeText = totalSize > 1024 * 1024
         ? `${(totalSize / (1024 * 1024)).toFixed(1)}MB`
@@ -509,31 +748,62 @@ export default function Page() {
 
       toast.addInfo(`Uploading ${files.length} file${files.length > 1 ? 's' : ''} (${sizeText})...`);
 
-      const result = await api.upload('/api/files/upload', formData);
+      for (const [folderPath, fileGroup] of folderStructure) {
+        const formData = new FormData();
+        const targetPath = folderPath
+          ? (currentPath ? `${currentPath}/${folderPath}` : folderPath)
+          : (currentPath || '');
 
-      if (result.success) {
-        const uploadedNames = result.files?.map(f => f.name).join(', ') || 'files';
-        toast.addSuccess(`✅ Uploaded: ${uploadedNames}`);
+        formData.append('path', targetPath);
 
+        for (const { file } of fileGroup) {
+          formData.append('files', file);
+        }
+
+        appendMetadataToFormData(formData, fileGroup.map(f => f.file));
+
+        try {
+          const result = await api.upload('/api/files/upload', formData);
+
+          if (result.success) {
+            totalUploaded += fileGroup.length;
+          } else {
+            let errorMsg = 'Upload failed';
+            switch (result.code) {
+              case 'no_files':
+                errorMsg = 'No files selected for upload';
+                break;
+              case 'directory_error':
+                errorMsg = `Directory access error: ${result.message}`;
+                break;
+              case 'upload_failed':
+                errorMsg = `Upload failed: ${result.message}`;
+                break;
+              case 'network_error':
+                errorMsg = 'Network error occurred during upload';
+                break;
+              case 'folder_auth_failed':
+                errorMsg = 'Permission denied for current folder';
+                break;
+              case 'explorer_invalid_path':
+                errorMsg = 'Invalid file path detected';
+                break;
+              default:
+                errorMsg = result.message || 'Unknown upload error';
+            }
+            toast.addError(`${errorMsg} (folder: ${folderPath || 'root'})`);
+          }
+        } catch (error) {
+          console.error('Upload error:', error);
+          toast.addError(`Network error uploading to folder: ${folderPath || 'root'}`);
+        }
+      }
+
+      if (totalUploaded > 0) {
+        toast.addSuccess(`✅ Uploaded ${totalUploaded} file${totalUploaded > 1 ? 's' : ''}`);
         if (fileListRef.current) {
           fileListRef.current.refresh();
         }
-      } else {
-        let errorMsg = 'Upload failed';
-        switch (result.code) {
-          case 'no_files':
-            errorMsg = 'No files selected for upload';
-            break;
-          case 'folder_auth_failed':
-            errorMsg = 'Permission denied for current folder';
-            break;
-          case 'explorer_invalid_path':
-            errorMsg = 'Invalid file path detected';
-            break;
-          default:
-            errorMsg = result.message || 'Unknown upload error';
-        }
-        toast.addError(errorMsg);
       }
 
     } catch (error) {
@@ -594,14 +864,21 @@ export default function Page() {
       return;
     }
 
-    const files = Array.from(e.dataTransfer.files);
-    if (files.length > 0) {
-      uploadFiles(files);
+    try {
+      const files = Array.from(e.dataTransfer.files);
+      if (files.length > 0) {
+        uploadFiles(files);
+      }
+    } catch (error) {
+      console.error('Drop handling error:', error);
+      toast?.addError('Failed to process dropped files');
     }
   };
 
   const handleDownload = () => {
-    if (!selectedItems || selectedItems.length === 0) return;
+    if (!selectedItems || selectedItems.length === 0) {
+      return;
+    }
 
     selectedItems.forEach(item => {
       if (item.type === 'file') downloadFile(item.path, item.name);
@@ -613,6 +890,7 @@ export default function Page() {
 
   const handleDelete = async () => {
     if (!selectedItems || selectedItems.length === 0) return;
+
     const itemNames = selectedItems.map(item => item.name).join(', ');
     setConfirmState({
       open: true,
@@ -659,9 +937,10 @@ export default function Page() {
     }
   };
 
-  const handleProperties = () => {
-    if (!selectedItems || selectedItems.length === 0) return;
-    setPropertiesState({ open: true, items: selectedItems.map(i => ({ ...i })) });
+  const handleProperties = (items = null) => {
+    const itemsToUse = items || selectedItems;
+    if (!itemsToUse || itemsToUse.length === 0) return;
+    setPropertiesState({ open: true, items: itemsToUse.map(i => ({ ...i })) });
   };
 
   const handleSortChange = (newSortBy) => {
@@ -669,7 +948,14 @@ export default function Page() {
   };
 
   const handleViewChange = (newViewMode) => {
-    setViewMode(newViewMode);
+    if (isMobile) {
+      // Mobile only supports list and grid
+      if (newViewMode === 'list' || newViewMode === 'grid') {
+        setMobileViewMode(newViewMode);
+      }
+    } else {
+      setDesktopViewMode(newViewMode);
+    }
   };
 
   const handleSelectionChange = useCallback((items) => {
@@ -678,6 +964,24 @@ export default function Page() {
 
   const handleFilesUpload = (files) => {
     uploadFiles(files);
+  };
+
+  const handleBackNavigation = () => {
+    if (currentPath === undefined || currentPath === '' || currentPath === 'favorites') {
+      // Already at root or in special paths, go to home/undefined
+      setCurrentPath(undefined);
+    } else {
+      // Go up one level
+      const pathParts = currentPath.split('/');
+      if (pathParts.length === 1) {
+        // Go to root
+        setCurrentPath('');
+      } else {
+        // Go to parent folder
+        const parentPath = pathParts.slice(0, -1).join('/');
+        setCurrentPath(parentPath);
+      }
+    }
   };
 
   const [newItemModalOpen, setNewItemModalOpen] = useState(false);
@@ -719,6 +1023,11 @@ export default function Page() {
   };
 
   if (!user) return null;
+
+  // Show loading screen until auth and settings are loaded
+  if (loading || !settingsLoaded) {
+    return <Loading />;
+  }
 
   return (
     <div
@@ -770,7 +1079,10 @@ export default function Page() {
         </div>
       )}
 
-      <Layout styleStyle={style.main} loading={loading} user={user} sideNav={true} currentPath={currentPath}>
+      <Layout styleStyle={style.main} loading={loading} user={user} sideNav={true} currentPath={currentPath} onOpenSettings={() => {
+        setShowSettings(true);
+        setCurrentPath('');
+      }}>
         <ConfirmModal
           open={confirmState.open}
           title={confirmState.title}
@@ -795,6 +1107,7 @@ export default function Page() {
               onOpenNewItemModal={openNewItemModal}
               onUpload={handleUpload}
               onDownload={handleDownload}
+              onGenerateQR={(type, items) => fileListRef.current?.generateQRCode?.(type, items)}
               onDelete={handleDelete}
               onRename={handleRename}
               onFavorite={handleFavorite}
@@ -840,18 +1153,30 @@ export default function Page() {
                 </div>
               </Resizable>
               <div className={style.fileListContainer}>
-                <FileList
-                  ref={fileListRef}
-                  socket={socket}
-                  currentPath={currentPath}
-                  onFolderDoubleClick={handleFolderDoubleClick}
-                  onSelectionChange={handleSelectionChange}
-                  onFilesUpload={handleFilesUpload}
-                  sortBy={sortBy}
-                  viewMode={viewMode}
-                  user={user}
-                  mobile={isMobile}
-                />
+                {showSettings ? (
+                  <Settings
+                    onClose={() => setShowSettings(false)}
+                    onThemeChange={handleThemeChange}
+                    onViewModeChange={setDesktopViewMode}
+                    onSortByChange={setSortBy}
+                    isMobile={false}
+                  />
+                ) : (
+                  <FileList
+                    ref={fileListRef}
+                    socket={socket}
+                    currentPath={currentPath}
+                    onFolderDoubleClick={handleFolderDoubleClick}
+                    onSelectionChange={handleSelectionChange}
+                    onFilesUpload={handleFilesUpload}
+                    onNavigateToFile={setCurrentPath}
+                    onProperties={handleProperties}
+                    sortBy={sortBy}
+                    viewMode={viewMode}
+                    user={user}
+                    mobile={isMobile}
+                  />
+                )}
               </div>
             </div>
           </div>
@@ -963,7 +1288,7 @@ export default function Page() {
                 <div className={style.mobileExplorerHeader}>
                   <div className={style.headerContent}>
                     <div className={style.folderNameBack}>
-                      <button className={style.backButton} onClick={() => setCurrentPath(undefined)}><ArrowLeft size={20} /></button>
+                      <button className={style.backButton} onClick={handleBackNavigation}><ArrowLeft size={20} /></button>
                       <h3 className={style.explorerTitle}>
                         {currentPath === '' ? 'Main Storage' : currentPath === 'favorites' ? 'Favourites' : currentPath.split('/').pop() || 'Files'}
                       </h3>
@@ -1002,18 +1327,30 @@ export default function Page() {
                   </div>
                 </div>
                 <div className={style.mobileFileListContainer}>
-                  <FileList
-                    ref={fileListRef}
-                    socket={socket}
-                    currentPath={currentPath}
-                    onFolderDoubleClick={handleFolderDoubleClick}
-                    onSelectionChange={handleSelectionChange}
-                    onFilesUpload={handleFilesUpload}
-                    sortBy={sortBy}
-                    viewMode={viewMode}
-                    user={user}
-                    mobile={isMobile}
-                  />
+                  {showSettings ? (
+                    <Settings
+                      onClose={() => setShowSettings(false)}
+                      onThemeChange={handleThemeChange}
+                      onViewModeChange={null} // No view mode change for mobile
+                      onSortByChange={setSortBy}
+                      isMobile={isMobile}
+                    />
+                  ) : (
+                    <FileList
+                      ref={fileListRef}
+                      socket={socket}
+                      currentPath={currentPath}
+                      onFolderDoubleClick={handleFolderDoubleClick}
+                      onSelectionChange={handleSelectionChange}
+                      onFilesUpload={handleFilesUpload}
+                      onNavigateToFile={setCurrentPath}
+                      onProperties={handleProperties}
+                      sortBy={sortBy}
+                      viewMode={viewMode}
+                      user={user}
+                      mobile={isMobile}
+                    />
+                  )}
                 </div>
 
                 <button className={style.floatingAddButton} onClick={handleNewFolder}>

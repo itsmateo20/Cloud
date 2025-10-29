@@ -25,6 +25,9 @@ export async function GET(req) {
 
     const { searchParams } = new URL(req.url);
     const filePath = searchParams.get("path");
+    const sizeParam = (searchParams.get('size') || 'medium').toLowerCase();
+    const sizeMap = { small: 96, medium: 128, large: 256 };
+    const targetSize = sizeMap[sizeParam] || sizeMap.medium;
 
     if (!filePath) {
         return NextResponse.json({ error: "File path is required" }, { status: 400 });
@@ -46,7 +49,7 @@ export async function GET(req) {
         const fileExtension = path.extname(filePath).toLowerCase();
         const stat = await fs.stat(fullPath);
         const sourceMTimeMs = stat.mtimeMs;
-        const etag = `"${sourceMTimeMs}-128"`;
+        const etag = `"${sourceMTimeMs}-img-${targetSize}"`;
 
         const ifNoneMatch = req.headers.get('if-none-match');
         if (ifNoneMatch && ifNoneMatch === etag) {
@@ -59,7 +62,7 @@ export async function GET(req) {
             try {
                 const thumbnailsDir = path.join(userFolder, '.thumbnails');
                 const relativeSafe = filePath.startsWith('/') ? filePath.slice(1) : filePath;
-                const cacheFile = path.join(thumbnailsDir, relativeSafe + '.thumb.jpg');
+                const cacheFile = path.join(thumbnailsDir, relativeSafe + `.thumb.${targetSize}.jpg`);
                 await fs.mkdir(path.dirname(cacheFile), { recursive: true });
 
                 let useCached = false;
@@ -74,7 +77,7 @@ export async function GET(req) {
 
                 if (!useCached) {
                     const imageBuffer = await fs.readFile(fullPath);
-                    const pipeline = sharp(imageBuffer).resize(128, 128, { fit: 'cover', position: 'center' }).jpeg({ quality: 75, mozjpeg: true });
+                    const pipeline = sharp(imageBuffer).resize(targetSize, targetSize, { fit: 'cover', position: 'center' }).jpeg({ quality: targetSize <= 96 ? 60 : 72, mozjpeg: true });
                     const outBuffer = await pipeline.toBuffer();
                     await fs.writeFile(cacheFile, outBuffer);
                 }
@@ -83,8 +86,9 @@ export async function GET(req) {
                 return new NextResponse(fileStream, {
                     headers: {
                         'Content-Type': 'image/jpeg',
-                        'Cache-Control': 'public, max-age=604800, immutable',
-                        'ETag': etag
+                        'Cache-Control': 'public, max-age=2592000, immutable', // 30 days + immutable
+                        'ETag': etag,
+                        'Expires': new Date(Date.now() + 2592000000).toUTCString()
                     }
                 });
             } catch (error) {

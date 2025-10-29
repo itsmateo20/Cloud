@@ -4,12 +4,21 @@
     display: flex;
     flex-direction: column;
     width: 100%;
-    height: 100%;
+    /* Occupy available vertical space and allow internal scroll area */
+    height: calc(100vh - var(--top-nav-height));
+    max-height: calc(100vh - var(--top-nav-height));
+    /* Remove global overflow hidden so inner content can scroll */
     overflow: hidden;
+    /* keep horizontal overflow clipped, vertical handled by .content */
     background-color: var(--background);
     transition: background-color 0.5s ease;
     font-family: var(--font-rubik);
     font-size: 14px;
+    /* Prevent text selection in file list */
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
 }
 
 /* Mobile FileList specific styles */
@@ -35,6 +44,8 @@
     border-right: 1px solid var(--text);
     position: relative;
     user-select: none;
+    flex: 0 0 auto;
+    /* fixed-width column cells */
 }
 
 .headerCell:last-child {
@@ -62,7 +73,9 @@
 }
 
 .content {
-
+    flex: 1 1 auto;
+    min-height: 0;
+    /* allow flexbox to shrink for scrolling */
     overflow-y: auto;
     overflow-x: hidden;
     height: 100%;
@@ -241,7 +254,6 @@
     padding: 12px;
     overflow-y: auto;
     overflow-x: hidden;
-    max-height: 100%;
 }
 
 .gridItem {
@@ -387,6 +399,9 @@
     padding: 20px;
     align-items: start;
     justify-items: center;
+    align-content: start;
+    justify-content: start;
+    grid-auto-rows: minmax(210px, auto);
 }
 
 .extraLargeIcons .item,
@@ -506,6 +521,12 @@
     padding: 16px;
     align-items: start;
     justify-items: center;
+    align-content: start;
+    /* prevent excessive vertical stretching */
+    justify-content: start;
+    /* keep packed to left */
+    grid-auto-rows: minmax(170px, auto);
+    /* consistent row height based on item height */
 }
 
 
@@ -545,6 +566,9 @@
     padding: 12px;
     align-items: start;
     justify-items: center;
+    align-content: start;
+    justify-content: start;
+    grid-auto-rows: minmax(120px, auto);
 }
 
 
@@ -584,6 +608,9 @@
     padding: 8px;
     align-items: start;
     justify-items: center;
+    align-content: start;
+    justify-content: start;
+    grid-auto-rows: minmax(96px, auto);
 }
 
 
@@ -693,6 +720,8 @@
     gap: var(--spacing-xs);
     overflow: hidden;
     text-align: left;
+    flex: 0 0 auto;
+    /* don't shrink/grow; use explicit px width */
 }
 
 .details .itemIcon {

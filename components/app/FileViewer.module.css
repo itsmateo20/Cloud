@@ -813,7 +813,6 @@
     min-width: clamp(380px, 75vw, 650px);
     /* Wider */
     max-width: 90vw;
-    transition: transform 0.3s ease, left 0.3s ease;
 }
 
 .customVideoControlsWithSidePanel {
@@ -834,7 +833,6 @@
     min-width: clamp(380px, 75vw, 650px);
     /* Wider */
     max-width: 90vw;
-    transition: transform 0.3s ease, left 0.3s ease;
 }
 
 /* .customVideoControlsWithSidePanel deprecated: container shift centers controls */

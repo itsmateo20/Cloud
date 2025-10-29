@@ -102,33 +102,15 @@ export function ContextMenu({
                         {isFolder ? "Open" : "Open"}
                     </div>
 
-                    {!isFolder && (
-                        <div className={styles.menuItem} onClick={() => handleAction("download")}>
-                            <span className={styles.icon}><Download size={16} /></span>
-                            Download{isMultipleSelected ? ` (${selectedItems.length})` : ""}
-                        </div>
-                    )}
+                    <div className={styles.menuItem} onClick={() => handleAction("download")}>
+                        <span className={styles.icon}><Download size={16} /></span>
+                        Download{isMultipleSelected ? ` (${selectedItems.length})` : ""}
+                    </div>
 
-                    {!isFolder && (
-                        <div
-                            className={`${styles.menuItem} ${styles.hasSubmenu}`}
-                            onMouseEnter={() => setShowQrSubmenu(true)}
-                            onMouseLeave={() => setShowQrSubmenu(false)}
-                        >
-                            <span className={styles.icon}><Smartphone size={16} /></span>
-                            QR Code
-                            <span className={styles.arrow}><ChevronRight size={12} /></span>
-
-                            {showQrSubmenu && (
-                                <div className={styles.submenu}>
-                                    <div className={styles.submenuItem} onClick={() => handleSubmenuAction("download-qr")}>
-                                        <span className={styles.icon}><Smartphone size={16} /></span>
-                                        Download file{isMultipleSelected ? `s` : ""} on Mobile device{isMultipleSelected ? ` (${selectedItems.length})` : ""}
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    )}
+                    <div className={styles.menuItem} onClick={() => handleSubmenuAction("download-qr")}>
+                        <span className={styles.icon}><Smartphone size={16} /></span>
+                        Download file{isMultipleSelected ? `s` : ""} via QR Code {isMultipleSelected ? ` (${selectedItems.length})` : ""}
+                    </div>
 
                     <div className={styles.separator}></div>
 
@@ -175,11 +157,11 @@ export function ContextMenu({
                             <div className={styles.submenu}>
                                 <div className={styles.submenuItem} onClick={() => handleSubmenuAction("download-qr")}>
                                     <span className={styles.icon}><Smartphone size={16} /></span>
-                                    Download file{isMultipleSelected ? `s` : ""} on Mobile device{isMultipleSelected ? ` (${selectedItems.length})` : ""}
+                                    Download file{isMultipleSelected ? `s` : ""} via QR Code {isMultipleSelected ? ` (${selectedItems.length})` : ""}
                                 </div>
                                 <div className={styles.submenuItem} onClick={() => handleSubmenuAction("upload-qr")}>
                                     <span className={styles.icon}><Upload size={16} /></span>
-                                    Upload files from Mobile device
+                                    Upload files via QR Code
                                 </div>
                             </div>
                         )}

@@ -26,10 +26,14 @@ model User {
 }
 
 model UserSettings {
-  id       Int    @id @default(autoincrement())
-  userId   Int    @unique
-  theme    String @default("light")
-  language String @default("en_US")
+  id            Int    @id @default(autoincrement())
+  userId        Int    @unique
+  theme         String @default("device")
+  language      String @default("en_US")
+  defaultView   String @default("details")
+  defaultSort   String @default("name")
+  imageQuality  String @default("best")
+  uploadQuality String @default("best")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

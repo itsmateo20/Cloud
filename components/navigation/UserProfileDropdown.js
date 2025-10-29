@@ -13,9 +13,9 @@ import Image from "next/image";
 
 import nav from "./UserProfileDropdown.module.css";
 
-import { LogOut, Settings } from "lucide-react";
+import { Cog, LogOut, Settings } from "lucide-react";
 
-export default function UserProfileDropdown({ user, mobile }) {
+export default function UserProfileDropdown({ user, mobile, onOpenSettings }) {
     const { signout } = useAuth();
     const userProfileRef = useRef(null);
     const userDropdownRef = useRef(null);
@@ -78,7 +78,7 @@ export default function UserProfileDropdown({ user, mobile }) {
                     {profileImage ? <Image className={nav.userProfileMobileImg} src={"https:" + profileImage} alt="User profile picture" width={30} height={30} loading="eager" /> : <SoftLoading className={nav.userProfileImg} />}
                     <h1>{user.email}</h1>
                 </div>
-                <div className={`${nav.userProfileMobileListItem} ${nav.userProfileMobileSettings}`}>
+                <div className={`${nav.userProfileMobileListItem} ${nav.userProfileMobileSettings}`} onClick={onOpenSettings}>
                     <Settings size={25} strokeWidth={2} />
                     <h1>Settings</h1>
                 </div>
@@ -125,6 +125,9 @@ export default function UserProfileDropdown({ user, mobile }) {
                     }, 1000);
                 }}
             >
+                <ul>
+                    <li onClick={onOpenSettings}><span>Settings</span><Cog size={22} strokeWidth={3} /></li>
+                </ul>
                 <ul>
                     <li onClick={() => signout()}><span>Logout</span><LogOut size={22} strokeWidth={3} /></li>
                 </ul>

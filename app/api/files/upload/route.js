@@ -48,7 +48,19 @@ export async function POST(req) {
 
         const userFolder = pathResult.path;
         const targetFolder = path.join(userFolder, targetPath);
-        await fs.mkdir(targetFolder, { recursive: true });
+
+        // Ensure target directory exists and is accessible
+        try {
+            await fs.mkdir(targetFolder, { recursive: true });
+            // Verify the directory was created and is accessible
+            await fs.access(targetFolder, fs.constants.R_OK | fs.constants.W_OK);
+        } catch (error) {
+            return NextResponse.json({
+                success: false,
+                code: "directory_error",
+                message: `Failed to create or access target directory: ${error.message}`
+            }, { status: 500 });
+        }
 
         const uploadedFiles = [];
 
@@ -95,11 +107,15 @@ export async function POST(req) {
                 metadataPreserved: !!fileMetadata
             });
         }
-        global.io?.emit("file-updated", {
-            path: targetPath,
-            action: "upload",
-            files: uploadedFiles
-        });
+        try {
+            const room = `user:${id}`;
+            global.io?.to(room).emit("file-updated", {
+                userId: id,
+                path: targetPath,
+                action: "upload",
+                files: uploadedFiles
+            });
+        } catch { }
 
         return NextResponse.json({
             success: true,

@@ -118,3 +118,4 @@ bun dev    # Full stack with Socket.IO
 - Prefer absolute imports with `@/` prefix (configured in jsconfig.json)
 - Error handling with specific error codes for frontend consumption
 - CSS modules with descriptive class names matching component structure
+- Inline code comments should be minimal. Only keep the single top-of-file header comment (e.g., file path). Remove other explanatory inline comments unless absolutely required for disambiguating complex logic. New contributions must not add additional inline comments beyond that header.

@@ -83,10 +83,23 @@
     gap: 8px;
 }
 
+.titleRow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+}
+
 .title {
     margin: 0;
     font-size: 16px;
     font-weight: 600;
+    flex: 1;
+}
+
+.favoriteStar {
+    color: var(--accent-color, #007acc);
+    flex-shrink: 0;
 }
 
 .closeBtn {
@@ -188,6 +201,14 @@
     margin: 4px 0 8px;
 }
 
-.favoriteStar {
-    color: var(--accent-color, #ffb347);
+.sizeDetails {
+    font-size: 12px;
+    color: var(--text-secondary, #999);
+    font-weight: normal;
+}
+
+.ageInfo {
+    font-size: 12px;
+    color: var(--text-secondary, #999);
+    font-weight: normal;
 }

@@ -71,11 +71,11 @@ export async function POST(req) {
                 return normalizedParentPath === affectedPath;
             });
 
-            global.io?.emit("file-updated", {
-                path: affectedPath,
-                action: "delete",
-                deletedItems: itemsInThisPath
-            });
+            try {
+                const room = `user:${id}`;
+                const payload = { userId: id, path: affectedPath, action: "delete", deletedItems: itemsInThisPath };
+                global.io?.to(room).emit("file-updated", payload);
+            } catch { }
         });
 
         return NextResponse.json({ success: true, code: "explorer_delete_success" }, { status: 200 });

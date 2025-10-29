@@ -45,6 +45,7 @@
 .separator {
     height: 1px;
     background-color: #e5e5e5;
+    transition: background-color 0.3s ease;
     margin: var(--spacing-xs) 0;
 }
 

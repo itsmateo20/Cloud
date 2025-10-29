@@ -13,7 +13,7 @@ import Loading from "@/components/Loading";
 import UserProfileDropdown from "./UserProfileDropdown";
 import { AlignJustify, Search } from "lucide-react";
 
-export function Navigation({ user, sideNav = false, currentPath }) {
+export function Navigation({ user, sideNav = false, currentPath, onOpenSettings }) {
     const isMobile = useIsMobile();
     const pathname = usePathname();
     const navRef = useRef(null);
@@ -22,6 +22,9 @@ export function Navigation({ user, sideNav = false, currentPath }) {
     const [startX, setStartX] = useState(0);
     const [currentX, setCurrentX] = useState(0);
     const [initialTransform, setInitialTransform] = useState(0);
+    const [lastX, setLastX] = useState(0);
+    const [lastTime, setLastTime] = useState(0);
+    const navWidthRef = useRef(0);
 
     const toggleNavigation = () => {
         if (!isMobile) return;
@@ -49,61 +52,93 @@ export function Navigation({ user, sideNav = false, currentPath }) {
 
     const handleStart = (clientX) => {
         if (!isMobile) return;
-
         const nav = navRef.current;
-        if (!nav || !isOpened) return;
+        if (!nav) return;
+
+        if (!isOpened && clientX > 30) return;
+
+        navWidthRef.current = nav.offsetWidth || 0;
 
         setIsDragging(true);
         setStartX(clientX);
         setCurrentX(clientX);
+        setLastX(clientX);
+        setLastTime(performance.now());
 
         const transform = getComputedStyle(nav).transform;
         const matrix = new DOMMatrix(transform);
-        setInitialTransform(matrix.m41);
+        setInitialTransform(isOpened ? matrix.m41 : -navWidthRef.current);
 
+        nav.style.willChange = "transform";
         nav.style.transition = "box-shadow 0.8s ease";
+        if (!isOpened) nav.style.transform = `translate(${-navWidthRef.current}px, 0%)`;
     };
 
     const handleMove = (clientX) => {
         if (!isDragging || !isMobile) return;
-
         const nav = navRef.current;
         if (!nav) return;
 
         setCurrentX(clientX);
+        const now = performance.now();
         const deltaX = clientX - startX;
-        const newTransform = Math.min(0, initialTransform + deltaX);
+        const newTransform = Math.min(0, Math.max(-navWidthRef.current, initialTransform + deltaX));
         nav.style.transform = `translate(${newTransform}px, 0%)`;
         nav.style.boxShadow = "none";
+
+        setLastX(clientX);
+        setLastTime(now);
     };
 
     const handleEnd = () => {
         if (!isDragging || !isMobile) return;
-
         const nav = navRef.current;
         if (!nav) return;
 
         setIsDragging(false);
+        nav.style.willChange = "";
+
         const deltaX = currentX - startX;
-        const threshold = -50;
+        const dt = Math.max(16, performance.now() - lastTime);
+        const velocity = (currentX - lastX) / dt;
 
-        nav.style.transition = "";
+        const currentTransform = new DOMMatrix(getComputedStyle(nav).transform).m41;
+        const openness = 1 - Math.abs(currentTransform) / (navWidthRef.current || 1);
 
-        if (deltaX < threshold) closeNavigation();
-        else {
-            nav.style.transform = "translate(0%, 0%)";
+        const shouldClose = () => {
+            if (velocity < -0.6) return true;
+            if (openness < 0.4) return true;
+            return false;
+        };
+
+        const closing = shouldClose();
+        const base = 220;
+        const speedFactor = Math.min(1.6, Math.max(0.45, Math.abs(velocity) * 140));
+        const duration = Math.round(base / speedFactor);
+        nav.style.transition = `transform ${duration}ms cubic-bezier(.4,0,.2,1), box-shadow 0.3s ease`;
+
+        if (closing) {
+            nav.style.transform = `translate(${-navWidthRef.current}px, 0%)`;
+            nav.style.boxShadow = "none";
+            setTimeout(() => setIsOpened(false), 0);
+        } else {
+            nav.style.transform = "translate(0px, 0%)";
             nav.style.boxShadow = "5px 0 50px 100px rgba(0, 0, 0, 0.1)";
+            setIsOpened(true);
         }
     };
 
     const handleTouchStart = (e) => {
         if (!isMobile) return;
+        e.preventDefault();
+        e.stopPropagation();
         handleStart(e.touches[0].clientX);
     };
 
     const handleTouchMove = (e) => {
         if (!isMobile) return;
         e.preventDefault();
+        e.stopPropagation();
         handleMove(e.touches[0].clientX);
     };
 
@@ -129,12 +164,21 @@ export function Navigation({ user, sideNav = false, currentPath }) {
 
     useEffect(() => {
         if (!isDragging || !isMobile) return;
+
+        // Prevent browser back/forward gestures during drag
+        document.body.style.overflowX = 'hidden';
+        document.documentElement.style.overscrollBehaviorX = 'none';
+
         document.addEventListener('mousemove', handleMouseMove);
         document.addEventListener('mouseup', handleMouseUp);
         document.addEventListener('touchmove', handleTouchMove, { passive: false });
         document.addEventListener('touchend', handleTouchEnd);
 
         return () => {
+            // Restore browser navigation when drag ends
+            document.body.style.overflowX = '';
+            document.documentElement.style.overscrollBehaviorX = '';
+
             document.removeEventListener('mousemove', handleMouseMove);
             document.removeEventListener('mouseup', handleMouseUp);
             document.removeEventListener('touchmove', handleTouchMove);
@@ -160,29 +204,78 @@ export function Navigation({ user, sideNav = false, currentPath }) {
             document.removeEventListener("touchstart", handleClickOutside);
         };
     }, [isOpened, isDragging, isMobile]);
+
+    // Prevent browser back/forward gestures on mobile when sidebar is available
+    useEffect(() => {
+        if (!isMobile || !user) return;
+
+        const preventBrowserNavigation = (e) => {
+            // Check if the touch started near the left edge (where sidebar drag initiates)
+            if (e.touches && e.touches.length === 1) {
+                const touch = e.touches[0];
+                if (touch.clientX <= 30) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+            }
+        };
+
+        // Apply CSS to prevent overscroll behavior
+        document.documentElement.style.overscrollBehaviorX = 'none';
+        document.body.style.overscrollBehaviorX = 'none';
+
+        // Add touch event listener to prevent browser navigation
+        document.addEventListener('touchstart', preventBrowserNavigation, { passive: false, capture: true });
+
+        return () => {
+            // Restore default behavior
+            document.documentElement.style.overscrollBehaviorX = '';
+            document.body.style.overscrollBehaviorX = '';
+            document.removeEventListener('touchstart', preventBrowserNavigation, { capture: true });
+        };
+    }, [isMobile, user]);
+
     useEffect(() => {
         if (!isDragging || !isMobile) return;
+        const nav = navRef.current;
+        if (!nav) return;
+        let raf;
+        const update = () => {
+            const width = navWidthRef.current || 300;
+            const dragDistance = Math.max(0, Math.min(startX - currentX, width));
+            const progress = Math.min(dragDistance / width, 1);
+            const maxSpread = 100;
+            const spread = maxSpread * (1 - progress);
+            nav.style.boxShadow = `5px 0 50px ${spread}px rgba(0, 0, 0, 0.1)`;
+        };
+        raf = requestAnimationFrame(update);
+        return () => cancelAnimationFrame(raf);
+    }, [isDragging, currentX, startX, isMobile]);
 
+    // Handle mobile/desktop transition
+    useEffect(() => {
         const nav = navRef.current;
         if (!nav) return;
 
-        const dragDistance = Math.max(0, Math.min(startX - currentX, 300));
-        const progress = Math.min(dragDistance / 300, 1);
-
-        const maxSpread = 100;
-        const spread = maxSpread * (1 - progress);
-        nav.style.boxShadow = `5px 0 50px ${spread}px rgba(0, 0, 0, 0.1)`;
-
-        return () => {
-            if (nav) nav.style.boxShadow = isOpened
-                ? `5px 0 50px ${maxSpread}px rgba(0, 0, 0, 0.1)`
-                : "none";
-        };
-    }, [isDragging, currentX, startX, isMobile, isOpened]);
+        if (!isMobile) {
+            // When switching to desktop, reset navigation state
+            setIsOpened(false);
+            setIsDragging(false);
+            nav.style.transform = '';
+            nav.style.boxShadow = '';
+            nav.style.transition = '';
+        } else {
+            // When switching to mobile, ensure navigation is closed
+            if (!isOpened) {
+                nav.style.transform = 'translate(-100%, 0%)';
+                nav.style.boxShadow = 'none';
+            }
+        }
+    }, [isMobile]);
 
     return (
         <>
-            {isMobile && sideNav && currentPath == undefined && (
+            {isMobile && sideNav && currentPath == undefined && user && (
                 <div className={style.searchContainer}>
                     <div className={style.searchBox}>
                         <div className={style.leftSide}>
@@ -192,20 +285,58 @@ export function Navigation({ user, sideNav = false, currentPath }) {
                                 strokeWidth={2}
                                 onClick={toggleNavigation}
                                 data-hamburger-button="true"
+                                aria-label="Toggle navigation"
+                                aria-expanded={isOpened}
                             />
                             <h1 className={style.searchTitle}>Search</h1>
                         </div>
                         <Search size={20} color="var(--text)" strokeWidth={2} />
                     </div>
                 </div>
-
+            )}
+            {isMobile && isOpened && user && <div className="overlay" onClick={closeNavigation} />}
+            {isMobile && !isOpened && user && (
+                <div
+                    style={{
+                        position: 'fixed',
+                        top: 0,
+                        left: 0,
+                        bottom: 0,
+                        width: '30px',
+                        zIndex: 50,
+                        touchAction: 'none'
+                    }}
+                    onTouchStart={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleStart(e.touches[0].clientX);
+                    }}
+                    onTouchMove={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleMove(e.touches[0].clientX);
+                    }}
+                    onTouchEnd={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleEnd();
+                    }}
+                    onMouseDown={(e) => handleStart(e.clientX)}
+                    onMouseMove={(e) => handleMove(e.clientX)}
+                    onMouseUp={handleEnd}
+                    onMouseLeave={() => isDragging && handleEnd()}
+                />
             )}
             <nav
                 ref={navRef}
-                className={style.navigation}
+                className={`${style.navigation} ${isMobile ? style.mobile : ''} ${isMobile && isOpened ? style.opened : ''}`}
                 style={(!isMobile && pathname !== "/") ? { filter: "drop-shadow(3px 0px 50px rgba(0, 0, 0, 0.3))" } : null}
-                onTouchStart={isMobile ? handleTouchStart : undefined}
-                onMouseDown={isMobile ? handleMouseDown : undefined}
+                role="navigation"
+                aria-label="Primary"
+                aria-hidden={isMobile ? (!isOpened).toString() : "false"}
+                aria-expanded={isMobile ? isOpened : true}
+                onTouchStart={isMobile && user ? handleTouchStart : undefined}
+                onMouseDown={isMobile && user ? handleMouseDown : undefined}
             >
                 <div className={style.titleContainer}>
                     <Link className={style.logo} href="/">
@@ -215,8 +346,8 @@ export function Navigation({ user, sideNav = false, currentPath }) {
                     </Link>
                     <h1 className={style.title}>Cloud</h1>
                 </div>
-                {user ? <UserProfileDropdown user={user} mobile={isMobile} /> : null}
-            </nav >
+                {user ? <UserProfileDropdown user={user} mobile={isMobile} onOpenSettings={onOpenSettings} /> : null}
+            </nav>
         </>
     );
 }

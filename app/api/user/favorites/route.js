@@ -106,6 +106,10 @@ export async function POST(req) {
                     }
                 }
             }
+            try {
+                const room = `user:${session.user.id}`;
+                global.io?.to(room).emit('favorites-updated', { userId: session.user.id });
+            } catch { }
         } else if (action === "remove") {
             for (const item of items) {
                 if (item.isFolder) {
@@ -186,6 +190,10 @@ export async function POST(req) {
                     }
                 }
             }
+            try {
+                const room = `user:${session.user.id}`;
+                global.io?.to(room).emit('favorites-updated', { userId: session.user.id });
+            } catch { }
         } else if (action === "update-path") {
             for (const item of items) {
                 if (item.isFolder) {
@@ -224,6 +232,10 @@ export async function POST(req) {
                     }
                 }
             }
+            try {
+                const room = `user:${session.user.id}`;
+                global.io?.to(room).emit('favorites-updated', { userId: session.user.id });
+            } catch { }
         } else if (action === "cleanup-orphaned") {
             const allFavoriteFiles = await prisma.user.findUnique({
                 where: { id: session.user.id },
@@ -318,6 +330,10 @@ export async function POST(req) {
             }
         }
 
+        try {
+            const room = `user:${session.user.id}`;
+            global.io?.to(room).emit('favorites-updated', { userId: session.user.id });
+        } catch { }
         return NextResponse.json({ success: true }, { status: 200 });
     }
 }

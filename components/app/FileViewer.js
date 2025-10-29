@@ -101,6 +101,8 @@ export function FileViewer({
     const [isEmpty, setIsEmpty] = useState(false);
     const [isHtmlPreview, setIsHtmlPreview] = useState(false);
     const [autoFitImage, setAutoFitImage] = useState(false);
+    const [fileMetadata, setFileMetadata] = useState(null);
+    const [metadataLoading, setMetadataLoading] = useState(false);
     const imagePositionRef = useRef({ x: 0, y: 0 });
     const isDraggingRef = useRef(false);
     const dragStartRef = useRef({ x: 0, y: 0 });
@@ -307,10 +309,25 @@ export function FileViewer({
         }
     };
 
-    const handleFileInfo = () => {
+    const handleFileInfo = async () => {
         lastFocusedElementRef.current = document.activeElement;
         setShowFileInfoModal(true);
         setShowDropdown(false);
+
+        // Fetch metadata for the current file
+        if (currentFile && !fileMetadata) {
+            setMetadataLoading(true);
+            try {
+                const response = await api.get(`/api/files/metadata?path=${encodeURIComponent(currentFile.path)}`);
+                if (response.success) {
+                    setFileMetadata(response.metadata);
+                }
+            } catch (error) {
+                console.error('Failed to fetch file metadata:', error);
+            } finally {
+                setMetadataLoading(false);
+            }
+        }
     };
 
     const handleDeleteConfirm = () => {
@@ -334,6 +351,15 @@ export function FileViewer({
     const formatDate = (dateString) => {
         const date = new Date(dateString);
         return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+    };
+
+    const hasGPSData = (file) => {
+        return fileMetadata?.gps && (fileMetadata.gps.latitude || fileMetadata.gps.longitude);
+    };
+
+    const formatGPS = (lat, lng) => {
+        if (!lat || !lng) return null;
+        return `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
     };
 
     const currentFile = files[currentFileIndex];
@@ -501,6 +527,8 @@ export function FileViewer({
             setIsEmpty(false);
             setFileContent('');
             setAutoFitImage(false);
+            setFileMetadata(null);
+            setMetadataLoading(false);
             resetZoom();
 
             setIsVideoPlaying(false);
@@ -785,7 +813,7 @@ export function FileViewer({
 
     const handleZoomIn = useCallback(() => {
         setImageScale(prev => {
-            const newScale = Math.min(prev * 1.2, 10);
+            const newScale = Math.min(prev * 1.05, 10); // Reduced from 1.2 to 1.05 for smoother zoom
             updateImageTransform(newScale, imagePositionRef.current);
             return newScale;
         });
@@ -793,7 +821,7 @@ export function FileViewer({
 
     const handleZoomOut = useCallback(() => {
         setImageScale(prev => {
-            const newScale = Math.max(prev / 1.2, 0.1);
+            const newScale = Math.max(prev / 1.05, 0.1); // Reduced from 1.2 to 1.05 for smoother zoom
             updateImageTransform(newScale, imagePositionRef.current);
             return newScale;
         });
@@ -1502,7 +1530,7 @@ export function FileViewer({
             {!mobile && (
                 <div ref={sidePanelRef} className={`${style.sidePanel} ${showFileInfoModal ? style.sidePanelOpen : ''}`}>
                     <div className={style.sidePanelHeader}>
-                        <h3>File Information</h3>
+                        <h3>File Properties</h3>
                         <button onClick={() => {
                             setShowFileInfoModal(false);
                             setFileInfoMenuSwipePosition(0);
@@ -1525,6 +1553,12 @@ export function FileViewer({
                             <span>Type:</span>
                             <span>{getFileType(currentFile.name)}</span>
                         </div>
+                        {currentFile.name && currentFile.name.includes('.') && (
+                            <div className={style.fileInfoItem}>
+                                <span>Extension:</span>
+                                <span>.{currentFile.name.split('.').pop().toLowerCase()}</span>
+                            </div>
+                        )}
                         <div className={style.fileInfoItem}>
                             <span>Path:</span>
                             <span>{currentFile.path}</span>
@@ -1533,6 +1567,54 @@ export function FileViewer({
                             <div className={style.fileInfoItem}>
                                 <span>Modified:</span>
                                 <span>{formatDate(currentFile.modified)}</span>
+                            </div>
+                        )}
+                        {currentFile.createdAt && (
+                            <div className={style.fileInfoItem}>
+                                <span>Created:</span>
+                                <span>{formatDate(currentFile.createdAt)}</span>
+                            </div>
+                        )}
+                        {currentFile.mime && (
+                            <div className={style.fileInfoItem}>
+                                <span>MIME Type:</span>
+                                <span>{currentFile.mime}</span>
+                            </div>
+                        )}
+                        {hasGPSData(currentFile) && (
+                            <div className={style.fileInfoItem}>
+                                <span>GPS Location:</span>
+                                <span>{formatGPS(fileMetadata?.gps?.latitude, fileMetadata?.gps?.longitude)}</span>
+                            </div>
+                        )}
+                        {fileMetadata?.gps?.altitude && (
+                            <div className={style.fileInfoItem}>
+                                <span>Altitude:</span>
+                                <span>{fileMetadata.gps.altitude.toFixed(2)} m</span>
+                            </div>
+                        )}
+                        {fileMetadata?.camera?.make && (
+                            <div className={style.fileInfoItem}>
+                                <span>Camera:</span>
+                                <span>{fileMetadata.camera.make} {fileMetadata.camera.model || ''}</span>
+                            </div>
+                        )}
+                        {fileMetadata?.camera?.lens && (
+                            <div className={style.fileInfoItem}>
+                                <span>Lens:</span>
+                                <span>{fileMetadata.camera.lens}</span>
+                            </div>
+                        )}
+                        {fileMetadata?.camera?.settings && (
+                            <div className={style.fileInfoItem}>
+                                <span>Camera Settings:</span>
+                                <span>{fileMetadata.camera.settings}</span>
+                            </div>
+                        )}
+                        {fileMetadata?.dateTime && (
+                            <div className={style.fileInfoItem}>
+                                <span>Date Taken:</span>
+                                <span>{formatDate(fileMetadata.dateTime)}</span>
                             </div>
                         )}
                     </div>
@@ -1559,7 +1641,7 @@ export function FileViewer({
                         <div className={mainStyle.popupModalMenuHeader}>
                             <div className={mainStyle.dragHandle}></div>
                             <div>
-                                <h3>File Information</h3>
+                                <h3>File Properties</h3>
                                 <button onClick={() => {
                                     setShowFileInfoModal(false);
                                     setFileInfoMenuSwipePosition(0);
@@ -1568,26 +1650,228 @@ export function FileViewer({
                             </div>
                         </div>
                         <div className={mainStyle.popupModalMenuOptions}>
-                            <div className={style.fileInfoItem}>
-                                <span>Name:</span>
-                                <span>{currentFile.name}</span>
-                            </div>
-                            <div className={style.fileInfoItem}>
-                                <span>Size:</span>
-                                <span>{formatFileSize(currentFile.size)}</span>
-                            </div>
-                            <div className={style.fileInfoItem}>
-                                <span>Type:</span>
-                                <span>{getFileType(currentFile.name)}</span>
-                            </div>
-                            <div className={style.fileInfoItem}>
-                                <span>Path:</span>
-                                <span>{currentFile.path}</span>
-                            </div>
-                            {currentFile.modified && (
+                            {/* General Section */}
+                            <div className={style.propertySection}>
+                                <h4 className={style.sectionTitle}>General</h4>
                                 <div className={style.fileInfoItem}>
-                                    <span>Modified:</span>
-                                    <span>{formatDate(currentFile.modified)}</span>
+                                    <span>Name:</span>
+                                    <span>{currentFile.name}</span>
+                                </div>
+                                <div className={style.fileInfoItem}>
+                                    <span>Size:</span>
+                                    <span>{formatFileSize(currentFile.size)}</span>
+                                </div>
+                                <div className={style.fileInfoItem}>
+                                    <span>Type:</span>
+                                    <span>{getFileType(currentFile.name)}</span>
+                                </div>
+                                {currentFile.name && currentFile.name.includes('.') && (
+                                    <div className={style.fileInfoItem}>
+                                        <span>Extension:</span>
+                                        <span>.{currentFile.name.split('.').pop().toLowerCase()}</span>
+                                    </div>
+                                )}
+                                <div className={style.fileInfoItem}>
+                                    <span>Path:</span>
+                                    <span>{currentFile.path}</span>
+                                </div>
+                            </div>
+
+                            {/* Dates Section */}
+                            <div className={style.propertySection}>
+                                <h4 className={style.sectionTitle}>Dates</h4>
+                                {currentFile.createdAt && (
+                                    <div className={style.fileInfoItem}>
+                                        <span>Created:</span>
+                                        <span>{formatDate(currentFile.createdAt)}</span>
+                                    </div>
+                                )}
+                                {currentFile.modified && (
+                                    <div className={style.fileInfoItem}>
+                                        <span>Modified:</span>
+                                        <span>{formatDate(currentFile.modified)}</span>
+                                    </div>
+                                )}
+                                {currentFile.accessedAt && (
+                                    <div className={style.fileInfoItem}>
+                                        <span>Accessed:</span>
+                                        <span>{formatDate(currentFile.accessedAt)}</span>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Technical Details Section */}
+                            <div className={style.propertySection}>
+                                <h4 className={style.sectionTitle}>Technical Details</h4>
+                                {currentFile.mime && (
+                                    <div className={style.fileInfoItem}>
+                                        <span>MIME Type:</span>
+                                        <span>{currentFile.mime}</span>
+                                    </div>
+                                )}
+                                {currentFile.encoding && (
+                                    <div className={style.fileInfoItem}>
+                                        <span>Encoding:</span>
+                                        <span>{currentFile.encoding}</span>
+                                    </div>
+                                )}
+                                {currentFile.permissions && (
+                                    <div className={style.fileInfoItem}>
+                                        <span>Permissions:</span>
+                                        <span>{currentFile.permissions}</span>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Location Section */}
+                            {hasGPSData(currentFile) && (
+                                <div className={style.propertySection}>
+                                    <h4 className={style.sectionTitle}>Location</h4>
+                                    <div className={style.fileInfoItem}>
+                                        <span>GPS Coordinates:</span>
+                                        <span>{formatGPS(fileMetadata?.gps?.latitude, fileMetadata?.gps?.longitude)}</span>
+                                    </div>
+                                    {fileMetadata?.gps?.altitude && (
+                                        <div className={style.fileInfoItem}>
+                                            <span>Altitude:</span>
+                                            <span>{fileMetadata.gps.altitude.toFixed(2)} meters</span>
+                                        </div>
+                                    )}
+                                    {fileMetadata?.gps?.location && (
+                                        <div className={style.fileInfoItem}>
+                                            <span>Location:</span>
+                                            <span>{fileMetadata.gps.location}</span>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* Camera Information Section */}
+                            {fileMetadata?.camera && (
+                                <div className={style.propertySection}>
+                                    <h4 className={style.sectionTitle}>Camera Information</h4>
+                                    {fileMetadata.camera.make && (
+                                        <div className={style.fileInfoItem}>
+                                            <span>Camera Make:</span>
+                                            <span>{fileMetadata.camera.make}</span>
+                                        </div>
+                                    )}
+                                    {fileMetadata.camera.model && (
+                                        <div className={style.fileInfoItem}>
+                                            <span>Camera Model:</span>
+                                            <span>{fileMetadata.camera.model}</span>
+                                        </div>
+                                    )}
+                                    {fileMetadata?.dateTime && (
+                                        <div className={style.fileInfoItem}>
+                                            <span>Date Taken:</span>
+                                            <span>{formatDate(fileMetadata.dateTime)}</span>
+                                        </div>
+                                    )}
+                                    {fileMetadata.camera.lens && (
+                                        <div className={style.fileInfoItem}>
+                                            <span>Lens:</span>
+                                            <span>{fileMetadata.camera.lens}</span>
+                                        </div>
+                                    )}
+                                    {fileMetadata.camera.settings && (
+                                        <div className={style.fileInfoItem}>
+                                            <span>Camera Settings:</span>
+                                            <span>{fileMetadata.camera.settings}</span>
+                                        </div>
+                                    )}
+                                    {fileMetadata.camera.software && (
+                                        <div className={style.fileInfoItem}>
+                                            <span>Software:</span>
+                                            <span>{fileMetadata.camera.software}</span>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* Image Details Section */}
+                            {fileMetadata && (fileMetadata.image || fileMetadata.settings) && (
+                                <div className={style.propertySection}>
+                                    <h4 className={style.sectionTitle}>Image Details</h4>
+                                    {fileMetadata.image?.width && fileMetadata.image?.height && (
+                                        <div className={style.fileInfoItem}>
+                                            <span>Dimensions:</span>
+                                            <span>{fileMetadata.image.width} × {fileMetadata.image.height} pixels</span>
+                                        </div>
+                                    )}
+                                    {fileMetadata.settings?.iso && (
+                                        <div className={style.fileInfoItem}>
+                                            <span>ISO:</span>
+                                            <span>{fileMetadata.settings.iso}</span>
+                                        </div>
+                                    )}
+                                    {fileMetadata.settings?.aperture && (
+                                        <div className={style.fileInfoItem}>
+                                            <span>Aperture:</span>
+                                            <span>f/{fileMetadata.settings.aperture}</span>
+                                        </div>
+                                    )}
+                                    {fileMetadata.settings?.shutterSpeed && (
+                                        <div className={style.fileInfoItem}>
+                                            <span>Shutter Speed:</span>
+                                            <span>{fileMetadata.settings.shutterSpeed}</span>
+                                        </div>
+                                    )}
+                                    {fileMetadata.settings?.flash && (
+                                        <div className={style.fileInfoItem}>
+                                            <span>Flash:</span>
+                                            <span>{fileMetadata.settings.flash}</span>
+                                        </div>
+                                    )}
+                                    {fileMetadata.settings?.whiteBalance && (
+                                        <div className={style.fileInfoItem}>
+                                            <span>White Balance:</span>
+                                            <span>{fileMetadata.settings.whiteBalance}</span>
+                                        </div>
+                                    )}
+                                    {fileMetadata.image?.orientation && (
+                                        <div className={style.fileInfoItem}>
+                                            <span>Orientation:</span>
+                                            <span>{fileMetadata.image.orientation}</span>
+                                        </div>
+                                    )}
+                                    {fileMetadata.image?.colorSpace && (
+                                        <div className={style.fileInfoItem}>
+                                            <span>Color Space:</span>
+                                            <span>{fileMetadata.image.colorSpace}</span>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* Device Information Section */}
+                            {fileMetadata?.device && (
+                                <div className={style.propertySection}>
+                                    <h4 className={style.sectionTitle}>Device Information</h4>
+                                    {fileMetadata.device.manufacturer && (
+                                        <div className={style.fileInfoItem}>
+                                            <span>Manufacturer:</span>
+                                            <span>{fileMetadata.device.manufacturer}</span>
+                                        </div>
+                                    )}
+                                    {fileMetadata.device.model && (
+                                        <div className={style.fileInfoItem}>
+                                            <span>Device Model:</span>
+                                            <span>{fileMetadata.device.model}</span>
+                                        </div>
+                                    )}
+                                    {fileMetadata.device.osVersion && (
+                                        <div className={style.fileInfoItem}>
+                                            <span>OS Version:</span>
+                                            <span>{fileMetadata.device.osVersion}</span>
+                                        </div>
+                                    )}
+                                    {fileMetadata.device.appVersion && (
+                                        <div className={style.fileInfoItem}>
+                                            <span>App Version:</span>
+                                            <span>{fileMetadata.device.appVersion}</span>
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </div>

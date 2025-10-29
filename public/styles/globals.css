@@ -97,6 +97,81 @@
   --fw-bold: 700;
 }
 
+/* Force light theme */
+[data-color-scheme="light"] {
+  --background: #ffffff;
+  --nav-background: #f1f1f1;
+  --nav-background-filter: brightness(0) saturate(100%) invert(100%) sepia(99%) saturate(133%) hue-rotate(240deg) brightness(112%) contrast(89%);
+  --nav-user-profile-background: #EEEEEE;
+  --nav-user-profile-border: #C6C3BD;
+  --text: #181818;
+  --text-color: #181818;
+  --text-color-muted: #606060;
+  --alt-text-1: #CFCFCF;
+  --alt-text-2: #ADADAD;
+  --alt-text-3: #606060;
+  --alt-svg-1: invert(83%) sepia(0%) saturate(0%) hue-rotate(193deg) brightness(99%) contrast(98%);
+  --alt-svg-3: invert(37%) sepia(0%) saturate(0%) hue-rotate(323deg) brightness(93%) contrast(81%);
+  --btn-background: #F2F2F2;
+  --btn-disabled-background: #D8D8D8;
+  --border-color: #CFCFCF;
+  --border-color-hover: #606060;
+  --hover-background: #E5E5E5;
+  --active-background: #D5D5D5;
+  --accent-color: #f1f1f1;
+  --accent-color-hover: #e1e1e1;
+  --scrollbar-thumb: #C0C0C0;
+  --scrollbar-thumb-hover: #B0B0B0;
+  --scrollbar-track: #F0F0F0;
+  --folder-arrow-color: #606060;
+  --explorer-hover: #dfdfdf;
+  --explorer-selected: #c7c7c7;
+  --explorer-item: #f1f1f1;
+  --input-border: #d1d5db;
+  --input-background: #ffffff;
+  --file-input-button-bg: #dbeafe;
+  --file-input-button-hover: #bfdbfe;
+  --file-input-button-text: #1e40af;
+}
+
+/* Force dark theme */
+[data-color-scheme="dark"] {
+  --background: #161616;
+  --nav-background: #141414;
+  --nav-background-filter: brightness(0) saturate(100%) invert(0%) sepia(1%) saturate(580%) hue-rotate(360deg) brightness(101%) contrast(84%);
+  --nav-user-profile-background: #1A1A1A;
+  --nav-user-profile-border: #272727;
+  --text: #ecedef;
+  --text-color: #ecedef;
+  --text-color-muted: #ADADAD;
+  --alt-text-1: #606060;
+  --alt-text-2: #ADADAD;
+  --alt-text-3: #CFCFCF;
+  --alt-svg-1: invert(37%) sepia(0%) saturate(0%) hue-rotate(323deg) brightness(93%) contrast(81%);
+  --alt-svg-3: invert(83%) sepia(0%) saturate(0%) hue-rotate(193deg) brightness(99%) contrast(98%);
+  --btn-background: #272727;
+  --btn-disabled-background: #2c2c2c;
+  --border-color: #575757;
+  --border-color-hover: #888888;
+  --hover-background: #2c2c2c;
+  --active-background: #3c3c3c;
+  --accent-color: #141414;
+  --accent-color-hover: #1A1A1A;
+  --scrollbar-thumb: #4c4c4c;
+  --scrollbar-thumb-hover: #5c5c5c;
+  --scrollbar-track: #1e1e1e;
+  --folder-arrow-color: #c1c1c1;
+  --explorer-hover: #2c2c2c;
+  --explorer-selected: #3c3c3c;
+  --explorer-item: #0f0f0f;
+  --input-border: #575757;
+  --input-background: #1a1a1a;
+  --file-input-button-bg: rgba(37, 99, 235, 0.2);
+  --file-input-button-hover: rgba(37, 99, 235, 0.3);
+  --file-input-button-text: #60a5fa;
+}
+
+/* Default system theme preference */
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #161616;
@@ -162,17 +237,112 @@
   }
 }
 
+/* High Contrast Theme */
+[data-theme="high-contrast"] {
+  --background: #000000;
+  --nav-background: #000000;
+  --nav-background-filter: brightness(0) saturate(100%) invert(0%);
+  --nav-user-profile-background: #000000;
+  --nav-user-profile-border: #ffffff;
+  --top-nav-height: 60px;
+  --text: #ffffff;
+  --text-color: #ffffff;
+  --text-color-muted: #cccccc;
+  --alt-text-1: #ffffff;
+  --alt-text-2: #ffffff;
+  --alt-text-3: #ffffff;
+  --alt-svg-1: invert(100%);
+  --alt-svg-3: invert(100%);
+  --btn-background: #000000;
+  --btn-disabled-background: #333333;
+  --border-color: #ffffff;
+  --border-color-hover: #ffffff;
 
+  --hover-background: #333333;
+  --active-background: #666666;
+
+  --accent-color: #888888;
+  --accent-color-hover: #cccccc;
+
+  --scrollbar-thumb: #ffffff;
+  --scrollbar-thumb-hover: #cccccc;
+  --scrollbar-track: #000000;
+  --folder-arrow-color: #ffffff;
+  --explorer-hover: #333333;
+  --explorer-selected: #666666;
+  --explorer-item: #000000;
+
+  --modal-enter-duration: 180ms;
+  --modal-exit-duration: 180ms;
+  --modal-ease: cubic-bezier(.4, 0, .2, 1);
+
+  --button-text-color: #000000;
+  --button-primary: #ffffff;
+  --button-primary-hover: #cccccc;
+  --button-success: #ffffff;
+  --button-success-hover: #cccccc;
+  --button-disabled: #333333;
+  --button-danger: #ffffff;
+  --button-danger-hover: #cccccc;
+
+  --message-success-bg: #333333;
+  --message-success-text: #ffffff;
+  --message-success-border: #ffffff;
+  --message-error-bg: #333333;
+  --message-error-text: #ffffff;
+  --message-error-border: #ffffff;
+
+  --input-border: #ffffff;
+  --input-background: #000000;
+  --file-input-button-bg: #333333;
+  --file-input-button-hover: #666666;
+  --file-input-button-text: #ffffff;
+}
+
+
+/* iOS / Safari autofill fix: keep themed background instead of white/yellow */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
 input:-webkit-autofill:focus,
-input:-webkit-autofill {
-  -webkit-box-shadow: none !important;
-  box-shadow: none !important;
-  background: transparent !important;
-  background-color: transparent !important;
+textarea:-webkit-autofill,
+textarea:-webkit-autofill:hover,
+textarea:-webkit-autofill:focus,
+select:-webkit-autofill,
+select:-webkit-autofill:hover,
+select:-webkit-autofill:focus,
+input:autofill,
+input:autofill:hover,
+input:autofill:focus {
   -webkit-text-fill-color: var(--text) !important;
   color: var(--text) !important;
-  appearance: none !important;
-  transition: background-color 50000s ease-in-out 0s;
+  caret-color: var(--text) !important;
+  /* Force background fill using large inset shadow; relies on theme vars */
+  box-shadow: 0 0 0 1000px var(--input-background) inset !important;
+  -webkit-box-shadow: 0 0 0 1000px var(--input-background) inset !important;
+  border: 1px solid var(--input-border) !important;
+  background: var(--input-background) !important;
+  background-clip: padding-box !important;
+  transition: background-color 0s ease-in-out 0s, color 0.15s ease;
+  /* cancel long delay hacks */
+}
+
+@media (prefers-color-scheme: dark) {
+
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus,
+  textarea:-webkit-autofill,
+  textarea:-webkit-autofill:hover,
+  textarea:-webkit-autofill:focus,
+  select:-webkit-autofill,
+  select:-webkit-autofill:hover,
+  select:-webkit-autofill:focus,
+  input:autofill,
+  input:autofill:hover,
+  input:autofill:focus {
+    box-shadow: 0 0 0 1000px var(--input-background) inset !important;
+    -webkit-box-shadow: 0 0 0 1000px var(--input-background) inset !important;
+  }
 }
 
 input[type="password"]::-ms-reveal,
@@ -212,6 +382,16 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   transition: background-color 0.5s ease, color 0.5s ease;
+}
+
+/* Mobile touch navigation prevention */
+@media (max-width: 768px) {
+
+  html,
+  body {
+    overscroll-behavior-x: none;
+    touch-action: pan-y;
+  }
 }
 
 * {
@@ -402,4 +582,15 @@ h6 {
   border: 3px solid #606060;
   transition: all 1s ease-in-out;
   user-select: none;
+}
+
+/* Loading spinner animation */
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
 }

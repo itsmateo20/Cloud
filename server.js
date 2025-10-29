@@ -47,6 +47,7 @@
 })();
 
 const { createServer } = require("http");
+require('./lib/memoryMonitor.js');
 const { Server } = require("socket.io");
 const next = require("next");
 const port = process.env.PORT || 3000;
@@ -70,6 +71,17 @@ app.prepare().then(() => {
 
     io.on("connection", (socket) => {
         console.log(` ⚡ Socket ${chalk.bold.green("connected")}\n     ${chalk.bold.gray("ID:")} ${socket.id}\n     ${chalk.bold.gray("Secure:")} ${socket.handshake.secure}\n     ${chalk.bold.gray("Time:")} ${socket.handshake.time}`);
+
+        socket.on('register-user', (payload) => {
+            try {
+                const userId = payload && (payload.userId || payload.id);
+                if (userId) {
+                    const room = `user:${userId}`;
+                    socket.join(room);
+                    console.log(`   → joined room ${room}`);
+                }
+            } catch { }
+        });
         socket.on('disconnect', () => {
             console.log(` ⚡ Socket ${chalk.bold.red("disconnected")}\n     ${chalk.bold.gray("ID:")} ${socket.id}\n     ${chalk.bold.gray("Secure:")} ${socket.handshake.secure}\n     ${chalk.bold.gray("Time:")} ${socket.handshake.time}`);
         });

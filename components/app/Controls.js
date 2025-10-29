@@ -10,6 +10,7 @@ import {
     Edit3,
     Upload,
     Download,
+    Smartphone,
     Trash2,
     ArrowUpDown,
     Eye,
@@ -36,6 +37,7 @@ const Controls = ({
     onOpenNewItemModal,
     onUpload,
     onDownload,
+    onGenerateQR,
     onDelete,
     onRename,
     onFavorite,
@@ -48,21 +50,28 @@ const Controls = ({
     const selectedArray = Array.isArray(selectedItems)
         ? selectedItems
         : Array.from(selectedItems || []);
+
     const [showNewDropdown, setShowNewDropdown] = useState(false);
     const [showSortDropdown, setShowSortDropdown] = useState(false);
     const [showViewDropdown, setShowViewDropdown] = useState(false);
     const [showMoreDropdown, setShowMoreDropdown] = useState(false);
+    const [showUploadDropdown, setShowUploadDropdown] = useState(false);
+    const [showDownloadDropdown, setShowDownloadDropdown] = useState(false);
 
     const newDropdownRef = useRef(null);
     const sortDropdownRef = useRef(null);
     const viewDropdownRef = useRef(null);
     const moreDropdownRef = useRef(null);
+    const uploadDropdownRef = useRef(null);
+    const downloadDropdownRef = useRef(null);
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (newDropdownRef.current && !newDropdownRef.current.contains(event.target)) setShowNewDropdown(false);
             if (sortDropdownRef.current && !sortDropdownRef.current.contains(event.target)) setShowSortDropdown(false);
             if (viewDropdownRef.current && !viewDropdownRef.current.contains(event.target)) setShowViewDropdown(false);
             if (moreDropdownRef.current && !moreDropdownRef.current.contains(event.target)) setShowMoreDropdown(false);
+            if (uploadDropdownRef.current && !uploadDropdownRef.current.contains(event.target)) setShowUploadDropdown(false);
+            if (downloadDropdownRef.current && !downloadDropdownRef.current.contains(event.target)) setShowDownloadDropdown(false);
         };
 
         document.addEventListener('mousedown', handleClickOutside);
@@ -141,25 +150,97 @@ const Controls = ({
                     )}
                 </div>
 
-                <button
-                    className={styles.button}
-                    onClick={onUpload}
-                    disabled={isSpecialPath}
-                    title="Upload"
-                >
-                    <span className={styles.icon}><Upload size={16} /></span>
-                    <span className={styles.label}>Upload</span>
-                </button>
-
-                <button
-                    className={`${styles.button} ${!hasSelection ? styles.disabled : ''}`}
-                    onClick={onDownload}
-                    disabled={!hasSelection}
-                    title="Download selected files and folders (folders as ZIP)"
-                >
-                    <span className={styles.icon}><Download size={16} /></span>
-                    <span className={styles.label}>Download</span>
-                </button>
+                <div className={styles.dropdown} ref={uploadDropdownRef}>
+                    <button
+                        className={styles.button}
+                        onClick={() => setShowUploadDropdown(!showUploadDropdown)}
+                        disabled={isSpecialPath}
+                        title="Upload"
+                    >
+                        <span className={styles.icon}><Upload size={16} /></span>
+                        <span className={styles.label}>Upload</span>
+                        <span className={styles.arrow}><ChevronDown size={12} /></span>
+                    </button>
+                    {showUploadDropdown && !isSpecialPath && (
+                        <div className={styles.dropdownMenu}>
+                            <button
+                                className={styles.dropdownItem}
+                                onClick={() => {
+                                    onUpload();
+                                    setShowUploadDropdown(false);
+                                }}
+                            >
+                                <span className={styles.dropdownIcon}><Upload size={16} /></span>
+                                Upload Files
+                            </button>
+                            <button
+                                className={styles.dropdownItem}
+                                onClick={() => {
+                                    const input = document.createElement('input');
+                                    input.type = 'file';
+                                    input.webkitdirectory = true;
+                                    input.multiple = true;
+                                    input.onchange = (e) => {
+                                        if (e.target.files && e.target.files.length > 0) {
+                                            onUpload(Array.from(e.target.files));
+                                        }
+                                    };
+                                    input.click();
+                                    setShowUploadDropdown(false);
+                                }}
+                            >
+                                <span className={styles.dropdownIcon}><FolderPlus size={16} /></span>
+                                Upload Folder
+                            </button>
+                            <button
+                                className={styles.dropdownItem}
+                                onClick={() => {
+                                    onGenerateQR?.('upload', []);
+                                    setShowUploadDropdown(false);
+                                }}
+                            >
+                                <span className={styles.dropdownIcon}><Smartphone size={16} /></span>
+                                Upload via QR Code
+                            </button>
+                        </div>
+                    )}
+                </div>
+                <div className={styles.dropdown} ref={downloadDropdownRef}>
+                    <button
+                        className={`${styles.button} ${!hasSelection ? styles.disabled : ''}`}
+                        onClick={() => hasSelection && setShowDownloadDropdown(!showDownloadDropdown)}
+                        disabled={!hasSelection}
+                        title="Download"
+                    >
+                        <span className={styles.icon}><Download size={16} /></span>
+                        <span className={styles.label}>Download</span>
+                        <span className={styles.arrow}><ChevronDown size={12} /></span>
+                    </button>
+                    {showDownloadDropdown && hasSelection && (
+                        <div className={styles.dropdownMenu}>
+                            <button
+                                className={styles.dropdownItem}
+                                onClick={() => {
+                                    onDownload?.();
+                                    setShowDownloadDropdown(false);
+                                }}
+                            >
+                                <span className={styles.dropdownIcon}><Download size={16} /></span>
+                                Download
+                            </button>
+                            <button
+                                className={styles.dropdownItem}
+                                onClick={() => {
+                                    onGenerateQR?.('download', selectedArray);
+                                    setShowDownloadDropdown(false);
+                                }}
+                            >
+                                <span className={styles.dropdownIcon}><Smartphone size={16} /></span>
+                                Download via QR Code
+                            </button>
+                        </div>
+                    )}
+                </div>
             </div>
 
             <div className={styles.separator}></div>

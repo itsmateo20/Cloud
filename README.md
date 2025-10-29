@@ -15,3 +15,18 @@
   <a href="https://www.figma.com/design/Nh5xaQlZEsJm8IMBb3ZCtk/Cloud?node-id=6-334&t=nsReP8nQCLObSVCY-0" style="text-decoration: none;"><img src="https://github.com/user-attachments/assets/0ff54115-0943-45c7-ba8f-756707816d9c" width="48%" height="auto" alt="Login Design"/>
   <a href="https://www.figma.com/design/Nh5xaQlZEsJm8IMBb3ZCtk/Cloud?node-id=6-334&t=nsReP8nQCLObSVCY-0" style="text-decoration: none;"><img src="https://github.com/user-attachments/assets/3b82680e-efc3-4b54-a66a-6029b1b87814" width="48%" height="auto" alt="Login Design"/>
 </div>
+
+## Performance & Adaptive Loading
+
+The application implements adaptive strategies to remain responsive across a wide range of network conditions and directory sizes:
+
+| Feature | Description |
+|---------|-------------|
+| Network Quality Detection | Classifies connection (low/medium/high) using Network Information API & RTT probes (`/api/health`). |
+| Concurrency Throttling | Thumbnail downloads queued (2/4/8 concurrent) depending on tier to avoid request flooding. |
+| Adaptive Thumbnail Sizes | `size=small|medium|large` parameter selects 96 / 128 / 256px variants cached per user per file mtime. |
+| Intersection Lazy Loading | Thumbnails only enqueue when near viewport (400px margin) to reduce wasted work. |
+| Virtualized Lists | List/Details views render only a moving window with overscan to keep DOM light for large folders. |
+| Smart Caching | ETags incorporate mtime + size; client benefits from conditional 304 responses. |
+
+Planned improvements: API pagination & infinite scroll, format negotiation (WebP/AVIF), priority prefetch, background warming of recently accessed folders.

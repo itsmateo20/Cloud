@@ -38,20 +38,30 @@ export async function POST(req) {
             }
         });
 
-        global.io?.emit("file-updated", {
-            path: path.dirname(oldPath).replace(".", ""),
-            action: "rename",
-            oldName: path.basename(oldPath),
-            newName,
-        });
+        try {
+            const room = `user:${id}`;
+            const payloadFU = {
+                userId: id,
+                path: path.dirname(oldPath).replace(".", ""),
+                action: "rename",
+                oldName: path.basename(oldPath),
+                newName,
+            };
+            global.io?.to(room).emit("file-updated", payloadFU);
+        } catch { }
 
-        global.io?.emit("folder-structure-updated", {
-            action: "rename",
-            oldPath: oldPath,
-            newPath: newPath,
-            oldName: path.basename(oldPath),
-            newName: newName
-        });
+        try {
+            const room = `user:${id}`;
+            const payloadFS = {
+                userId: id,
+                action: "rename",
+                oldPath: oldPath,
+                newPath: newPath,
+                oldName: path.basename(oldPath),
+                newName: newName
+            };
+            global.io?.to(room).emit("folder-structure-updated", payloadFS);
+        } catch { }
 
         return NextResponse.json({ success: true, code: "explorer_rename_success" }, { status: 200 });
 

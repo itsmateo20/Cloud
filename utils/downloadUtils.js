@@ -181,7 +181,7 @@ export class DownloadManager {
             clearTimeout(progressTimeout);
             isCompleted = true;
             window.dispatchEvent(new CustomEvent('downloadComplete', {
-                detail: { id: downloadId, fileName, type }
+                detail: { id: downloadId, fileName, type, success: true }
             }));
 
             window.removeEventListener('downloadCancel', handleCancel);
@@ -189,15 +189,16 @@ export class DownloadManager {
 
         } catch (error) {
             clearTimeout(progressTimeout);
+            isCompleted = true;
             this.activeDownloads.delete(downloadId);
 
             if (error.name === 'AbortError' || error.message === 'Download cancelled') {
-                window.dispatchEvent(new CustomEvent('downloadCancelled', {
-                    detail: { id: downloadId, fileName }
+                window.dispatchEvent(new CustomEvent('downloadComplete', {
+                    detail: { id: downloadId, fileName, success: false, error: 'Download cancelled' }
                 }));
             } else {
-                window.dispatchEvent(new CustomEvent('downloadError', {
-                    detail: { id: downloadId, fileName, error: error.message }
+                window.dispatchEvent(new CustomEvent('downloadComplete', {
+                    detail: { id: downloadId, fileName, success: false, error: error.message }
                 }));
             }
             throw error;
@@ -300,21 +301,22 @@ export class DownloadManager {
 
             isCompleted = true;
             window.dispatchEvent(new CustomEvent('downloadComplete', {
-                detail: { id: downloadId, fileName, type: 'file' }
+                detail: { id: downloadId, fileName, type: 'file', success: true }
             }));
 
             this.activeDownloads.delete(downloadId);
 
         } catch (error) {
+            isCompleted = true;
             this.activeDownloads.delete(downloadId);
 
             if (error.name === 'AbortError' || error.message === 'Download cancelled') {
-                window.dispatchEvent(new CustomEvent('downloadCancelled', {
-                    detail: { id: downloadId, fileName }
+                window.dispatchEvent(new CustomEvent('downloadComplete', {
+                    detail: { id: downloadId, fileName, success: false, error: 'Download cancelled' }
                 }));
             } else {
-                window.dispatchEvent(new CustomEvent('downloadError', {
-                    detail: { id: downloadId, fileName, error: error.message }
+                window.dispatchEvent(new CustomEvent('downloadComplete', {
+                    detail: { id: downloadId, fileName, success: false, error: error.message }
                 }));
             }
             throw error;
@@ -435,21 +437,22 @@ export class DownloadManager {
 
             isCompleted = true;
             window.dispatchEvent(new CustomEvent('downloadComplete', {
-                detail: { id: downloadId, fileName: zipName, type: 'zip' }
+                detail: { id: downloadId, fileName: zipName, type: 'zip', success: true }
             }));
 
             this.activeDownloads.delete(downloadId);
 
         } catch (error) {
+            isCompleted = true;
             this.activeDownloads.delete(downloadId);
 
             if (error.name === 'AbortError' || error.message === 'Download cancelled') {
-                window.dispatchEvent(new CustomEvent('downloadCancelled', {
-                    detail: { id: downloadId, fileName: zipName }
+                window.dispatchEvent(new CustomEvent('downloadComplete', {
+                    detail: { id: downloadId, fileName: zipName, success: false, error: 'Download cancelled' }
                 }));
             } else {
-                window.dispatchEvent(new CustomEvent('downloadError', {
-                    detail: { id: downloadId, fileName: zipName, error: error.message }
+                window.dispatchEvent(new CustomEvent('downloadComplete', {
+                    detail: { id: downloadId, fileName: zipName, success: false, error: error.message }
                 }));
             }
             throw error;
@@ -545,21 +548,22 @@ export class DownloadManager {
 
             isCompleted = true;
             window.dispatchEvent(new CustomEvent('downloadComplete', {
-                detail: { id: downloadId, fileName: zipName, type: 'folder' }
+                detail: { id: downloadId, fileName: zipName, type: 'folder', success: true }
             }));
 
             this.activeDownloads.delete(downloadId);
 
         } catch (error) {
+            isCompleted = true;
             this.activeDownloads.delete(downloadId);
 
             if (error.name === 'AbortError' || error.message === 'Download cancelled') {
-                window.dispatchEvent(new CustomEvent('downloadCancelled', {
-                    detail: { id: downloadId, fileName: folderName }
+                window.dispatchEvent(new CustomEvent('downloadComplete', {
+                    detail: { id: downloadId, fileName: folderName, success: false, error: 'Download cancelled' }
                 }));
             } else {
-                window.dispatchEvent(new CustomEvent('downloadError', {
-                    detail: { id: downloadId, fileName: folderName, error: error.message }
+                window.dispatchEvent(new CustomEvent('downloadComplete', {
+                    detail: { id: downloadId, fileName: folderName, success: false, error: error.message }
                 }));
             }
             throw error;

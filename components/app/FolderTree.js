@@ -25,60 +25,63 @@ export default function FolderTree({
     useEffect(() => {
         if (!socket) return;
 
-        const handleContentChange = () => {
-            checkTabVisibility();
+        const handleContentChange = async () => {
+            try {
+                await checkTabVisibility();
+                if (selectedPath === 'favorites') {
+                    const favoritesData = await api.get("/api/user/favorites");
+                    const hasFavorites = favoritesData.success && (
+                        (favoritesData.files && favoritesData.files.length > 0) ||
+                        (favoritesData.folders && favoritesData.folders.length > 0)
+                    );
+                    if (!hasFavorites) onFolderSelect("");
+                }
+            } catch (e) {
+                if (selectedPath === 'favorites') onFolderSelect("");
+            }
         };
 
-        socket.on("folder-structure-updated", (payload) => {
+        const handleFolderStructure = (payload) => {
             handleFolderStructureUpdate(payload);
-        });
+            handleContentChange();
+        };
 
-        socket.on("file-updated", (payload) => {
-            if (payload.action === 'delete') {
-                const deletedFolders = payload.deletedItems.filter(item => item.type === 'folder');
-                if (deletedFolders.length > 0) handleFolderDeletion(payload.path, deletedFolders);
+        const handleFileUpdated = (payload) => {
+            if (!payload) return;
+            const { action, path: affectedPath } = payload;
+            if (action === 'delete') {
+                const deletedFolders = (payload.deletedItems || []).filter(item => item.type === 'folder');
+                if (deletedFolders.length > 0) handleFolderDeletion(affectedPath || '', deletedFolders);
+                return;
             }
-        });
+            if (action === 'upload' || action === 'create') {
+                const pathToRefresh = (affectedPath === '.' ? '' : (affectedPath || ''));
+                if (pathToRefresh !== undefined && pathToRefresh !== null) {
+                    setExpandedFolders(prev => {
+                        const toExpand = new Set(prev);
+                        const parts = (pathToRefresh || '').split('/').filter(Boolean);
+                        for (let i = 0; i < parts.length; i++) {
+                            const segPath = parts.slice(0, i + 1).join('/');
+                            toExpand.add(segPath);
+                        }
+                        return toExpand;
+                    });
+                }
+                loadFolderContents(pathToRefresh);
+                return;
+            }
+        };
 
-        socket?.on('file-favorited', handleContentChange);
-        socket?.on('folder-structure-updated', handleContentChange);
+        socket.on('folder-structure-updated', handleFolderStructure);
+        socket.on('file-updated', handleFileUpdated);
+        socket.on('favorites-updated', handleContentChange);
 
         return () => {
-            socket?.off('file-favorited', handleContentChange);
-            socket?.off('folder-structure-updated');
+            socket.off('folder-structure-updated', handleFolderStructure);
+            socket.off('file-updated', handleFileUpdated);
+            socket.off('favorites-updated', handleContentChange);
         };
-    }, [socket]);
-
-    useEffect(() => {
-        const autoExpandToPath = async () => {
-            if (selectedPath === 'favorites') return;
-
-            const pathParts = selectedPath.split('/').filter(part => part.length > 0);
-            const foldersToExpand = [];
-            for (let i = 0; i < pathParts.length; i++) {
-                const folderPath = pathParts.slice(0, i + 1).join('/');
-                foldersToExpand.push(folderPath);
-            }
-
-            const newExpanded = new Set(expandedFolders);
-            let hasChanges = false;
-
-            for (const folderPath of foldersToExpand) {
-                if (!newExpanded.has(folderPath)) {
-                    newExpanded.add(folderPath);
-                    hasChanges = true;
-                    if (!folderContents.has(folderPath)) {
-                        try {
-                            await loadFolderContents(folderPath);
-                        } catch (error) { }
-                    }
-                }
-            }
-            if (hasChanges) setExpandedFolders(newExpanded);
-        };
-
-        autoExpandToPath();
-    }, [selectedPath]);
+    }, [socket, selectedPath, onFolderSelect]);
 
     useEffect(() => {
         loadFolderContents("");

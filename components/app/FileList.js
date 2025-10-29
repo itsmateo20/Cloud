@@ -1,52 +1,16 @@
 // components/app/FileList.js
 "use client";
 
-import { useRef, useState, useEffect, forwardRef, useImperativeHandle, useCallback } from "react";
+import React, { useRef, useState, useEffect, forwardRef, useImperativeHandle, useCallback, useMemo } from "react";
 import { api } from "@/utils/api";
 import { downloadFile, downloadFolder } from "@/utils/downloadUtils";
-
 import styles from "./FileList.module.css";
+import { useNetworkTierConfig } from '@/utils/useNetworkQuality';
 import SoftLoading from "@/components/SoftLoading";
-import React from 'react';
-
-const ThumbnailWithLoader = ({ src, alt, cacheRef }) => {
-    const [loaded, setLoaded] = useState(() => cacheRef?.current?.has(src));
-
-    useEffect(() => {
-        if (cacheRef?.current?.has(src)) {
-            setLoaded(true);
-        }
-    }, [src, cacheRef]);
-
-    const handleLoad = () => {
-        if (cacheRef?.current && !cacheRef.current.has(src)) {
-            cacheRef.current.add(src);
-        }
-        setLoaded(true);
-    };
-
-    return (
-        <>
-            {!loaded && <div className={styles.thumbLoader}><SoftLoading /></div>}
-            <img
-                src={src}
-                alt={alt}
-                className={styles.thumbnailImage}
-                loading="lazy"
-                decoding="async"
-                style={!loaded ? { visibility: 'hidden', position: 'absolute' } : {}}
-                onLoad={handleLoad}
-                onError={(e) => { e.currentTarget.style.display = 'none'; setLoaded(true); }}
-            />
-        </>
-    );
-};
-
 import { ContextMenu } from "./ContextMenu";
+import { ConfirmModal } from "./ConfirmModal";
 import { useToast } from './ToastProvider';
-import ConfirmModal from "./ConfirmModal";
 import { FileViewer } from "./FileViewer";
-
 import {
     Image,
     FileText,
@@ -58,9 +22,151 @@ import {
     File,
     Code,
     FileJson,
-    FileX,
     Star
 } from 'lucide-react';
+
+function createConcurrencyQueue(maxConcurrency) {
+    let active = 0;
+    const waiting = [];
+    const api = {
+        maxConcurrency,
+        setConcurrency(newMax) {
+            api.maxConcurrency = newMax;
+            api._drain();
+        },
+        enqueue(task) {
+            return api._push(task);
+        },
+        _drain() {
+            while (active < api.maxConcurrency && waiting.length) {
+                const { task, resolveRelease } = waiting.shift();
+                active++;
+                Promise.resolve(task()).finally(() => {
+                    active--;
+                    resolveRelease();
+                    api._drain();
+                });
+            }
+        }
+    };
+    api._push = function (task) {
+        let freed = false;
+        let externalResolve;
+        const releasePromise = new Promise(r => { externalResolve = r; });
+        const entry = {
+            task: async () => {
+                try { await task(); } finally { freed = true; }
+            },
+            resolveRelease: () => { externalResolve(); }
+        };
+        waiting.push(entry);
+        api._drain();
+        return () => {
+            if (!freed) {
+                const idx = waiting.indexOf(entry);
+                if (idx !== -1) waiting.splice(idx, 1);
+            }
+        };
+    };
+    return api;
+}
+
+const ThumbnailWithLoader = ({ src, alt, cacheRef, queue, currentPath }) => {
+    const cacheKey = `${currentPath}||${src}`;
+    const [loaded, setLoaded] = useState(() => cacheRef?.current?.has(cacheKey));
+    const [inView, setInView] = useState(false);
+    const [canStart, setCanStart] = useState(false);
+    const [error, setError] = useState(false);
+    const rootRef = useRef(null);
+    const imgRef = useRef(null);
+    const observerRef = useRef(null);
+
+    useEffect(() => {
+        setLoaded(cacheRef?.current?.has(cacheKey));
+        setError(false);
+        setCanStart(false);
+        setInView(false);
+    }, [cacheKey, cacheRef]);
+
+    useEffect(() => {
+        if (!rootRef.current) return;
+
+        // Clean up previous observer
+        if (observerRef.current) {
+            observerRef.current.disconnect();
+        }
+
+        if ('IntersectionObserver' in window) {
+            // Reduce rootMargin for better performance
+            observerRef.current = new IntersectionObserver(entries => {
+                const entry = entries[0];
+                if (entry.isIntersecting) {
+                    setInView(true);
+                } else {
+                    setInView(false);
+                    setCanStart(false);
+                    if (imgRef.current) {
+                        imgRef.current.src = '';
+                    }
+                }
+            }, { rootMargin: '100px 0px 100px 0px', threshold: 0.01 }); // Reduced from 200px
+
+            observerRef.current.observe(rootRef.current);
+        } else {
+            setInView(true);
+        }
+
+        return () => {
+            if (observerRef.current) {
+                observerRef.current.disconnect();
+            }
+        };
+    }, []);
+
+    useEffect(() => {
+        if (!src || loaded || !inView || error) return;
+        let cancelled = false;
+        const release = queue?.enqueue?.(async () => {
+            if (!cancelled && inView) setCanStart(true);
+        });
+        return () => { cancelled = true; release?.(); };
+    }, [src, loaded, inView, queue, error]);
+
+    const handleLoad = () => {
+        if (cacheRef?.current && !cacheRef.current.has(cacheKey)) {
+            cacheRef.current.set(cacheKey, true);
+        }
+        setLoaded(true);
+        setError(false);
+    };
+
+    const handleError = () => {
+        setError(true);
+        setLoaded(true);
+        if (imgRef.current) {
+            imgRef.current.style.display = 'none';
+        }
+    };
+
+    return (
+        <div ref={rootRef} style={{ position: 'relative' }}>
+            {!loaded && inView && <div className={styles.thumbLoader}><SoftLoading /></div>}
+            {canStart && !error && (
+                <img
+                    ref={imgRef}
+                    src={src}
+                    alt={alt}
+                    className={styles.thumbnailImage}
+                    loading="lazy"
+                    decoding="async"
+                    style={!loaded ? { visibility: 'hidden', position: 'absolute' } : {}}
+                    onLoad={handleLoad}
+                    onError={handleError}
+                />
+            )}
+        </div>
+    );
+};
 
 const formatDate = (date) => {
     if (!date) return '—';
@@ -189,25 +295,9 @@ const isVideo = (filename) => {
     return ['mp4', 'webm', 'ogg', 'avi', 'mov', 'wmv', 'flv', 'mkv'].includes(ext);
 };
 
-const getPreviewUrl = (file, currentPath) => {
-    if (isImage(file.name)) {
-        const fullPath = currentPath === '/' ? `/${file.name}` : `${currentPath}/${file.name}`;
-        const mod = file.modified || file.modifiedAt || file.updatedAt || file.createdAt || '';
-        const v = mod ? new Date(mod).getTime() : '';
-        return `/api/files/thumbnail?path=${encodeURIComponent(fullPath)}${v ? `&v=${v}` : ''}`;
-    }
-    return null;
-};
-
-const getVideoThumbnailUrl = (file, currentPath) => {
-    if (isVideo(file.name)) {
-        const fullPath = currentPath === '/' ? `/${file.name}` : `${currentPath}/${file.name}`;
-        const mod = file.modified || file.modifiedAt || file.updatedAt || file.createdAt || '';
-        const v = mod ? new Date(mod).getTime() : '';
-        return `/api/files/video-thumbnail?path=${encodeURIComponent(fullPath)}${v ? `&v=${v}` : ''}`;
-    }
-    return null;
-};
+// (Replaced later inside component with size-aware versions)
+let getPreviewUrl = (file, currentPath) => null;
+let getVideoThumbnailUrl = (file, currentPath) => null;
 
 const FileList = forwardRef(({
     socket,
@@ -216,13 +306,58 @@ const FileList = forwardRef(({
     onContentChange,
     onSelectionChange,
     onFilesUpload,
+    onProperties,
+    onNavigateToFile,
     sortBy = 'name',
     viewMode = 'list',
     user,
     mobile = false,
 }, ref) => {
     const toast = (() => { try { return useToast(); } catch { return null; } })();
-    const thumbnailCacheRef = useRef(new Set());
+    // Optimize concurrency for better performance
+    const { quality: networkQuality, thumbnailConcurrency, sizeParam } = useNetworkTierConfig();
+    const thumbnailCacheRef = useRef(new Map());
+    const thumbnailQueueRef = useRef();
+
+    // Reduce max concurrency for better performance - was causing bottlenecks
+    const optimalConcurrency = Math.min(thumbnailConcurrency, 6); // Cap at 6 instead of 16
+    if (!thumbnailQueueRef.current) thumbnailQueueRef.current = createConcurrencyQueue(optimalConcurrency);
+    else if (thumbnailQueueRef.current.maxConcurrency !== optimalConcurrency) thumbnailQueueRef.current.setConcurrency(optimalConcurrency);
+
+    useEffect(() => {
+        const cache = thumbnailCacheRef.current;
+        const pathPrefix = `${currentPath}||`;
+        for (const [key] of cache) {
+            if (!key.startsWith(pathPrefix)) {
+                cache.delete(key);
+            }
+        }
+        if (cache.size > 1000) {
+            const entries = Array.from(cache.entries());
+            const toDelete = entries.slice(0, Math.floor(entries.length / 2));
+            toDelete.forEach(([key]) => cache.delete(key));
+        }
+    }, [currentPath]);
+
+    // Override preview builders with adaptive size param
+    getPreviewUrl = useCallback((file, path) => {
+        if (isImage(file.name)) {
+            const fullPath = path === '/' ? `/${file.name}` : `${path}/${file.name}`;
+            const mod = file.modified || file.modifiedAt || file.updatedAt || file.createdAt || '';
+            const v = mod ? new Date(mod).getTime() : '';
+            return `/api/files/thumbnail?path=${encodeURIComponent(fullPath)}${v ? `&v=${v}` : ''}&size=${sizeParam}`;
+        }
+        return null;
+    }, [sizeParam]);
+    getVideoThumbnailUrl = useCallback((file, path) => {
+        if (isVideo(file.name)) {
+            const fullPath = path === '/' ? `/${file.name}` : `${path}/${file.name}`;
+            const mod = file.modified || file.modifiedAt || file.updatedAt || file.createdAt || '';
+            const v = mod ? new Date(mod).getTime() : '';
+            return `/api/files/video-thumbnail?path=${encodeURIComponent(fullPath)}${v ? `&v=${v}` : ''}&size=${sizeParam}`;
+        }
+        return null;
+    }, [sizeParam]);
     const [folders, setFolders] = useState([]);
     const [files, setFiles] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -243,11 +378,18 @@ const FileList = forwardRef(({
     });
 
     const [columnWidths, setColumnWidths] = useState({
-        name: 40,
-        dateModified: 25,
-        type: 20,
-        size: 15
+        name: 360,
+        dateModified: 220,
+        type: 180,
+        size: 120
     });
+    const COLUMN_STORAGE_KEY = 'filelist:details:columnWidths:v1';
+    const minColumnWidths = {
+        name: 160,
+        dateModified: 160,
+        type: 120,
+        size: 100
+    };
 
     const [resizing, setResizing] = useState({
         isResizing: false,
@@ -255,6 +397,35 @@ const FileList = forwardRef(({
         startWidth: 0,
         column: null
     });
+
+    // Load persisted column widths
+    useEffect(() => {
+        try {
+            const raw = typeof window !== 'undefined' ? localStorage.getItem(COLUMN_STORAGE_KEY) : null;
+            if (raw) {
+                const saved = JSON.parse(raw);
+                const next = {
+                    name: Math.max(minColumnWidths.name, Number(saved.name) || 360),
+                    dateModified: Math.max(minColumnWidths.dateModified, Number(saved.dateModified) || 220),
+                    type: Math.max(minColumnWidths.type, Number(saved.type) || 180),
+                    size: Math.max(minColumnWidths.size, Number(saved.size) || 120)
+                };
+                setColumnWidths(next);
+            }
+        } catch { }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    // Persist column widths (debounced)
+    useEffect(() => {
+        let t;
+        try {
+            t = setTimeout(() => {
+                localStorage.setItem(COLUMN_STORAGE_KEY, JSON.stringify(columnWidths));
+            }, 200);
+        } catch { }
+        return () => { if (t) clearTimeout(t); };
+    }, [columnWidths]);
 
     const [renaming, setRenaming] = useState({ active: false, items: [], value: "" });
     const [qrModal, setQrModal] = useState({ visible: false, type: '', qrCode: '', items: [] });
@@ -274,12 +445,9 @@ const FileList = forwardRef(({
         if (!resizing.isResizing) return;
 
         const deltaX = e.clientX - resizing.startX;
-        const newWidth = Math.max(10, Math.min(80, resizing.startWidth + (deltaX / window.innerWidth * 100)));
-
-        setColumnWidths(prev => ({
-            ...prev,
-            [resizing.column]: newWidth
-        }));
+        const target = resizing.column;
+        const proposed = Math.max(minColumnWidths[target], resizing.startWidth + deltaX);
+        setColumnWidths(prev => ({ ...prev, [target]: proposed }));
     }, [resizing]);
 
     const handleResizeEnd = useCallback(() => {
@@ -301,6 +469,60 @@ const FileList = forwardRef(({
             };
         }
     }, [resizing.isResizing, handleResizeMove, handleResizeEnd]);
+
+    // Autosize columns on header divider double-click (details view)
+    const measureCanvasRef = useRef(null);
+    const ensureMeasureCtx = () => {
+        if (!measureCanvasRef.current) {
+            const c = document.createElement('canvas');
+            measureCanvasRef.current = c.getContext('2d');
+        }
+        return measureCanvasRef.current;
+    };
+    const measureText = (text, font = '13px system-ui, -apple-system, Segoe UI, Roboto, Arial') => {
+        const ctx = ensureMeasureCtx();
+        if (!ctx) return text.length * 8 + 16;
+        ctx.font = font;
+        return ctx.measureText(String(text)).width;
+    };
+    const autoSizeColumn = (column) => {
+        try {
+            const padding = column === 'name' ? 56 : 28; // icon + padding allowance
+            const headerLabel = column === 'name' ? 'Name' : column === 'dateModified' ? 'Date modified' : column === 'type' ? 'Type' : 'Size';
+            let maxW = measureText(headerLabel);
+            const items = [...folders, ...files];
+            for (const it of items) {
+                let text = '';
+                switch (column) {
+                    case 'name': text = it.name || ''; break;
+                    case 'dateModified': text = formatDate(it.modified || it.updatedAt || it.createdAt) || ''; break;
+                    case 'type': text = it.type === 'folder' ? 'File folder' : getFileType(it.name); break;
+                    case 'size': text = it.type === 'folder' ? '—' : formatFileSize(it.size || 0); break;
+                }
+                const w = measureText(text);
+                if (w > maxW) maxW = w;
+            }
+            const proposed = Math.max(minColumnWidths[column], Math.ceil(maxW + padding));
+            setColumnWidths(prev => ({ ...prev, [column]: proposed }));
+        } catch { }
+    };
+
+    // Socket listener for favorites updates
+    useEffect(() => {
+        if (!socket) return;
+
+        const handleFavoritesUpdated = () => {
+            if (currentPath === 'favorites') {
+                refreshContent();
+            }
+        };
+
+        socket.on('favorites-updated', handleFavoritesUpdated);
+
+        return () => {
+            socket.off('favorites-updated', handleFavoritesUpdated);
+        };
+    }, [socket, currentPath]);
 
     const handleRenameInput = (e) => {
         setRenaming(prev => ({ ...prev, value: e.target.value }));
@@ -417,24 +639,30 @@ const FileList = forwardRef(({
     };
 
     const loadContents = useCallback(async () => {
+        if (currentPath === 'favorites') return;
         setLoading(true);
         try {
-            const data = await api.get(`/api/files?path=${encodeURIComponent(currentPath)}`);
+            // Add cache buster for development, but allow browser caching in production
+            const cacheParam = process.env.NODE_ENV === 'development' ? `&_t=${Date.now()}` : '';
+            const data = await api.get(`/api/files?path=${encodeURIComponent(currentPath)}${cacheParam}`);
             setFolders(data.folders || []);
-            setFiles(data.files || []);
+            setFiles((data.files || []).map(f => ({
+                ...f,
+                size: f.size && typeof f.size !== 'number' ? Number(f.size) : f.size
+            })));
             setSelectedItems(new Set());
             setLastSelectedItem(null);
         } catch (error) {
-
+            console.error('Error loading file contents:', error);
             setFolders([]);
             setFiles([]);
         } finally {
             setLoading(false);
         }
     }, [currentPath]);
+
     const refreshContent = useCallback(() => {
         if (currentPath === "favorites") {
-
             api.get("/api/user/favorites")
                 .then(data => {
                     if (data.success) {
@@ -445,12 +673,15 @@ const FileList = forwardRef(({
         } else {
             loadContents();
         }
-    }, [onContentChange, currentPath, loadContents]);
+    }, [currentPath, loadContents]);
+
+
     useImperativeHandle(ref, () => ({
         triggerFavorite: (items) => {
             handleContextMenuAction('favorite', items);
         },
         refresh: refreshContent,
+        generateQRCode: (type, items) => generateQRCode(type, items),
         updateItem: (path, patch) => {
             if (!path) return;
             setFiles(prev => prev.map(f => f.path === path ? { ...f, ...patch } : f));
@@ -499,7 +730,7 @@ const FileList = forwardRef(({
         } else {
             loadContents();
         }
-    }, [currentPath]);
+    }, [currentPath, loadContents]);
 
     useEffect(() => {
         if (!socket) return;
@@ -589,25 +820,10 @@ const FileList = forwardRef(({
 
     const handleItemsAdd = (newItems) => {
         if (!newItems || !Array.isArray(newItems)) {
-
+            // Fallback: reload if we can't safely merge
             loadContents();
             return;
         }
-        <ConfirmModal
-            open={confirmState.open}
-            title={confirmState.title}
-            message={confirmState.message}
-            onCancel={() => {
-                if (confirmState.action === 'context-download-mode') {
-                    generateQRCode('download', confirmState.context);
-                }
-                closeConfirm();
-            }}
-            onConfirm={executeConfirmedAction}
-            destructive={confirmState.destructive}
-            confirmLabel={confirmState.confirmLabel}
-            cancelLabel={confirmState.cancelLabel}
-        />
 
         newItems.forEach(item => {
             const itemType = item.type || (item.name && item.name.includes('.') ? 'file' : 'folder');
@@ -670,6 +886,7 @@ const FileList = forwardRef(({
         }
 
         if (event.ctrlKey || event.metaKey) {
+            // Ctrl+click: toggle selection
             const newSelected = new Set(selectedItems);
             if (newSelected.has(item.path)) {
                 newSelected.delete(item.path);
@@ -678,24 +895,32 @@ const FileList = forwardRef(({
             }
             setSelectedItems(newSelected);
             setLastSelectedItem(item);
-        } else if (event.shiftKey && lastSelectedItem) {
-            const allItems = [...folders, ...files];
-            const lastIndex = allItems.findIndex(i => i.path === lastSelectedItem.path);
-            const currentIndex = allItems.findIndex(i => i.path === item.path);
+        } else if (event.shiftKey) {
+            // Shift+click: range selection
+            if (!lastSelectedItem) {
+                // No anchor point, just select this item
+                setSelectedItems(new Set([item.path]));
+                setLastSelectedItem(item);
+            } else {
+                const lastIndex = pathIndexMap.get(lastSelectedItem.path) ?? -1;
+                const currentIndex = pathIndexMap.get(item.path) ?? -1;
 
-            if (lastIndex !== -1 && currentIndex !== -1) {
-                const startIndex = Math.min(lastIndex, currentIndex);
-                const endIndex = Math.max(lastIndex, currentIndex);
+                if (lastIndex !== -1 && currentIndex !== -1) {
+                    const startIndex = Math.min(lastIndex, currentIndex);
+                    const endIndex = Math.max(lastIndex, currentIndex);
 
-                const rangeItems = allItems.slice(startIndex, endIndex + 1);
-                const newSelected = new Set(selectedItems);
-                rangeItems.forEach(rangeItem => {
-                    newSelected.add(rangeItem.path);
-                });
+                    const newSelected = new Set();
 
-                setSelectedItems(newSelected);
+                    // Select the range from anchor to current item based on visible order
+                    for (let i = startIndex; i <= endIndex; i++) {
+                        newSelected.add(combinedSortedItems[i].path);
+                    }
+
+                    setSelectedItems(newSelected);
+                }
             }
         } else {
+            // Regular click: select only this item
             setSelectedItems(new Set([item.path]));
             setLastSelectedItem(item);
         }
@@ -841,6 +1066,10 @@ const FileList = forwardRef(({
                             setFolders(prev => prev.filter(f => !items.some(it => it.name === f.name)));
                             setSelectedItems(new Set());
                             setLastSelectedItem(null);
+                            // Emit socket event for favorites update
+                            if (socket && socket.emit) {
+                                socket.emit('favorites-updated', { userId: user?.id });
+                            }
                             refreshContent();
                             toast?.addInfo('Removed from favorites');
                         } else toast?.addError(response.message || 'Failed to remove from favorites');
@@ -857,6 +1086,10 @@ const FileList = forwardRef(({
                                     else setFolders(prev => prev.map(f => f.path === item.path ? { ...f, isFavorited: false } : f));
                                 } catch (e) { console.error('Error removing from favorites:', e); }
                             }
+                        }
+                        // Emit socket event for favorites update
+                        if (socket && socket.emit) {
+                            socket.emit('favorites-updated', { userId: user?.id });
                         }
                         refreshContent();
                         toast?.addInfo('Removed from favorites');
@@ -900,6 +1133,10 @@ const FileList = forwardRef(({
                     setFiles(prev => prev.map(f =>
                         f.path === file.path ? { ...f, isFavorited: !f.isFavorited } : f
                     ));
+                    // Emit socket event for favorites update
+                    if (socket && socket.emit) {
+                        socket.emit('favorites-updated', { userId: user?.id });
+                    }
                     refreshContent();
                 } catch (error) {
 
@@ -988,6 +1225,11 @@ const FileList = forwardRef(({
                             ));
                         }
 
+                        // Emit socket event for favorites update
+                        if (socket && socket.emit) {
+                            socket.emit('favorites-updated', { userId: user?.id });
+                        }
+
                         refreshContent();
                     } catch (error) {
 
@@ -1028,6 +1270,10 @@ const FileList = forwardRef(({
                         }
                     }
                 }
+                // Emit socket event for favorites update
+                if (socket && socket.emit) {
+                    socket.emit('favorites-updated', { userId: user?.id });
+                }
                 refreshContent();
                 break;
 
@@ -1042,7 +1288,23 @@ const FileList = forwardRef(({
                 break;
 
             case 'properties':
-                toast?.addInfo('Open properties panel (placeholder)');
+                if (onProperties) {
+                    onProperties(items);
+                } else {
+                    toast?.addInfo('Properties function not available');
+                }
+                break;
+
+            case 'go-to-location':
+                if (items.length === 1 && items[0].path && onNavigateToFile) {
+                    // Extract the directory path from the file path
+                    const filePath = items[0].path;
+                    const dirPath = filePath.substring(0, filePath.lastIndexOf('/')) || '';
+                    onNavigateToFile(dirPath);
+                    toast?.addInfo(`Navigating to ${dirPath || 'root'}`);
+                } else {
+                    toast?.addError('Cannot navigate to file location');
+                }
                 break;
 
             default:
@@ -1097,13 +1359,95 @@ const FileList = forwardRef(({
         });
     };
 
-    if (loading) {
-        return <SoftLoading />;
-    }
     const filteredFolders = folders.filter(f => f.name !== '.thumbnails' && !f.path.endsWith('/.thumbnails'));
     const filteredFiles = files.filter(f => !f.path.includes('/.thumbnails/') && !f.name.startsWith('.thumbnails'));
     const sortedFolders = sortItems(filteredFolders, sortBy);
     const sortedFiles = sortItems(filteredFiles, sortBy);
+    // Combine in the exact order we render (folders, then files) to drive range selection
+    const combinedSortedItems = useMemo(() => [...sortedFolders, ...sortedFiles], [sortedFolders, sortedFiles]);
+    const pathIndexMap = useMemo(() => {
+        const map = new Map();
+        combinedSortedItems.forEach((it, idx) => map.set(it.path, idx));
+        return map;
+    }, [combinedSortedItems]);
+
+    const scrollContainerRef = useRef(null);
+    const headerInnerRef = useRef(null);
+    const [virtual, setVirtual] = useState({ start: 0, end: 0, itemHeight: 32, containerHeight: 0 });
+    const totalColumnWidth = useMemo(() => (
+        (columnWidths.name || 0) + (columnWidths.dateModified || 0) + (columnWidths.type || 0) + (columnWidths.size || 0)
+    ), [columnWidths]);
+
+    const isVirtualizableView = ['list', 'details'].includes(viewMode); // only apply to list/details now
+    const allRenderableItems = useMemo(() => isVirtualizableView ? [...sortedFolders, ...sortedFiles] : null, [isVirtualizableView, sortedFolders, sortedFiles]);
+    const totalCount = allRenderableItems ? allRenderableItems.length : 0;
+
+    useEffect(() => {
+        if (!isVirtualizableView) return;
+        const el = scrollContainerRef.current;
+        if (!el) return;
+
+        const measure = () => {
+            const containerHeight = el.clientHeight;
+            setVirtual(v => ({ ...v, containerHeight }));
+        };
+        measure();
+        window.addEventListener('resize', measure);
+        return () => window.removeEventListener('resize', measure);
+    }, [isVirtualizableView]);
+
+    useEffect(() => {
+        if (!isVirtualizableView) return;
+        const el = scrollContainerRef.current;
+        if (!el) return;
+        const handleScroll = () => {
+            const scrollTop = el.scrollTop;
+            const itemHeight = virtual.itemHeight;
+            const containerHeight = el.clientHeight;
+            const startIndex = Math.max(0, Math.floor(scrollTop / itemHeight) - 10);
+            const visibleCount = Math.ceil(containerHeight / itemHeight) + 20;
+            const endIndex = Math.min(totalCount, startIndex + visibleCount);
+            setVirtual(v => ({ ...v, start: startIndex, end: endIndex }));
+            // sync header horizontal scroll
+            try {
+                const left = el.scrollLeft || 0;
+                if (headerInnerRef.current) headerInnerRef.current.style.transform = `translateX(${-left}px)`;
+            } catch { }
+        };
+        el.addEventListener('scroll', handleScroll, { passive: true });
+        handleScroll();
+        return () => el.removeEventListener('scroll', handleScroll);
+    }, [isVirtualizableView, totalCount, virtual.itemHeight]);
+
+    // derive slice
+    let virtualizedFolders = sortedFolders;
+    let virtualizedFiles = sortedFiles;
+    let topSpacer = 0;
+    let bottomSpacer = 0;
+    if (isVirtualizableView) {
+        // map combined index
+        const start = virtual.start || 0;
+        const end = virtual.end || 0;
+        if (totalCount > 0) {
+            const folderCount = sortedFolders.length;
+            const fileCount = sortedFiles.length;
+            const sliceIndices = { start, end };
+            const sliceFoldersStart = Math.min(folderCount, sliceIndices.start);
+            const sliceFoldersEnd = Math.min(folderCount, sliceIndices.end);
+            virtualizedFolders = sortedFolders.slice(sliceFoldersStart, sliceFoldersEnd);
+            const remainingStartInFiles = Math.max(0, sliceIndices.start - folderCount);
+            const remainingEndInFiles = Math.max(0, sliceIndices.end - folderCount);
+            virtualizedFiles = sortedFiles.slice(remainingStartInFiles, remainingEndInFiles);
+            topSpacer = (sliceIndices.start) * virtual.itemHeight;
+            bottomSpacer = (totalCount - sliceIndices.end) * virtual.itemHeight;
+        }
+    }
+
+
+
+    if (loading) {
+        return <SoftLoading />;
+    }
 
     return (
         <div
@@ -1112,35 +1456,48 @@ const FileList = forwardRef(({
             {/* Header - only show in list and details view */}
             {viewMode === 'details' && (
                 <div className={styles.header}>
-                    <div className={styles.headerCell} style={{ width: `${columnWidths.name}%` }}>
-                        Name
-                        <div
-                            className={styles.resizeHandle}
-                            onMouseDown={(e) => handleResizeStart(e, 'name')}
-                        />
-                    </div>
-                    <div className={styles.headerCell} style={{ width: `${columnWidths.dateModified}%` }}>
-                        Date modified
-                        <div
-                            className={styles.resizeHandle}
-                            onMouseDown={(e) => handleResizeStart(e, 'dateModified')}
-                        />
-                    </div>
-                    <div className={styles.headerCell} style={{ width: `${columnWidths.type}%` }}>
-                        Type
-                        <div
-                            className={styles.resizeHandle}
-                            onMouseDown={(e) => handleResizeStart(e, 'type')}
-                        />
-                    </div>
-                    <div className={styles.headerCell} style={{ width: `${columnWidths.size}%` }}>
-                        Size
+                    <div className={styles.headerTrack} ref={headerInnerRef} style={{ display: 'flex', position: 'relative', width: `${totalColumnWidth}px` }}>
+                        <div className={styles.headerCell} style={{ width: `${columnWidths.name}px` }}>
+                            Name
+                            <div
+                                className={styles.resizeHandle}
+                                onMouseDown={(e) => handleResizeStart(e, 'name')}
+                                onDoubleClick={() => autoSizeColumn('name')}
+                            />
+                        </div>
+                        <div className={styles.headerCell} style={{ width: `${columnWidths.dateModified}px` }}>
+                            Date modified
+                            <div
+                                className={styles.resizeHandle}
+                                onMouseDown={(e) => handleResizeStart(e, 'dateModified')}
+                                onDoubleClick={() => autoSizeColumn('dateModified')}
+                            />
+                        </div>
+                        <div className={styles.headerCell} style={{ width: `${columnWidths.type}px` }}>
+                            Type
+                            <div
+                                className={styles.resizeHandle}
+                                onMouseDown={(e) => handleResizeStart(e, 'type')}
+                                onDoubleClick={() => autoSizeColumn('type')}
+                            />
+                        </div>
+                        <div className={styles.headerCell} style={{ width: `${columnWidths.size}px` }}>
+                            Size
+                            <div
+                                className={styles.resizeHandle}
+                                onMouseDown={(e) => handleResizeStart(e, 'size')}
+                                onDoubleClick={() => autoSizeColumn('size')}
+                            />
+                        </div>
                     </div>
                 </div>
             )}
 
-            <div className={`${styles.content} ${styles[viewMode]}`}>
-                {sortedFolders.map(folder => {
+            <div ref={scrollContainerRef} className={`${styles.content} ${styles[viewMode]}`} style={viewMode === 'details' ? { overflowX: 'auto' } : undefined}>
+                {isVirtualizableView && topSpacer > 0 && (
+                    <div style={{ height: topSpacer, pointerEvents: 'none' }} />
+                )}
+                {(isVirtualizableView ? virtualizedFolders : sortedFolders).map(folder => {
                     const isIconView = ['extraLargeIcons', 'largeIcons', 'mediumIcons', 'smallIcons'].includes(viewMode);
                     const isTilesView = viewMode === 'tiles';
                     const isGridView = viewMode === 'grid';
@@ -1153,10 +1510,7 @@ const FileList = forwardRef(({
                             onClick={(e) => handleItemClick(folder, e)}
                             onDoubleClick={() => handleFolderDoubleClick(folder)}
                             onContextMenu={(e) => handleItemRightClick(folder, e)}
-                            style={{
-                                cursor: 'pointer',
-                                opacity: 1
-                            }}
+                            style={{ cursor: 'pointer', opacity: 1, ...(viewMode === 'details' ? { width: `${totalColumnWidth}px` } : {}) }}
                         >
                             {isIconView ? (
                                 <>
@@ -1253,7 +1607,7 @@ const FileList = forwardRef(({
                                 </div>
                             ) : isListOrDetailsView ? (
                                 <>
-                                    <div className={`${styles.cell} ${styles.nameCell}`} style={{ width: `${columnWidths.name}%` }}>
+                                    <div className={`${styles.cell} ${styles.nameCell}`} style={{ width: `${columnWidths.name}px` }}>
                                         <span className={styles.itemIcon}><FolderClosed size={16} /></span>
                                         {renaming.active && renaming.items.length > 0 && renaming.items[0].path === folder.path ? (
                                             <input
@@ -1283,13 +1637,13 @@ const FileList = forwardRef(({
                                     </div>
                                     {viewMode === 'details' && (
                                         <>
-                                            <div className={styles.cell} style={{ width: `${columnWidths.dateModified}%` }}>
+                                            <div className={styles.cell} style={{ width: `${columnWidths.dateModified}px` }}>
                                                 {formatDate(folder.modified || folder.updatedAt || folder.modifiedAt || folder.createdAt)}
                                             </div>
-                                            <div className={styles.cell} style={{ width: `${columnWidths.type}%` }}>
+                                            <div className={styles.cell} style={{ width: `${columnWidths.type}px` }}>
                                                 File folder
                                             </div>
-                                            <div className={styles.cell} style={{ width: `${columnWidths.size}%` }}>
+                                            <div className={styles.cell} style={{ width: `${columnWidths.size}px` }}>
                                                 —
                                             </div>
                                         </>
@@ -1300,7 +1654,7 @@ const FileList = forwardRef(({
                     );
                 })}
 
-                {sortedFiles.map(file => {
+                {(isVirtualizableView ? virtualizedFiles : sortedFiles).map(file => {
                     const isIconView = ['extraLargeIcons', 'largeIcons', 'mediumIcons', 'smallIcons'].includes(viewMode);
                     const isTilesView = viewMode === 'tiles';
                     const isGridView = viewMode === 'grid';
@@ -1313,15 +1667,16 @@ const FileList = forwardRef(({
                             onClick={(e) => handleItemClick(file, e)}
                             onDoubleClick={() => handleFileDoubleClick(file)}
                             onContextMenu={(e) => handleItemRightClick(file, e)}
+                            style={viewMode === 'details' ? { width: `${totalColumnWidth}px` } : undefined}
                         >
                             {isIconView ? (
                                 <>
                                     <div className={styles.iconVisualRegion}>
                                         <div className={styles.itemVisualWrapper}>
                                             {isImage(file.name) ? (
-                                                <ThumbnailWithLoader cacheRef={thumbnailCacheRef} src={getPreviewUrl(file, currentPath)} alt={file.name} />
+                                                <ThumbnailWithLoader queue={thumbnailQueueRef.current} cacheRef={thumbnailCacheRef} src={getPreviewUrl(file, currentPath)} alt={file.name} currentPath={currentPath} />
                                             ) : isVideo(file.name) ? (
-                                                <ThumbnailWithLoader cacheRef={thumbnailCacheRef} src={getVideoThumbnailUrl(file, currentPath)} alt={file.name} />
+                                                <ThumbnailWithLoader queue={thumbnailQueueRef.current} cacheRef={thumbnailCacheRef} src={getVideoThumbnailUrl(file, currentPath)} alt={file.name} currentPath={currentPath} />
                                             ) : (
                                                 <div className={`${styles.itemIcon} ${styles.fileIcon}`}>{getFileIcon(file.name, 48)}</div>
                                             )}
@@ -1354,9 +1709,9 @@ const FileList = forwardRef(({
                                 <>
                                     <div className={styles.thumbWrapper}>
                                         {isImage(file.name) ? (
-                                            <ThumbnailWithLoader cacheRef={thumbnailCacheRef} src={getPreviewUrl(file, currentPath)} alt={file.name} />
+                                            <ThumbnailWithLoader queue={thumbnailQueueRef.current} cacheRef={thumbnailCacheRef} src={getPreviewUrl(file, currentPath)} alt={file.name} currentPath={currentPath} />
                                         ) : isVideo(file.name) ? (
-                                            <ThumbnailWithLoader cacheRef={thumbnailCacheRef} src={getVideoThumbnailUrl(file, currentPath)} alt={file.name} />
+                                            <ThumbnailWithLoader queue={thumbnailQueueRef.current} cacheRef={thumbnailCacheRef} src={getVideoThumbnailUrl(file, currentPath)} alt={file.name} currentPath={currentPath} />
                                         ) : (
                                             <div className={styles.fallbackIcon}>{getFileIcon(file.name, 40)}</div>
                                         )}
@@ -1423,11 +1778,7 @@ const FileList = forwardRef(({
                                         {(isImage(file.name) || isVideo(file.name)) ? (
                                             <div className={styles.itemPreview}>
                                                 {isImage(file.name) ? (
-                                                    <img
-                                                        src={getPreviewUrl(file, currentPath)}
-                                                        alt={file.name}
-                                                        className={styles.previewImage}
-                                                    />
+                                                    <ThumbnailWithLoader queue={thumbnailQueueRef.current} cacheRef={thumbnailCacheRef} src={getPreviewUrl(file, currentPath)} alt={file.name} currentPath={currentPath} />
                                                 ) : (
                                                     <video
                                                         src={`/api/files/download?path=${encodeURIComponent(currentPath === '/' ? `/${file.name}` : `${currentPath}/${file.name}`)}`}
@@ -1450,7 +1801,7 @@ const FileList = forwardRef(({
                                 </div>
                             ) : isListOrDetailsView ? (
                                 <>
-                                    <div className={`${styles.cell} ${styles.nameCell}`} style={{ width: `${columnWidths.name}%` }}>
+                                    <div className={`${styles.cell} ${styles.nameCell}`} style={{ width: `${columnWidths.name}px` }}>
                                         <span className={styles.itemIcon}>
                                             {getFileIcon(file.name, 16)}
                                         </span>
@@ -1479,13 +1830,13 @@ const FileList = forwardRef(({
                                     </div>
                                     {viewMode === 'details' && (
                                         <>
-                                            <div className={styles.cell} style={{ width: `${columnWidths.dateModified}%` }}>
+                                            <div className={styles.cell} style={{ width: `${columnWidths.dateModified}px` }}>
                                                 {formatDate(file.modified || file.modifiedAt || file.createdAt)}
                                             </div>
-                                            <div className={styles.cell} style={{ width: `${columnWidths.type}%` }}>
+                                            <div className={styles.cell} style={{ width: `${columnWidths.type}px` }}>
                                                 {getFileType(file.name)}
                                             </div>
-                                            <div className={styles.cell} style={{ width: `${columnWidths.size}%` }}>
+                                            <div className={styles.cell} style={{ width: `${columnWidths.size}px` }}>
                                                 {formatFileSize(file.size)}
                                             </div>
                                         </>
@@ -1495,6 +1846,11 @@ const FileList = forwardRef(({
                         </div>
                     );
                 })}
+                {isVirtualizableView && bottomSpacer > 0 && (
+                    <div style={{ height: bottomSpacer, pointerEvents: 'none' }} />
+                )}
+
+
             </div>
 
             {loading && (
@@ -1502,6 +1858,22 @@ const FileList = forwardRef(({
                     <div className={styles.spinner}></div>
                 </div>
             )}
+
+            <ConfirmModal
+                open={confirmState.open}
+                title={confirmState.title}
+                message={confirmState.message}
+                onCancel={() => {
+                    if (confirmState.action === 'context-download-mode') {
+                        generateQRCode('download', confirmState.context);
+                    }
+                    closeConfirm();
+                }}
+                onConfirm={executeConfirmedAction}
+                destructive={confirmState.destructive}
+                confirmLabel={confirmState.confirmLabel}
+                cancelLabel={confirmState.cancelLabel}
+            />
 
             {contextMenu.visible && (
                 <ContextMenu
@@ -1575,3 +1947,4 @@ const FileList = forwardRef(({
 });
 
 export default FileList;
+

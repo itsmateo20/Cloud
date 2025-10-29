@@ -18,6 +18,13 @@ export async function GET(req) {
 
     const url = new URL(req.url);
     const requestedPath = url.searchParams.get("path") || "";
+    // Pagination parameters
+    // limit: max number of items (folders+files) to return
+    // cursor: opaque cursor referencing last returned item ("F:<name>" for folder, "FI:<name>" for file)
+    // We paginate over the combined, name-sorted sequence: all folders (A-Z) then files (A-Z)
+    const limitParam = parseInt(url.searchParams.get("limit") || "", 10);
+    const limit = Number.isFinite(limitParam) && limitParam > 0 ? Math.min(limitParam, 500) : null; // cap to 500
+    const cursor = url.searchParams.get("cursor") || null;
 
     const userFolder = getUserUploadPath(userId);
     const targetPath = path.join(userFolder, requestedPath);
@@ -45,117 +52,202 @@ export async function GET(req) {
         const folders = [];
         const files = [];
 
-        await Promise.all(
+        // Batch process items to reduce database queries
+        const itemStats = await Promise.all(
             items.filter(item => !item.endsWith(".INF") && item !== '.thumbnails').map(async item => {
                 const itemPath = path.join(targetPath, item);
                 const stat = await fs.stat(itemPath);
                 const relativePath = path.relative(userFolder, itemPath).replace(/\\/g, "/");
-                const parentFolderPath = requestedPath || null;
 
-                if (stat.isDirectory()) {
-                    const contents = await fs.readdir(itemPath).catch(() => []);
-                    const hasSubfolders = await Promise.all(
-                        contents.map(async subItem => {
-                            const subItemPath = path.join(itemPath, subItem);
-                            const subStat = await fs.stat(subItemPath).catch(() => null);
-                            return subStat?.isDirectory() || false;
-                        })
-                    ).then(results => results.some(Boolean));
-
-                    let parentFolder = null;
-                    if (parentFolderPath) {
-                        parentFolder = await prisma.folder.findFirst({
-                            where: {
-                                ownerId: userId,
-                                path: parentFolderPath
-                            }
-                        });
-                    }
-
-                    const folder = await prisma.folder.upsert({
-                        where: { ownerId_path: { ownerId: userId, path: relativePath } },
-                        update: {
-                            createdAt: stat.birthtime,
-                            parentId: parentFolder?.id ?? null
-                        },
-                        create: {
-                            name: item,
-                            path: relativePath,
-                            ownerId: userId,
-                            createdAt: stat.birthtime,
-                            parentId: parentFolder?.id ?? null
-                        },
-                        include: {
-                            favoritedBy: {
-                                where: { id: userId },
-                                select: { id: true }
-                            }
-                        }
-                    });
-
-                    folders.push({
-                        id: folder.id,
-                        name: item,
-                        path: relativePath,
-                        type: "folder",
-                        hasSubfolders,
-                        modified: stat.mtime,
-                        isFavorited: folder.favoritedBy.length > 0
-                    });
-                } else {
-                    let folder = null;
-                    if (parentFolderPath) {
-                        const folderName = parentFolderPath.split("/").pop();
-                        folder = await prisma.folder.findFirst({
-                            where: { ownerId: userId, name: folderName }
-                        });
-                    }
-
-                    const file = await prisma.file.upsert({
-                        where: { ownerId_path: { ownerId: userId, path: relativePath } },
-                        update: {
-                            size: BigInt(stat.size),
-                        },
-                        create: {
-                            name: item,
-                            path: relativePath,
-                            ownerId: userId,
-                            size: BigInt(stat.size),
-                            type: path.extname(item).slice(1) || "unknown",
-                            createdAt: stat.birthtime,
-                            folderId: folder?.id || null,
-                        },
-                        include: {
-                            favoritedBy: {
-                                where: { id: userId },
-                                select: { id: true }
-                            }
-                        }
-                    });
-
-                    files.push({
-                        id: file.id,
-                        name: item,
-                        path: relativePath,
-                        type: "file",
-                        size: Number(stat.size),
-                        modified: stat.mtime,
-                        url: getUserFileUrl(userId, relativePath),
-                        isFavorited: file.favoritedBy.length > 0
-                    });
-                }
+                return {
+                    name: item,
+                    path: relativePath,
+                    fullPath: itemPath,
+                    stat,
+                    isDirectory: stat.isDirectory()
+                };
             })
         );
+
+        // Get existing DB records in batches to reduce queries
+        const allPaths = itemStats.map(item => item.path);
+        const [existingFolders, existingFiles] = await Promise.all([
+            prisma.folder.findMany({
+                where: { ownerId: userId, path: { in: allPaths.filter((_, i) => itemStats[i].isDirectory) } },
+                include: { favoritedBy: { where: { id: userId }, select: { id: true } } }
+            }),
+            prisma.file.findMany({
+                where: { ownerId: userId, path: { in: allPaths.filter((_, i) => !itemStats[i].isDirectory) } },
+                include: { favoritedBy: { where: { id: userId }, select: { id: true } } }
+            })
+        ]);
+
+        const folderMap = new Map(existingFolders.map(f => [f.path, f]));
+        const fileMap = new Map(existingFiles.map(f => [f.path, f]));
+
+        // Process folders
+        const folderData = [];
+        const newFolders = [];
+        const updateFolders = [];
+
+        for (const item of itemStats.filter(i => i.isDirectory)) {
+            const existing = folderMap.get(item.path);
+            const contents = await fs.readdir(item.fullPath).catch(() => []);
+            const hasSubfolders = await Promise.all(
+                contents.map(async subItem => {
+                    const subItemPath = path.join(item.fullPath, subItem);
+                    const subStat = await fs.stat(subItemPath).catch(() => null);
+                    return subStat?.isDirectory() || false;
+                })
+            ).then(results => results.some(Boolean));
+
+            if (existing) {
+                updateFolders.push({
+                    where: { id: existing.id },
+                    data: { createdAt: item.stat.birthtime }
+                });
+                folderData.push({
+                    id: existing.id,
+                    name: item.name,
+                    path: item.path,
+                    type: "folder",
+                    hasSubfolders,
+                    modified: item.stat.mtime,
+                    isFavorited: existing.favoritedBy.length > 0
+                });
+            } else {
+                const newFolder = {
+                    name: item.name,
+                    path: item.path,
+                    ownerId: userId,
+                    createdAt: item.stat.birthtime,
+                    parentId: null
+                };
+                newFolders.push(newFolder);
+                folderData.push({
+                    id: null, // Will be set after creation
+                    name: item.name,
+                    path: item.path,
+                    type: "folder",
+                    hasSubfolders,
+                    modified: item.stat.mtime,
+                    isFavorited: false
+                });
+            }
+        }
+
+        // Process files
+        const fileData = [];
+        const newFiles = [];
+        const updateFiles = [];
+
+        for (const item of itemStats.filter(i => !i.isDirectory)) {
+            const existing = fileMap.get(item.path);
+
+            if (existing) {
+                updateFiles.push({
+                    where: { id: existing.id },
+                    data: { size: BigInt(item.stat.size) }
+                });
+                fileData.push({
+                    id: existing.id,
+                    name: item.name,
+                    path: item.path,
+                    type: "file",
+                    size: Number(item.stat.size),
+                    modified: item.stat.mtime,
+                    url: getUserFileUrl(userId, item.path),
+                    isFavorited: existing.favoritedBy.length > 0
+                });
+            } else {
+                const newFile = {
+                    name: item.name,
+                    path: item.path,
+                    ownerId: userId,
+                    size: BigInt(item.stat.size),
+                    type: path.extname(item.name).slice(1) || "unknown",
+                    createdAt: item.stat.birthtime,
+                    folderId: null
+                };
+                newFiles.push(newFile);
+                fileData.push({
+                    id: null, // Will be set after creation
+                    name: item.name,
+                    path: item.path,
+                    type: "file",
+                    size: Number(item.stat.size),
+                    modified: item.stat.mtime,
+                    url: getUserFileUrl(userId, item.path),
+                    isFavorited: false
+                });
+            }
+        }
+
+        // Batch database operations
+        await Promise.all([
+            newFolders.length > 0 ? prisma.folder.createMany({ data: newFolders }) : Promise.resolve(),
+            newFiles.length > 0 ? prisma.file.createMany({ data: newFiles }) : Promise.resolve(),
+            ...updateFolders.map(update => prisma.folder.update(update)),
+            ...updateFiles.map(update => prisma.file.update(update))
+        ]);
+
+        folders.push(...folderData);
+        files.push(...fileData);
 
         folders.sort((a, b) => a.name.localeCompare(b.name));
         files.sort((a, b) => a.name.localeCompare(b.name));
 
+        let pagedFolders = folders;
+        let pagedFiles = files;
+        let nextCursor = null;
+        let hasMore = false;
+
+        if (limit) {
+            // Build combined list of references: folders first then files
+            const combined = [
+                ...folders.map(f => ({ kind: 'folder', name: f.name })),
+                ...files.map(f => ({ kind: 'file', name: f.name }))
+            ];
+
+            let startIndex = 0;
+            if (cursor) {
+                // cursor format: F:<name> for folder, FI:<name> for file
+                const cursorMatch = cursor.match(/^(F|FI):(.+)$/);
+                if (cursorMatch) {
+                    const [, typeToken, curName] = cursorMatch;
+                    const isFolderCursor = typeToken === 'F';
+                    const idx = combined.findIndex(e => e.kind === (isFolderCursor ? 'folder' : 'file') && e.name === curName);
+                    if (idx !== -1) startIndex = idx + 1; // start after cursor
+                }
+            }
+
+            const endIndexExclusive = startIndex + limit;
+            const pageSlice = combined.slice(startIndex, endIndexExclusive);
+            hasMore = endIndexExclusive < combined.length;
+            const lastItem = pageSlice[pageSlice.length - 1];
+            if (hasMore && lastItem) {
+                nextCursor = (lastItem.kind === 'folder' ? 'F:' : 'FI:') + lastItem.name;
+            }
+
+            // Separate back into folders/files preserving original objects
+            const folderNamesInPage = new Set(pageSlice.filter(i => i.kind === 'folder').map(i => i.name));
+            const fileNamesInPage = new Set(pageSlice.filter(i => i.kind === 'file').map(i => i.name));
+            pagedFolders = folders.filter(f => folderNamesInPage.has(f.name));
+            pagedFiles = files.filter(f => fileNamesInPage.has(f.name));
+        }
+
         return NextResponse.json({
-            folders,
-            files: files.map(file => ({
+            folders: pagedFolders,
+            files: pagedFiles.map(file => ({
                 ...file,
                 size: file.size ? file.size.toString() : null
             })),
+            pagination: limit ? {
+                limit,
+                cursor: cursor || null,
+                nextCursor,
+                hasMore
+            } : null,
             success: true,
             code: "explorer_directory_read",
             path: {
@@ -203,8 +295,9 @@ export async function POST(req) {
             }
             try {
                 await fs.access(folderPath);
-                return NextResponse.json({ success: false, code: "folder_exists", message: "Folder already exists" }, { status: 400 });
+                return NextResponse.json({ success: true, code: "directory_exists", message: "Folder already exists" }, { status: 200 });
             } catch {
+                // Folder doesn't exist, continue with creation
             }
             await fs.mkdir(folderPath, { recursive: true });
             const relativePath = path.relative(userFolder, folderPath).replace(/\\/g, '/');
@@ -224,11 +317,11 @@ export async function POST(req) {
                     parentId: parentFolder?.id || null
                 }
             });
-            global.io?.emit("folder-structure-updated", {
-                action: "create",
-                newPath: relativePath,
-                name: name
-            });
+            try {
+                const room = `user:${userId}`;
+                const payload = { userId, action: "create", newPath: relativePath, name };
+                global.io?.to(room).emit("folder-structure-updated", payload);
+            } catch { }
 
             return NextResponse.json({
                 success: true,
@@ -274,16 +367,16 @@ export async function POST(req) {
                     folderId: folder?.id || null
                 }
             });
-            global.io?.emit("file-updated", {
-                path: targetPath || "",
-                action: "create",
-                file: {
-                    id: file.id,
-                    name: file.name,
-                    path: file.path,
-                    type: "file"
-                }
-            });
+            try {
+                const room = `user:${userId}`;
+                const payload = {
+                    userId,
+                    path: targetPath || "",
+                    action: "create",
+                    file: { id: file.id, name: file.name, path: file.path, type: "file" }
+                };
+                global.io?.to(room).emit("file-updated", payload);
+            } catch { }
 
             return NextResponse.json({
                 success: true,

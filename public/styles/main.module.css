@@ -56,6 +56,7 @@
     overflow: hidden;
     display: flex;
     flex-direction: column;
+    padding-bottom: 80px;
 }
 
 .desktopContainer {
@@ -383,6 +384,7 @@
     height: 100%;
     display: flex;
     flex-direction: column;
+    padding-bottom: 80px;
 }
 
 .mobileExplorerHeader {
@@ -437,15 +439,13 @@
     margin: 0 clamp(1.5px, 0.4vw, 2px);
 }
 
+.breadcrumbCurrent,
 .breadcrumbLink {
-    background: none;
-    border: none;
-    color: var(--accent-color);
+    color: var(--text);
     font-size: clamp(12px, 2vw, 14px);
     cursor: pointer;
     padding: clamp(3px, 0.8vw, 4px) clamp(5px, 1.2vw, 6px);
     border-radius: clamp(3px, 0.8vw, 4px);
-    transition: background-color 0.2s ease;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -457,15 +457,7 @@
 }
 
 .breadcrumbCurrent {
-    color: var(--text);
-    font-size: clamp(12px, 2vw, 14px);
     font-weight: 600;
-    padding: clamp(3px, 0.8vw, 4px) clamp(5px, 1.2vw, 6px);
-    border-bottom: 2px solid var(--accent-color);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: clamp(100px, 20vw, 120px);
 }
 
 .backButton {

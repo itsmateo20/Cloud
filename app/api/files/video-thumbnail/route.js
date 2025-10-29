@@ -17,6 +17,9 @@ export async function GET(req) {
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     const { searchParams } = new URL(req.url);
     const filePath = searchParams.get('path');
+    const sizeParam = (searchParams.get('size') || 'medium').toLowerCase();
+    const sizeMap = { small: 96, medium: 128, large: 256 };
+    const targetSize = sizeMap[sizeParam] || sizeMap.medium;
     if (!filePath) return NextResponse.json({ error: 'File path is required' }, { status: 400 });
 
     try {
@@ -32,13 +35,13 @@ export async function GET(req) {
 
         const stat = await fs.stat(fullPath);
         const sourceMTimeMs = stat.mtimeMs;
-        const etag = `"${sourceMTimeMs}-vthumb"`;
+        const etag = `"${sourceMTimeMs}-vthumb-${targetSize}"`;
         const ifNoneMatch = req.headers.get('if-none-match');
         if (ifNoneMatch && ifNoneMatch === etag) return new NextResponse(null, { status: 304, headers: { 'ETag': etag } });
 
         const rel = filePath.startsWith('/') ? filePath.slice(1) : filePath;
         const thumbsDir = path.join(userFolder, '.thumbnails');
-        const outFile = path.join(thumbsDir, rel + '.video.jpg');
+        const outFile = path.join(thumbsDir, `${rel}.video.${targetSize}.jpg`);
         await fs.mkdir(path.dirname(outFile), { recursive: true });
 
         let useCached = false;
@@ -55,7 +58,7 @@ export async function GET(req) {
                     '-ss', '0.5',
                     '-i', fullPath,
                     '-frames:v', '1',
-                    '-vf', 'scale=128:-1:force_original_aspect_ratio=decrease',
+                    '-vf', `scale=${targetSize}:-1:force_original_aspect_ratio=decrease`,
                     '-q:v', '4',
                     outFile + '.tmp.jpg'
                 ];
@@ -77,7 +80,7 @@ export async function GET(req) {
         return new NextResponse(buf, {
             headers: {
                 'Content-Type': 'image/jpeg',
-                'Cache-Control': 'public, max-age=604800, immutable',
+                'Cache-Control': 'public, max-age=86400',
                 'ETag': etag
             }
         });
