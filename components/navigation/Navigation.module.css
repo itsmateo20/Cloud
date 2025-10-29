@@ -77,7 +77,7 @@
 }
 
 
-/* Mobile styles applied by JavaScript through isMobile hook */
+
 .navigation.mobile {
     transform: translate(-100%, 0);
     width: 75%;

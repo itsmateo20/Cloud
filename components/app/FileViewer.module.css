@@ -20,16 +20,16 @@
     display: flex;
     flex-direction: column;
     justify-content: center;
-    /* Remove transform shifting; we'll use padding to reserve space */
+    
     transition: padding-right 0.35s ease;
 }
 
-/* New pattern: add right padding equal to panel width when open so header/content stay put */
+
 .containerWithPanelSpace {
     padding-right: var(--fv-side-panel-width, 400px);
 }
 
-/* Desktop layout with side panel */
+
 .containerWithSidePanel {
     position: relative;
     width: 100%;
@@ -261,13 +261,13 @@
     align-items: center;
     justify-content: center;
     position: relative;
-    /* Center content between left edge and 400px side panel by shifting center left by 200px */
+    
     padding-right: 200px;
 }
 
-/* .fileContainerWithSidePanel deprecated: dynamic container shift now handles centering */
 
-/* Enable scroll/pan space when an image is zoomed beyond viewport */
+
+
 .zoomActive {
     cursor: grab;
 }
@@ -312,7 +312,7 @@
     -webkit-perspective: 1000px;
 }
 
-/* Constrain very large images on initial load; toggled via state */
+
 .autoFitImage {
     max-width: 90vw;
     max-height: 85vh;
@@ -584,7 +584,7 @@
     z-index: 3000;
 }
 
-/* With side panel we shift container, so zoom controls remain centered automatically */
+
 
 .zoomButton {
     background: none;
@@ -713,7 +713,7 @@
     }
 }
 
-/* Mobile specific styles */
+
 .mobileOverlay {
     background: rgba(0, 0, 0, 1);
 }
@@ -794,7 +794,7 @@
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
 }
 
-/* Custom Video Controls */
+
 .customVideoControls {
     position: fixed;
     bottom: clamp(12px, 3vw, 20px);
@@ -804,14 +804,14 @@
     backdrop-filter: blur(20px);
     border-radius: clamp(12px, 3vw, 16px);
     padding: clamp(4px, 1vw, 8px);
-    /* Smaller padding */
+    
     display: flex;
     flex-direction: column;
     gap: clamp(8px, 2vw, 12px);
     z-index: 2003;
     border: 1px solid rgba(255, 255, 255, 0.2);
     min-width: clamp(380px, 75vw, 650px);
-    /* Wider */
+    
     max-width: 90vw;
 }
 
@@ -824,19 +824,19 @@
     backdrop-filter: blur(20px);
     border-radius: clamp(12px, 3vw, 16px);
     padding: clamp(4px, 1vw, 8px);
-    /* Smaller padding */
+    
     display: flex;
     flex-direction: column;
     gap: clamp(8px, 2vw, 12px);
     z-index: 2003;
     border: 1px solid rgba(255, 255, 255, 0.2);
     min-width: clamp(380px, 75vw, 650px);
-    /* Wider */
+    
     max-width: 90vw;
 }
 
-/* .customVideoControlsWithSidePanel deprecated: container shift centers controls */
-/* Removed special animation; class retained in JS logic but no styling needed */
+
+
 
 @keyframes zoomPanelOpen {
     0% {
@@ -861,7 +861,7 @@
     display: flex;
     align-items: center;
     padding: 0 clamp(4px, 1vw, 8px);
-    /* Smaller padding */
+    
     gap: clamp(10px, 2.5vw, 16px);
 }
 
@@ -870,13 +870,13 @@
     align-items: center;
     gap: clamp(8px, 2vw, 12px);
     justify-content: flex-end;
-    /* Push content to the right */
+    
 }
 
 .videoTimeDisplay {
     color: var(--button-text-color);
     font-size: clamp(11px, 2.5vw, 15px);
-    /* Slightly bigger text */
+    
     opacity: 0.9;
     font-family: var(--font-courierprime);
     font-weight: 500;
@@ -885,7 +885,7 @@
 .videoProgressBar {
     flex: 1;
     height: clamp(6px, 1.5vw, 10px);
-    /* Thicker on desktop */
+    
     background: rgba(255, 255, 255, 0.3);
     border-radius: clamp(3px, 0.75vw, 5px);
     cursor: pointer;
@@ -896,7 +896,7 @@
 
 .videoProgressBar:hover {
     height: clamp(8px, 2vw, 12px);
-    /* Even thicker on hover for desktop */
+    
 }
 
 .videoProgressFill {
@@ -933,16 +933,16 @@
     justify-content: space-between;
     align-items: center;
     gap: clamp(8px, 2vw, 12px);
-    /* Reduced gap */
+    
     padding: clamp(2px, 0.5vw, 4px) 0;
-    /* Reduced vertical padding */
+    
 }
 
 .videoControlCenter {
     display: flex;
     justify-content: center;
     gap: clamp(6px, 1.5vw, 10px);
-    /* Reduced gap */
+    
     flex: 1;
 }
 
@@ -954,23 +954,23 @@
     border: none;
     color: white;
     border-radius: clamp(6px, 1.5vw, 10px);
-    /* Smaller border radius */
+    
     cursor: pointer;
     font-size: clamp(14px, 3vw, 18px);
     width: clamp(55px, 9vw, 75px);
-    /* Fixed width instead of min-width */
+    
     height: clamp(30px, 9vw, 44px);
-    /* Square buttons */
+    
     padding: 0;
-    /* Remove padding for square buttons */
+    
     transition: background-color 0.2s ease;
     outline: none;
 }
 
-/* Icon sizing inside buttons */
+
 .videoControlButton svg {
     width: clamp(18px, 4vw, 24px);
-    /* Slightly larger icons */
+    
     height: clamp(18px, 4vw, 24px);
 }
 
@@ -1032,7 +1032,7 @@
     }
 }
 
-/* File Info Items */
+
 .fileInfoItem {
     display: flex;
     justify-content: space-between;
@@ -1054,7 +1054,7 @@
     word-break: break-all;
 }
 
-/* HTML Preview */
+
 .htmlPreviewContainer {
     width: 100%;
     height: 100%;

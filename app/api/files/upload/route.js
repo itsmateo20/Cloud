@@ -49,10 +49,9 @@ export async function POST(req) {
         const userFolder = pathResult.path;
         const targetFolder = path.join(userFolder, targetPath);
 
-        // Ensure target directory exists and is accessible
         try {
             await fs.mkdir(targetFolder, { recursive: true });
-            // Verify the directory was created and is accessible
+
             await fs.access(targetFolder, fs.constants.R_OK | fs.constants.W_OK);
         } catch (error) {
             return NextResponse.json({

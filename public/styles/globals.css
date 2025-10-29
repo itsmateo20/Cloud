@@ -32,12 +32,12 @@
   --explorer-selected: #c7c7c7;
   --explorer-item: #f1f1f1;
 
-  /* Modal animation tokens */
+  
   --modal-enter-duration: 180ms;
   --modal-exit-duration: 180ms;
   --modal-ease: cubic-bezier(.4, 0, .2, 1);
 
-  /* Button colors */
+  
   --button-text-color: #ffffff;
   --button-primary: #2563eb;
   --button-primary-hover: #1d4ed8;
@@ -47,7 +47,7 @@
   --button-danger: #dc2626;
   --button-danger-hover: #b91c1c;
 
-  /* Message colors */
+  
   --message-success-bg: #f0f9ff;
   --message-success-text: #1e40af;
   --message-success-border: #dbeafe;
@@ -55,14 +55,14 @@
   --message-error-text: #dc2626;
   --message-error-border: #fecaca;
 
-  /* Input colors */
+  
   --input-border: #d1d5db;
   --input-background: #ffffff;
   --file-input-button-bg: #dbeafe;
   --file-input-button-hover: #bfdbfe;
   --file-input-button-text: #1e40af;
 
-  /* Font sizes - responsive */
+  
   --font-size-xs: clamp(10px, 1.8vw, 12px);
   --font-size-sm: clamp(12px, 2vw, 14px);
   --font-size-base: clamp(14px, 2.5vw, 16px);
@@ -71,13 +71,13 @@
   --font-size-2xl: clamp(20px, 4vw, 24px);
   --font-size-3xl: clamp(24px, 5vw, 30px);
 
-  /* Extended semantic sizes */
+  
   --font-size-display: clamp(32px, 6vw, 54px);
   --font-size-display-sm: clamp(26px, 5vw, 42px);
   --font-size-code: clamp(12px, 1.8vw, 14px);
   --font-size-micro: clamp(9px, 1.4vw, 11px);
 
-  /* Spacing - responsive */
+  
   --spacing-xs: clamp(2px, 0.5vw, 4px);
   --spacing-sm: clamp(4px, 1vw, 8px);
   --spacing-base: clamp(8px, 2vw, 12px);
@@ -85,19 +85,18 @@
   --spacing-xl: clamp(16px, 4vw, 20px);
   --spacing-2xl: clamp(20px, 5vw, 24px);
 
-  /* Line-height scales */
+  
   --lh-tight: 1.1;
   --lh-normal: 1.35;
   --lh-relaxed: 1.5;
 
-  /* Utility font weight tokens */
+  
   --fw-regular: 400;
   --fw-medium: 500;
   --fw-semibold: 600;
   --fw-bold: 700;
 }
 
-/* Force light theme */
 [data-color-scheme="light"] {
   --background: #ffffff;
   --nav-background: #f1f1f1;
@@ -134,7 +133,6 @@
   --file-input-button-text: #1e40af;
 }
 
-/* Force dark theme */
 [data-color-scheme="dark"] {
   --background: #161616;
   --nav-background: #141414;
@@ -171,7 +169,6 @@
   --file-input-button-text: #60a5fa;
 }
 
-/* Default system theme preference */
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #161616;
@@ -210,7 +207,7 @@
     --explorer-selected: #3c3c3c;
     --explorer-item: #0f0f0f;
 
-    /* Modal animation tokens (dark override for potential theming if needed) */
+    
     --modal-enter-duration: 180ms;
     --modal-exit-duration: 180ms;
     --modal-ease: cubic-bezier(.4, 0, .2, 1);
@@ -237,7 +234,6 @@
   }
 }
 
-/* High Contrast Theme */
 [data-theme="high-contrast"] {
   --background: #000000;
   --nav-background: #000000;
@@ -299,8 +295,6 @@
   --file-input-button-text: #ffffff;
 }
 
-
-/* iOS / Safari autofill fix: keep themed background instead of white/yellow */
 input:-webkit-autofill,
 input:-webkit-autofill:hover,
 input:-webkit-autofill:focus,
@@ -316,14 +310,14 @@ input:autofill:focus {
   -webkit-text-fill-color: var(--text) !important;
   color: var(--text) !important;
   caret-color: var(--text) !important;
-  /* Force background fill using large inset shadow; relies on theme vars */
+  
   box-shadow: 0 0 0 1000px var(--input-background) inset !important;
   -webkit-box-shadow: 0 0 0 1000px var(--input-background) inset !important;
   border: 1px solid var(--input-border) !important;
   background: var(--input-background) !important;
   background-clip: padding-box !important;
   transition: background-color 0s ease-in-out 0s, color 0.15s ease;
-  /* cancel long delay hacks */
+  
 }
 
 @media (prefers-color-scheme: dark) {
@@ -384,7 +378,6 @@ body {
   transition: background-color 0.5s ease, color 0.5s ease;
 }
 
-/* Mobile touch navigation prevention */
 @media (max-width: 768px) {
 
   html,
@@ -460,7 +453,6 @@ a {
   text-decoration: none;
 }
 
-/* Typography utility classes */
 .text-xs {
   font-size: var(--font-size-xs);
   line-height: var(--lh-normal);
@@ -534,7 +526,6 @@ a {
   font-weight: var(--fw-bold);
 }
 
-/* Clamp-based heading reset */
 h1,
 h2,
 h3,
@@ -549,7 +540,6 @@ h1 {
   font-size: var(--font-size-display-sm);
 }
 
-/* large page title */
 h2 {
   font-size: var(--font-size-2xl);
 }
@@ -584,7 +574,6 @@ h6 {
   user-select: none;
 }
 
-/* Loading spinner animation */
 @keyframes spin {
   0% {
     transform: rotate(0deg);

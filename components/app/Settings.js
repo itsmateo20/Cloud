@@ -373,7 +373,7 @@ export default function Settings({ onClose, onViewModeChange, onSortByChange, on
               />
             </DropdownSettingItem>
 
-            {/* Delete Account Section */}
+            {}
             <div className={style.dangerZone}>
               <h2 className={style.dangerTitle}>Danger Zone</h2>
               <div className={style.settingItem}>
@@ -393,7 +393,7 @@ export default function Settings({ onClose, onViewModeChange, onSortByChange, on
         </div>
       </div>
 
-      {/* Delete Account Confirmation Modal */}
+      {}
       <ConfirmModal
         isOpen={showDeleteConfirm}
         title="Delete Account"

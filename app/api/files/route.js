@@ -18,12 +18,9 @@ export async function GET(req) {
 
     const url = new URL(req.url);
     const requestedPath = url.searchParams.get("path") || "";
-    // Pagination parameters
-    // limit: max number of items (folders+files) to return
-    // cursor: opaque cursor referencing last returned item ("F:<name>" for folder, "FI:<name>" for file)
-    // We paginate over the combined, name-sorted sequence: all folders (A-Z) then files (A-Z)
+
     const limitParam = parseInt(url.searchParams.get("limit") || "", 10);
-    const limit = Number.isFinite(limitParam) && limitParam > 0 ? Math.min(limitParam, 500) : null; // cap to 500
+    const limit = Number.isFinite(limitParam) && limitParam > 0 ? Math.min(limitParam, 500) : null;
     const cursor = url.searchParams.get("cursor") || null;
 
     const userFolder = getUserUploadPath(userId);
@@ -52,7 +49,6 @@ export async function GET(req) {
         const folders = [];
         const files = [];
 
-        // Batch process items to reduce database queries
         const itemStats = await Promise.all(
             items.filter(item => !item.endsWith(".INF") && item !== '.thumbnails').map(async item => {
                 const itemPath = path.join(targetPath, item);
@@ -69,7 +65,6 @@ export async function GET(req) {
             })
         );
 
-        // Get existing DB records in batches to reduce queries
         const allPaths = itemStats.map(item => item.path);
         const [existingFolders, existingFiles] = await Promise.all([
             prisma.folder.findMany({
@@ -85,7 +80,6 @@ export async function GET(req) {
         const folderMap = new Map(existingFolders.map(f => [f.path, f]));
         const fileMap = new Map(existingFiles.map(f => [f.path, f]));
 
-        // Process folders
         const folderData = [];
         const newFolders = [];
         const updateFolders = [];
@@ -125,7 +119,7 @@ export async function GET(req) {
                 };
                 newFolders.push(newFolder);
                 folderData.push({
-                    id: null, // Will be set after creation
+                    id: null,
                     name: item.name,
                     path: item.path,
                     type: "folder",
@@ -136,7 +130,6 @@ export async function GET(req) {
             }
         }
 
-        // Process files
         const fileData = [];
         const newFiles = [];
         const updateFiles = [];
@@ -171,7 +164,7 @@ export async function GET(req) {
                 };
                 newFiles.push(newFile);
                 fileData.push({
-                    id: null, // Will be set after creation
+                    id: null,
                     name: item.name,
                     path: item.path,
                     type: "file",
@@ -183,7 +176,6 @@ export async function GET(req) {
             }
         }
 
-        // Batch database operations
         await Promise.all([
             newFolders.length > 0 ? prisma.folder.createMany({ data: newFolders }) : Promise.resolve(),
             newFiles.length > 0 ? prisma.file.createMany({ data: newFiles }) : Promise.resolve(),
@@ -203,7 +195,7 @@ export async function GET(req) {
         let hasMore = false;
 
         if (limit) {
-            // Build combined list of references: folders first then files
+
             const combined = [
                 ...folders.map(f => ({ kind: 'folder', name: f.name })),
                 ...files.map(f => ({ kind: 'file', name: f.name }))
@@ -211,13 +203,13 @@ export async function GET(req) {
 
             let startIndex = 0;
             if (cursor) {
-                // cursor format: F:<name> for folder, FI:<name> for file
+
                 const cursorMatch = cursor.match(/^(F|FI):(.+)$/);
                 if (cursorMatch) {
                     const [, typeToken, curName] = cursorMatch;
                     const isFolderCursor = typeToken === 'F';
                     const idx = combined.findIndex(e => e.kind === (isFolderCursor ? 'folder' : 'file') && e.name === curName);
-                    if (idx !== -1) startIndex = idx + 1; // start after cursor
+                    if (idx !== -1) startIndex = idx + 1;
                 }
             }
 
@@ -229,7 +221,6 @@ export async function GET(req) {
                 nextCursor = (lastItem.kind === 'folder' ? 'F:' : 'FI:') + lastItem.name;
             }
 
-            // Separate back into folders/files preserving original objects
             const folderNamesInPage = new Set(pageSlice.filter(i => i.kind === 'folder').map(i => i.name));
             const fileNamesInPage = new Set(pageSlice.filter(i => i.kind === 'file').map(i => i.name));
             pagedFolders = folders.filter(f => folderNamesInPage.has(f.name));
@@ -297,7 +288,7 @@ export async function POST(req) {
                 await fs.access(folderPath);
                 return NextResponse.json({ success: true, code: "directory_exists", message: "Folder already exists" }, { status: 200 });
             } catch {
-                // Folder doesn't exist, continue with creation
+
             }
             await fs.mkdir(folderPath, { recursive: true });
             const relativePath = path.relative(userFolder, folderPath).replace(/\\/g, '/');

@@ -1,6 +1,6 @@
 /* components/qr/QRHandler.module.css */
 
-/* Error page styles */
+
 .errorContainer {
     min-height: 100vh;
     display: flex;
@@ -28,7 +28,7 @@
     color: var(--text-color-muted);
 }
 
-/* Main component styles */
+
 .container {
     min-height: 100vh;
     background-color: var(--background);

@@ -1,10 +1,5 @@
 // utils/fileMetadata.client.js
 
-/**
- * Reads metadata from a File object on the client side
- * @param {File} file - The File object to read metadata from
- * @returns {Object} Metadata object containing available information
- */
 export function readFileMetadata(file) {
     const metadata = {
         name: file.name,
@@ -25,22 +20,11 @@ export function readFileMetadata(file) {
     return metadata;
 }
 
-/**
- * Appends metadata to FormData for upload
- * @param {FormData} formData - The FormData object to append to
- * @param {File[]} files - Array of File objects
- */
 export function appendMetadataToFormData(formData, files) {
     const metadataArray = files.map(file => readFileMetadata(file));
     formData.append('metadata', JSON.stringify(metadataArray));
 }
 
-/**
- * Extracts EXIF data from image files (if available)
- * Note: This requires the browser's File API and may not work in all browsers
- * @param {File} file - Image file to extract EXIF from
- * @returns {Promise<Object>} Promise resolving to EXIF data
- */
 export async function extractEXIFData(file) {
     if (!file.type.startsWith('image/')) return null;
 

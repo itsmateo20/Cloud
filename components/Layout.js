@@ -15,13 +15,12 @@ export default function Layout({ children, mainStyle, loading = true, user = nul
             setShowLoading(true);
             setFadeOut(false);
         } else {
-            // Start fade out
+
             setFadeOut(true);
 
-            // Hide loading after fade out completes
             const timer = setTimeout(() => {
                 setShowLoading(false);
-            }, 1000); // Allow time for fade out animation
+            }, 1000);
 
             return () => clearTimeout(timer);
         }

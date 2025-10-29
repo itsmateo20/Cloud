@@ -43,7 +43,7 @@
                 }
             };
         }
-    } catch { /* best-effort polyfill; ignore if unavailable */ }
+    } catch {  }
 })();
 
 const { createServer } = require("http");
@@ -52,7 +52,6 @@ const { Server } = require("socket.io");
 const next = require("next");
 const port = process.env.PORT || 3000;
 
-// Force production mode when using built files
 const dev = process.env.NODE_ENV !== "production";
 const app = next({ quiet: !dev, dev, turbo: false });
 const handle = app.getRequestHandler();

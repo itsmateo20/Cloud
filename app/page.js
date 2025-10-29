@@ -62,15 +62,12 @@ export default function Page() {
 
   const isMobile = useIsMobile();
 
-  // Computed view mode based on device type
   const viewMode = isMobile ? mobileViewMode : desktopViewMode;
 
-  // Load all settings (theme, view, sort) on page load
   useEffect(() => {
     const loadSettings = async () => {
       let settings = null;
 
-      // Try to load settings from API if user is logged in and auth is not still loading
       if (user && !loading) {
         try {
           const response = await api.get('/api/user/settings');
@@ -82,7 +79,6 @@ export default function Page() {
         }
       }
 
-      // Apply theme
       let savedTheme = settings?.theme;
       if (!savedTheme && typeof window !== 'undefined') {
         savedTheme = localStorage.getItem('cloud-theme') || 'device';
@@ -91,7 +87,6 @@ export default function Page() {
       if (savedTheme) {
         const html = document.documentElement;
 
-        // Remove all theme-related attributes first
         html.removeAttribute('data-theme');
         html.removeAttribute('data-color-scheme');
 
@@ -107,28 +102,25 @@ export default function Page() {
             break;
           case 'device':
           default:
-            // Let the browser use its default behavior with prefers-color-scheme
+
             break;
         }
       }
 
-      // Apply view and sort settings (only for desktop)
       if (settings) {
         setDesktopViewMode(settings.defaultView);
         setSortBy(settings.defaultSort);
       } else if (typeof window !== 'undefined') {
-        // Fallback to localStorage (only for desktop)
+
         const savedView = localStorage.getItem('cloud-default-view') || 'details';
         const savedSort = localStorage.getItem('cloud-default-sort') || 'name';
         setDesktopViewMode(savedView);
         setSortBy(savedSort);
       }
 
-      // Mark settings as loaded
       setSettingsLoaded(true);
     };
 
-    // Load settings when auth is resolved (either user is loaded or confirmed not logged in)
     if (!loading) {
       loadSettings();
     }
@@ -452,10 +444,9 @@ export default function Page() {
   };
 
   const handleThemeChange = (newTheme) => {
-    // Apply theme immediately when changed in settings
+
     const html = document.documentElement;
 
-    // Remove all theme-related attributes first
     html.removeAttribute('data-theme');
     html.removeAttribute('data-color-scheme');
 
@@ -471,7 +462,7 @@ export default function Page() {
         break;
       case 'device':
       default:
-        // Let the browser use its default behavior with prefers-color-scheme
+
         break;
     }
   };
@@ -525,7 +516,7 @@ export default function Page() {
       setMobileViewMode(prevMode => prevMode === 'list' ? 'grid' : 'list');
     } else {
       setDesktopViewMode(prevMode => {
-        // Desktop has more view options
+
         switch (prevMode) {
           case 'details': return 'list';
           case 'list': return 'largeIcons';
@@ -623,12 +614,11 @@ export default function Page() {
 
   const handleUpload = (files = null) => {
     if (files && files.length > 0) {
-      // Files passed directly (e.g., from folder upload button)
+
       uploadFiles(files);
       return;
     }
 
-    // Regular file upload
     const input = document.createElement('input');
     input.type = 'file';
     input.multiple = true;
@@ -650,19 +640,19 @@ export default function Page() {
     }
 
     try {
-      // Group files by their folder structure using webkitRelativePath
+
       const folderStructure = new Map();
       const foldersToCreate = new Set();
 
       for (const file of files) {
         if (file.webkitRelativePath) {
-          // File is part of a folder drag - extract folder structure
+
           const pathParts = file.webkitRelativePath.split('/');
-          const fileName = pathParts.pop(); // Remove filename
+          const fileName = pathParts.pop();
           const folderPath = pathParts.join('/');
 
           if (folderPath) {
-            // Track folders that need to be created (build full folder hierarchy)
+
             let currentFolderPath = '';
             for (const part of pathParts) {
               currentFolderPath = currentFolderPath ? `${currentFolderPath}/${part}` : part;
@@ -677,7 +667,7 @@ export default function Page() {
               fileName
             });
           } else {
-            // File in root folder of the upload
+
             if (!folderStructure.has('')) {
               folderStructure.set('', []);
             }
@@ -687,7 +677,7 @@ export default function Page() {
             });
           }
         } else {
-          // Regular file upload to current directory
+
           if (!folderStructure.has('')) {
             folderStructure.set('', []);
           }
@@ -698,11 +688,9 @@ export default function Page() {
         }
       }
 
-      // Create folders first if needed
       if (foldersToCreate.size > 0) {
         toast.addInfo(`Creating ${foldersToCreate.size} folder${foldersToCreate.size > 1 ? 's' : ''}...`);
 
-        // Sort folders by depth to create parent folders first
         const sortedFolders = Array.from(foldersToCreate).sort((a, b) => {
           return a.split('/').length - b.split('/').length;
         });
@@ -720,24 +708,21 @@ export default function Page() {
               currentPath: parentPath
             });
 
-            // Accept both success and "exists" as valid states
             if (!result.success && result.code !== 'exists') {
               console.warn(`Failed to create folder ${folderName}: ${result.message}`);
               toast.addError(`Failed to create folder: ${folderName}`);
-              return; // Stop upload process if folder creation fails
+              return;
             }
           } catch (error) {
             console.warn(`Error creating folder ${folderPath}:`, error);
             toast.addError(`Error creating folder: ${folderPath}`);
-            return; // Stop upload process on error
+            return;
           }
         }
 
-        // Wait longer for folder creation to complete and filesystem to sync
         await new Promise(resolve => setTimeout(resolve, 300));
       }
 
-      // Upload files to their respective folders
       let totalUploaded = 0;
       let totalSize = 0;
       files.forEach(file => totalSize += file.size);
@@ -949,7 +934,7 @@ export default function Page() {
 
   const handleViewChange = (newViewMode) => {
     if (isMobile) {
-      // Mobile only supports list and grid
+
       if (newViewMode === 'list' || newViewMode === 'grid') {
         setMobileViewMode(newViewMode);
       }
@@ -968,16 +953,16 @@ export default function Page() {
 
   const handleBackNavigation = () => {
     if (currentPath === undefined || currentPath === '' || currentPath === 'favorites') {
-      // Already at root or in special paths, go to home/undefined
+
       setCurrentPath(undefined);
     } else {
-      // Go up one level
+
       const pathParts = currentPath.split('/');
       if (pathParts.length === 1) {
-        // Go to root
+
         setCurrentPath('');
       } else {
-        // Go to parent folder
+
         const parentPath = pathParts.slice(0, -1).join('/');
         setCurrentPath(parentPath);
       }
@@ -1024,7 +1009,6 @@ export default function Page() {
 
   if (!user) return null;
 
-  // Show loading screen until auth and settings are loaded
   if (loading || !settingsLoaded) {
     return <Loading />;
   }
@@ -1037,7 +1021,7 @@ export default function Page() {
       onDrop={handleGlobalDrop}
       style={{ position: 'relative', height: '100%', width: '100%' }}
     >
-      {/* Global drag overlay */}
+      {}
       {isGlobalDragOver && (
         <div style={{
           position: 'fixed',
@@ -1098,7 +1082,7 @@ export default function Page() {
           items={propertiesState.items}
           onClose={() => setPropertiesState({ open: false, items: [] })}
         />
-        {/* Pass action handler down via FileList -> FileViewer chain if supported */}
+        {}
         {!isMobile && (
           <div className={style.desktopContainer}>
             <Controls
@@ -1181,7 +1165,7 @@ export default function Page() {
             </div>
           </div>
         )}
-        {/* New Item Modal */}
+        {}
         <NewItemModal
           isOpen={newItemModalOpen}
           existingNames={existingNames}
@@ -1282,7 +1266,7 @@ export default function Page() {
               </div>
             </div>
 
-            {/* Mobile file explorer overlay */}
+            {}
             {currentPath !== undefined && (
               <div className={`${style.mobileExplorerContainer} ${style.active}`}>
                 <div className={style.mobileExplorerHeader}>
@@ -1331,7 +1315,7 @@ export default function Page() {
                     <Settings
                       onClose={() => setShowSettings(false)}
                       onThemeChange={handleThemeChange}
-                      onViewModeChange={null} // No view mode change for mobile
+                      onViewModeChange={null}
                       onSortByChange={setSortBy}
                       isMobile={isMobile}
                     />
@@ -1359,7 +1343,7 @@ export default function Page() {
               </div>
             )}
 
-            {/* Sort Menu */}
+            {}
             {showSortMenu && (
               <div className={style.sortMenuOverlay} onClick={() => setShowSortMenu(false)}>
                 <div className={style.sortMenu} onClick={(e) => e.stopPropagation()}>
@@ -1385,7 +1369,7 @@ export default function Page() {
               </div>
             )}
 
-            {/* Sort Options Menu */}
+            {}
             {showSortOptionsMenu && (
               <div className={style.popupModalMenuOverlay} onClick={() => {
                 setShowSortOptionsMenu(false);
@@ -1447,7 +1431,7 @@ export default function Page() {
               </div>
             )}
 
-            {/* New Folder Popup */}
+            {}
             {showNewFolderPopup && (
               <div className={style.popupOverlay} onClick={cancelNewFolder}>
                 <div className={style.popup} onClick={(e) => e.stopPropagation()}>

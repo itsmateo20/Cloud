@@ -2,11 +2,6 @@
 
 import fs from 'fs/promises';
 
-/**
- * Server-side utility to apply metadata to uploaded files
- * @param {string} filePath - Path to the uploaded file
- * @param {Object} metadata - Metadata object from client
- */
 export async function applyFileMetadata(filePath, metadata) {
     if (!metadata || typeof metadata !== 'object') return false;
 
@@ -20,12 +15,6 @@ export async function applyFileMetadata(filePath, metadata) {
     } catch (error) { return false; }
 }
 
-/**
- * Enhanced metadata preservation for server-side
- * Attempts to preserve as much metadata as possible
- * @param {string} filePath - Path to the uploaded file
- * @param {Object} metadata - Complete metadata object
- */
 export async function preserveFileMetadata(filePath, metadata) {
     if (!metadata || typeof metadata !== 'object') return { success: false, reason: 'No metadata provided' };
 
@@ -47,7 +36,6 @@ export async function preserveFileMetadata(filePath, metadata) {
                 results.errors.push(`Failed to set modification time: ${error.message}`);
             }
         }
-
 
         results.success = results.operations.length > 0;
         return results;

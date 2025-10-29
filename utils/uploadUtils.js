@@ -11,14 +11,6 @@ export class Uploader {
         this.RETRY_DELAY = 1000;
     }
 
-    /**
-     * Upload a single file with chunked upload for better performance
-     * @param {File} file - The file to upload
-     * @param {string} currentPath - The current folder path
-     * @param {function} onProgress - Progress callback (uploaded, total, percentage)
-     * @param {AbortSignal} signal - Abort signal for cancellation
-     * @returns {Promise<{success: boolean, fileName?: string, error?: string}>}
-     */
     async uploadFile(file, currentPath, onProgress, signal) {
         const uploadId = crypto.randomUUID();
 
@@ -44,9 +36,6 @@ export class Uploader {
         }
     }
 
-    /**
-     * Regular upload for small files
-     */
     async uploadFileRegular(file, currentPath, onProgress, signal) {
         const formData = new FormData();
         formData.append('file', file);
@@ -63,9 +52,6 @@ export class Uploader {
         return { success: true, fileName: file.name };
     }
 
-    /**
-     * Chunked upload for large files
-     */
     async uploadFileChunked(file, currentPath, onProgress, signal, uploadId) {
         const chunks = this.createChunks(file);
         const uploadedChunks = new Set();
@@ -114,9 +100,6 @@ export class Uploader {
         }
     }
 
-    /**
-     * Create file chunks
-     */
     createChunks(file) {
         const chunks = [];
         let offset = 0;
@@ -141,9 +124,6 @@ export class Uploader {
         return chunks;
     }
 
-    /**
-     * Initialize chunked upload session
-     */
     async initializeChunkedUpload(file, currentPath, signal) {
         const response = await api.post('/api/files/upload/init', {
             fileName: file.name,
@@ -156,9 +136,6 @@ export class Uploader {
         return response;
     }
 
-    /**
-     * Upload chunks with concurrency control
-     */
     async uploadChunksConcurrently(chunks, uploadToken, uploadId, onProgress, signal) {
         const uploadState = this.uploadQueue.get(uploadId);
         if (!uploadState) {
@@ -218,9 +195,6 @@ export class Uploader {
         });
     }
 
-    /**
-     * Upload a single chunk
-     */
     async uploadSingleChunk(chunk, uploadToken, signal) {
         const formData = new FormData();
         formData.append('chunk', chunk.blob);
@@ -236,9 +210,6 @@ export class Uploader {
         return result;
     }
 
-    /**
-     * Complete chunked upload
-     */
     async completeChunkedUpload(uploadToken, signal) {
         const result = await api.post('/api/files/upload/complete', {
             uploadToken
@@ -247,23 +218,12 @@ export class Uploader {
         return result;
     }
 
-    /**
-     * Abort chunked upload
-     */
     async abortChunkedUpload(uploadToken) {
         try {
             await api.post('/api/files/upload/abort', { uploadToken });
         } catch (error) { }
     }
 
-    /**
-     * Upload multiple files sequentially with progress tracking
-     * @param {FileList|File[]} files - Files to upload
-     * @param {string} currentPath - Current folder path
-     * @param {function} onProgress - Progress callback (fileIndex, fileName, fileProgress, overallProgress)
-     * @param {AbortSignal} signal - Abort signal
-     * @returns {Promise<{success: boolean, results: Array, errors: Array}>}
-     */
     async uploadFiles(files, currentPath, onProgress, signal) {
         const fileArray = Array.from(files);
         const results = [];
@@ -339,9 +299,6 @@ export class Uploader {
         };
     }
 
-    /**
-     * Cancel an ongoing upload
-     */
     cancelUpload(uploadId) {
         const uploadState = this.uploadQueue.get(uploadId);
         if (uploadState && uploadState.signal) {
@@ -349,9 +306,6 @@ export class Uploader {
         }
     }
 
-    /**
-     * Get upload progress for a specific upload
-     */
     getUploadProgress(uploadId) {
         const uploadState = this.uploadQueue.get(uploadId);
         if (!uploadState) return null;

@@ -2,7 +2,6 @@
 
 "use client";
 
-
 import { useState } from 'react';
 import { api } from '@/utils/api';
 import styles from './QRHandler.module.css';

@@ -314,7 +314,6 @@ export function FileViewer({
         setShowFileInfoModal(true);
         setShowDropdown(false);
 
-        // Fetch metadata for the current file
         if (currentFile && !fileMetadata) {
             setMetadataLoading(true);
             try {
@@ -813,7 +812,7 @@ export function FileViewer({
 
     const handleZoomIn = useCallback(() => {
         setImageScale(prev => {
-            const newScale = Math.min(prev * 1.05, 10); // Reduced from 1.2 to 1.05 for smoother zoom
+            const newScale = Math.min(prev * 1.05, 10);
             updateImageTransform(newScale, imagePositionRef.current);
             return newScale;
         });
@@ -821,7 +820,7 @@ export function FileViewer({
 
     const handleZoomOut = useCallback(() => {
         setImageScale(prev => {
-            const newScale = Math.max(prev / 1.05, 0.1); // Reduced from 1.2 to 1.05 for smoother zoom
+            const newScale = Math.max(prev / 1.05, 0.1);
             updateImageTransform(newScale, imagePositionRef.current);
             return newScale;
         });
@@ -1031,7 +1030,7 @@ export function FileViewer({
                             </video>
                         </div>
 
-                        {/* Custom Video Controls */}
+                        {}
                         {getFileType(currentFile.name) === 'video' && showControls && (
                             <div
                                 className={`${style.customVideoControls} ${isVideoVertical ? style.customVideoControlsVertical : ''}`}
@@ -1262,12 +1261,12 @@ export function FileViewer({
 
     return (
         <>
-            {/* Main FileViewer */}
+            {}
             <div className={`${style.overlay} ${mobile ? style.mobileOverlay : ''}`} style={{ display: showCodeEditor ? 'none' : 'flex' }}>
                 <div className={`${style.container} ${!mobile && showFileInfoModal ? style.containerWithPanelSpace : ''} ${mobile ? style.mobileContainer : ''}`} ref={containerRef}>
-                    {/* Main content area */}
+                    {}
                     <div className={style.mainContentArea}>
-                        {/* Header */}
+                        {}
                         {showControls && (
                             <div className={`${style.header} ${mobile ? style.mobileHeader : ''}`}>
                                 {mobile ? (
@@ -1394,7 +1393,7 @@ export function FileViewer({
 
                                                 {showDropdown && (
                                                     <div className={style.dropdownMenu}>
-                                                        {/* Only show rename if user owns the file or has rename permission */}
+                                                        {}
                                                         {(currentFile.canRename) && (
                                                             <>
                                                                 <button
@@ -1431,7 +1430,7 @@ export function FileViewer({
                             </div>
                         )}
 
-                        {/* Navigation - only show on desktop */}
+                        {}
                         {!mobile && showControls && currentFileIndex > 0 && (
                             <button
                                 className={`${style.navButton} ${style.navLeft}`}
@@ -1452,7 +1451,7 @@ export function FileViewer({
                             </button>
                         )}
 
-                        {/* Content Container */}
+                        {}
                         <div
                             className={`${style.fileContainer} ${(getFileType(currentFile?.name) === 'image' && imageScale > 1) ? style.zoomActive : ''}`}
                             onClick={toggleControls}
@@ -1464,7 +1463,7 @@ export function FileViewer({
                             {!isLoading && renderFileContent()}
                         </div>
 
-                        {/* Mobile Navigation - only show on mobile */}
+                        {}
                         {mobile && showControls && (
                             <>
                                 {currentFileIndex > 0 && (
@@ -1489,7 +1488,7 @@ export function FileViewer({
                             </>
                         )}
 
-                        {/* Zoom Controls - Only for images */}
+                        {}
                         {supportsZoom && !isLoading && !fileError && showControls && (
                             <div className={`${style.zoomControls} ${!mobile && showFileInfoModal ? style.zoomControlsWithSidePanel : ''}`}>
                                 <button
@@ -1523,10 +1522,10 @@ export function FileViewer({
                         )}
                     </div>
                 </div>
-                {/* Close main content area div for desktop */}
+                {}
             </div>
 
-            {/* Desktop Side Panel */}
+            {}
             {!mobile && (
                 <div ref={sidePanelRef} className={`${style.sidePanel} ${showFileInfoModal ? style.sidePanelOpen : ''}`}>
                     <div className={style.sidePanelHeader}>
@@ -1621,7 +1620,7 @@ export function FileViewer({
                 </div>
             )}
 
-            {/* Mobile File Info Modal */}
+            {}
             {mobile && showFileInfoModal && (
                 <div className={mainStyle.popupModalMenuOverlay} onClick={() => {
                     setShowFileInfoModal(false);
@@ -1650,7 +1649,7 @@ export function FileViewer({
                             </div>
                         </div>
                         <div className={mainStyle.popupModalMenuOptions}>
-                            {/* General Section */}
+                            {}
                             <div className={style.propertySection}>
                                 <h4 className={style.sectionTitle}>General</h4>
                                 <div className={style.fileInfoItem}>
@@ -1677,7 +1676,7 @@ export function FileViewer({
                                 </div>
                             </div>
 
-                            {/* Dates Section */}
+                            {}
                             <div className={style.propertySection}>
                                 <h4 className={style.sectionTitle}>Dates</h4>
                                 {currentFile.createdAt && (
@@ -1700,7 +1699,7 @@ export function FileViewer({
                                 )}
                             </div>
 
-                            {/* Technical Details Section */}
+                            {}
                             <div className={style.propertySection}>
                                 <h4 className={style.sectionTitle}>Technical Details</h4>
                                 {currentFile.mime && (
@@ -1723,7 +1722,7 @@ export function FileViewer({
                                 )}
                             </div>
 
-                            {/* Location Section */}
+                            {}
                             {hasGPSData(currentFile) && (
                                 <div className={style.propertySection}>
                                     <h4 className={style.sectionTitle}>Location</h4>
@@ -1746,7 +1745,7 @@ export function FileViewer({
                                 </div>
                             )}
 
-                            {/* Camera Information Section */}
+                            {}
                             {fileMetadata?.camera && (
                                 <div className={style.propertySection}>
                                     <h4 className={style.sectionTitle}>Camera Information</h4>
@@ -1789,7 +1788,7 @@ export function FileViewer({
                                 </div>
                             )}
 
-                            {/* Image Details Section */}
+                            {}
                             {fileMetadata && (fileMetadata.image || fileMetadata.settings) && (
                                 <div className={style.propertySection}>
                                     <h4 className={style.sectionTitle}>Image Details</h4>
@@ -1844,7 +1843,7 @@ export function FileViewer({
                                 </div>
                             )}
 
-                            {/* Device Information Section */}
+                            {}
                             {fileMetadata?.device && (
                                 <div className={style.propertySection}>
                                     <h4 className={style.sectionTitle}>Device Information</h4>
@@ -1879,7 +1878,7 @@ export function FileViewer({
                 </div>
             )}
 
-            {/* Delete Confirmation Modal */}
+            {}
             {showDeleteModal && (
                 <div className={mainStyle.popupModalMenuOverlay} onClick={() => {
                     setShowDeleteModal(false);
@@ -1935,7 +1934,7 @@ export function FileViewer({
                 </div>
             )}
 
-            {/* Code Editor */}
+            {}
             {showCodeEditor && isEditableFile(currentFile?.name) && (
                 <CodeEditor
                     file={currentFile}

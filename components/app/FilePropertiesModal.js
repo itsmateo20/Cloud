@@ -63,7 +63,6 @@ export default function FilePropertiesModal({ open, items = [], onClose }) {
         }
     }, [open, visible]);
 
-    // Extract additional metadata for single file or folder
     useEffect(() => {
         if (open && items.length === 1) {
             const item = items[0];
@@ -74,14 +73,13 @@ export default function FilePropertiesModal({ open, items = [], onClose }) {
                 accessed: item.accessedAt || item.accessed,
                 encoding: (item.isDirectory || item.type === 'folder') ? null : (item.encoding || 'UTF-8'),
                 permissions: item.permissions || '644',
-                // Folder-specific metadata
+
                 itemCount: (item.isDirectory || item.type === 'folder') ? item.itemCount : null,
                 folderSize: (item.isDirectory || item.type === 'folder') ? item.folderSize : null,
                 hasSubfolders: (item.isDirectory || item.type === 'folder') ? item.hasSubfolders : null,
                 lastActivity: (item.isDirectory || item.type === 'folder') ? item.lastActivity : null
             };
 
-            // Try to extract EXIF data for images (only for files, not folders)
             if (item.metadata && !(item.isDirectory || item.type === 'folder')) {
                 newMetadata.exif = item.metadata;
             }

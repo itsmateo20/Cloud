@@ -58,7 +58,7 @@
     }
 }
 
-/* Fade in animations */
+
 .lightFadeIn {
     animation: lightFadeInAnimation 0.6s ease-out forwards;
 }
@@ -67,7 +67,7 @@
     animation: darkFadeInAnimation 0.3s ease-out forwards;
 }
 
-/* Fade out animations */
+
 .fadeOut.lightFade {
     animation: lightFadeOutAnimation 0.8s ease-in forwards;
 }
@@ -76,7 +76,7 @@
     animation: darkFadeOutAnimation 0.4s ease-in forwards;
 }
 
-/* Light theme animations - slower, smoother */
+
 @keyframes lightFadeInAnimation {
     from {
         opacity: 0;
@@ -102,7 +102,7 @@
     }
 }
 
-/* Dark theme animations - faster, subtler */
+
 @keyframes darkFadeInAnimation {
     from {
         opacity: 0;

@@ -3,20 +3,6 @@
 import React, { useEffect, useCallback, useState } from 'react';
 import styles from './ConfirmModal.module.css';
 
-/**
- * Reusable confirmation modal.
- * Props:
- *  - open: boolean
- *  - title: string
- *  - message: string (supports \n for new lines)
- *  - variant: 'default' | 'danger'
- *  - confirmLabel: string
- *  - cancelLabel: string
- *  - onConfirm: () => void
- *  - onCancel: () => void
- *  - destructive: boolean (styles confirm button as danger)
- *  - extraActions?: React.ReactNode (optional extra action buttons left side)
- */
 export function ConfirmModal({
     open,
     title = 'Confirm Action',

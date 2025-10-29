@@ -5,13 +5,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import styles from './NewItemModal.module.css';
 import { X, FolderPlus, FileIcon, FileText, AlertCircle } from 'lucide-react';
 
-/**
- * Props:
- *  - isOpen
- *  - onClose()
- *  - onCreate({ type: 'folder'|'file'|'text', name: string }) -> Promise<{success:boolean,error?:string}>
- *  - existingNames: string[] (names in current directory for duplicate validation)
- */
 export function NewItemModal({ isOpen, onClose, onCreate, existingNames = [], initialType = 'folder' }) {
     const [name, setName] = useState('');
     const [type, setType] = useState(initialType || 'folder');
@@ -22,7 +15,7 @@ export function NewItemModal({ isOpen, onClose, onCreate, existingNames = [], in
     const inputRef = useRef(null);
     const lastTypeRef = useRef('folder');
 
-    const ILLEGAL = /[\\/:*?"<>|]/; // Windows + common FS invalid characters
+    const ILLEGAL = /[\\/:*?"<>|]/;
 
     useEffect(() => {
         if (isOpen) {

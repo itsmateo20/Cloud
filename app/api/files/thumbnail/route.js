@@ -8,15 +8,6 @@ import sharp from "sharp";
 import fsSync from 'fs';
 import { getUserUploadPath } from "@/lib/paths";
 
-/**
- * Image thumbnail strategy:
- *  - Single size 128x128 cover, JPEG quality 75
- *  - Cached on disk under uploads/{userId}/.thumbnails/<relativePath>.thumb.jpg
- *  - Cache invalidated when source mtime changes (compares stats)
- *  - Adds ETag header (mtime-ms:size) and supports If-None-Match for 304
- *  - Version query param (?v=) can be appended client-side but not required for correctness
- */
-
 export async function GET(req) {
     const session = await getSession();
     if (!session) {
@@ -72,7 +63,7 @@ export async function GET(req) {
                         if (cacheStat.mtimeMs >= sourceMTimeMs) {
                             useCached = true;
                         }
-                    } catch { /* ignore */ }
+                    } catch {  }
                 }
 
                 if (!useCached) {
@@ -86,7 +77,7 @@ export async function GET(req) {
                 return new NextResponse(fileStream, {
                     headers: {
                         'Content-Type': 'image/jpeg',
-                        'Cache-Control': 'public, max-age=2592000, immutable', // 30 days + immutable
+                        'Cache-Control': 'public, max-age=2592000, immutable',
                         'ETag': etag,
                         'Expires': new Date(Date.now() + 2592000000).toUTCString()
                     }
@@ -97,7 +88,7 @@ export async function GET(req) {
             }
         } else if (isVideo) {
             const placeholderSvg = `
-                <svg width="64" height="64" xmlns="http://www.w3.org/2000/svg">
+                <svg width="64" height="64" xmlns="http:
                     <rect width="64" height="64" fill="#f0f0f0"/>
                     <text x="32" y="40" text-anchor="middle" font-family="Arial" font-size="24">🎬</text>
                 </svg>

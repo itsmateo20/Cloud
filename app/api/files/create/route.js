@@ -60,7 +60,7 @@ export async function POST(req) {
         try {
             await fs.access(targetPath);
             return NextResponse.json({ success: false, code: 'exists', message: 'Item already exists' }, { status: 409 });
-        } catch { /* not existing is expected */ }
+        } catch {  }
 
         if (safeType === 'folder') {
             await fs.mkdir(targetPath, { recursive: false });

@@ -165,7 +165,6 @@ export function Navigation({ user, sideNav = false, currentPath, onOpenSettings 
     useEffect(() => {
         if (!isDragging || !isMobile) return;
 
-        // Prevent browser back/forward gestures during drag
         document.body.style.overflowX = 'hidden';
         document.documentElement.style.overscrollBehaviorX = 'none';
 
@@ -175,7 +174,7 @@ export function Navigation({ user, sideNav = false, currentPath, onOpenSettings 
         document.addEventListener('touchend', handleTouchEnd);
 
         return () => {
-            // Restore browser navigation when drag ends
+
             document.body.style.overflowX = '';
             document.documentElement.style.overscrollBehaviorX = '';
 
@@ -205,12 +204,11 @@ export function Navigation({ user, sideNav = false, currentPath, onOpenSettings 
         };
     }, [isOpened, isDragging, isMobile]);
 
-    // Prevent browser back/forward gestures on mobile when sidebar is available
     useEffect(() => {
         if (!isMobile || !user) return;
 
         const preventBrowserNavigation = (e) => {
-            // Check if the touch started near the left edge (where sidebar drag initiates)
+
             if (e.touches && e.touches.length === 1) {
                 const touch = e.touches[0];
                 if (touch.clientX <= 30) {
@@ -220,15 +218,13 @@ export function Navigation({ user, sideNav = false, currentPath, onOpenSettings 
             }
         };
 
-        // Apply CSS to prevent overscroll behavior
         document.documentElement.style.overscrollBehaviorX = 'none';
         document.body.style.overscrollBehaviorX = 'none';
 
-        // Add touch event listener to prevent browser navigation
         document.addEventListener('touchstart', preventBrowserNavigation, { passive: false, capture: true });
 
         return () => {
-            // Restore default behavior
+
             document.documentElement.style.overscrollBehaviorX = '';
             document.body.style.overscrollBehaviorX = '';
             document.removeEventListener('touchstart', preventBrowserNavigation, { capture: true });
@@ -252,20 +248,19 @@ export function Navigation({ user, sideNav = false, currentPath, onOpenSettings 
         return () => cancelAnimationFrame(raf);
     }, [isDragging, currentX, startX, isMobile]);
 
-    // Handle mobile/desktop transition
     useEffect(() => {
         const nav = navRef.current;
         if (!nav) return;
 
         if (!isMobile) {
-            // When switching to desktop, reset navigation state
+
             setIsOpened(false);
             setIsDragging(false);
             nav.style.transform = '';
             nav.style.boxShadow = '';
             nav.style.transition = '';
         } else {
-            // When switching to mobile, ensure navigation is closed
+
             if (!isOpened) {
                 nav.style.transform = 'translate(-100%, 0%)';
                 nav.style.boxShadow = 'none';

@@ -91,13 +91,12 @@ const ThumbnailWithLoader = ({ src, alt, cacheRef, queue, currentPath }) => {
     useEffect(() => {
         if (!rootRef.current) return;
 
-        // Clean up previous observer
         if (observerRef.current) {
             observerRef.current.disconnect();
         }
 
         if ('IntersectionObserver' in window) {
-            // Reduce rootMargin for better performance
+
             observerRef.current = new IntersectionObserver(entries => {
                 const entry = entries[0];
                 if (entry.isIntersecting) {
@@ -109,7 +108,7 @@ const ThumbnailWithLoader = ({ src, alt, cacheRef, queue, currentPath }) => {
                         imgRef.current.src = '';
                     }
                 }
-            }, { rootMargin: '100px 0px 100px 0px', threshold: 0.01 }); // Reduced from 200px
+            }, { rootMargin: '100px 0px 100px 0px', threshold: 0.01 });
 
             observerRef.current.observe(rootRef.current);
         } else {
@@ -295,7 +294,6 @@ const isVideo = (filename) => {
     return ['mp4', 'webm', 'ogg', 'avi', 'mov', 'wmv', 'flv', 'mkv'].includes(ext);
 };
 
-// (Replaced later inside component with size-aware versions)
 let getPreviewUrl = (file, currentPath) => null;
 let getVideoThumbnailUrl = (file, currentPath) => null;
 
@@ -314,13 +312,12 @@ const FileList = forwardRef(({
     mobile = false,
 }, ref) => {
     const toast = (() => { try { return useToast(); } catch { return null; } })();
-    // Optimize concurrency for better performance
+
     const { quality: networkQuality, thumbnailConcurrency, sizeParam } = useNetworkTierConfig();
     const thumbnailCacheRef = useRef(new Map());
     const thumbnailQueueRef = useRef();
 
-    // Reduce max concurrency for better performance - was causing bottlenecks
-    const optimalConcurrency = Math.min(thumbnailConcurrency, 6); // Cap at 6 instead of 16
+    const optimalConcurrency = Math.min(thumbnailConcurrency, 6);
     if (!thumbnailQueueRef.current) thumbnailQueueRef.current = createConcurrencyQueue(optimalConcurrency);
     else if (thumbnailQueueRef.current.maxConcurrency !== optimalConcurrency) thumbnailQueueRef.current.setConcurrency(optimalConcurrency);
 
@@ -339,7 +336,6 @@ const FileList = forwardRef(({
         }
     }, [currentPath]);
 
-    // Override preview builders with adaptive size param
     getPreviewUrl = useCallback((file, path) => {
         if (isImage(file.name)) {
             const fullPath = path === '/' ? `/${file.name}` : `${path}/${file.name}`;
@@ -398,7 +394,6 @@ const FileList = forwardRef(({
         column: null
     });
 
-    // Load persisted column widths
     useEffect(() => {
         try {
             const raw = typeof window !== 'undefined' ? localStorage.getItem(COLUMN_STORAGE_KEY) : null;
@@ -413,10 +408,9 @@ const FileList = forwardRef(({
                 setColumnWidths(next);
             }
         } catch { }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+
     }, []);
 
-    // Persist column widths (debounced)
     useEffect(() => {
         let t;
         try {
@@ -470,7 +464,6 @@ const FileList = forwardRef(({
         }
     }, [resizing.isResizing, handleResizeMove, handleResizeEnd]);
 
-    // Autosize columns on header divider double-click (details view)
     const measureCanvasRef = useRef(null);
     const ensureMeasureCtx = () => {
         if (!measureCanvasRef.current) {
@@ -487,7 +480,7 @@ const FileList = forwardRef(({
     };
     const autoSizeColumn = (column) => {
         try {
-            const padding = column === 'name' ? 56 : 28; // icon + padding allowance
+            const padding = column === 'name' ? 56 : 28;
             const headerLabel = column === 'name' ? 'Name' : column === 'dateModified' ? 'Date modified' : column === 'type' ? 'Type' : 'Size';
             let maxW = measureText(headerLabel);
             const items = [...folders, ...files];
@@ -507,7 +500,6 @@ const FileList = forwardRef(({
         } catch { }
     };
 
-    // Socket listener for favorites updates
     useEffect(() => {
         if (!socket) return;
 
@@ -642,7 +634,7 @@ const FileList = forwardRef(({
         if (currentPath === 'favorites') return;
         setLoading(true);
         try {
-            // Add cache buster for development, but allow browser caching in production
+
             const cacheParam = process.env.NODE_ENV === 'development' ? `&_t=${Date.now()}` : '';
             const data = await api.get(`/api/files?path=${encodeURIComponent(currentPath)}${cacheParam}`);
             setFolders(data.folders || []);
@@ -674,7 +666,6 @@ const FileList = forwardRef(({
             loadContents();
         }
     }, [currentPath, loadContents]);
-
 
     useImperativeHandle(ref, () => ({
         triggerFavorite: (items) => {
@@ -820,7 +811,7 @@ const FileList = forwardRef(({
 
     const handleItemsAdd = (newItems) => {
         if (!newItems || !Array.isArray(newItems)) {
-            // Fallback: reload if we can't safely merge
+
             loadContents();
             return;
         }
@@ -886,7 +877,7 @@ const FileList = forwardRef(({
         }
 
         if (event.ctrlKey || event.metaKey) {
-            // Ctrl+click: toggle selection
+
             const newSelected = new Set(selectedItems);
             if (newSelected.has(item.path)) {
                 newSelected.delete(item.path);
@@ -896,9 +887,9 @@ const FileList = forwardRef(({
             setSelectedItems(newSelected);
             setLastSelectedItem(item);
         } else if (event.shiftKey) {
-            // Shift+click: range selection
+
             if (!lastSelectedItem) {
-                // No anchor point, just select this item
+
                 setSelectedItems(new Set([item.path]));
                 setLastSelectedItem(item);
             } else {
@@ -911,7 +902,6 @@ const FileList = forwardRef(({
 
                     const newSelected = new Set();
 
-                    // Select the range from anchor to current item based on visible order
                     for (let i = startIndex; i <= endIndex; i++) {
                         newSelected.add(combinedSortedItems[i].path);
                     }
@@ -920,7 +910,7 @@ const FileList = forwardRef(({
                 }
             }
         } else {
-            // Regular click: select only this item
+
             setSelectedItems(new Set([item.path]));
             setLastSelectedItem(item);
         }
@@ -1066,7 +1056,7 @@ const FileList = forwardRef(({
                             setFolders(prev => prev.filter(f => !items.some(it => it.name === f.name)));
                             setSelectedItems(new Set());
                             setLastSelectedItem(null);
-                            // Emit socket event for favorites update
+
                             if (socket && socket.emit) {
                                 socket.emit('favorites-updated', { userId: user?.id });
                             }
@@ -1087,7 +1077,7 @@ const FileList = forwardRef(({
                                 } catch (e) { console.error('Error removing from favorites:', e); }
                             }
                         }
-                        // Emit socket event for favorites update
+
                         if (socket && socket.emit) {
                             socket.emit('favorites-updated', { userId: user?.id });
                         }
@@ -1133,7 +1123,7 @@ const FileList = forwardRef(({
                     setFiles(prev => prev.map(f =>
                         f.path === file.path ? { ...f, isFavorited: !f.isFavorited } : f
                     ));
-                    // Emit socket event for favorites update
+
                     if (socket && socket.emit) {
                         socket.emit('favorites-updated', { userId: user?.id });
                     }
@@ -1225,7 +1215,6 @@ const FileList = forwardRef(({
                             ));
                         }
 
-                        // Emit socket event for favorites update
                         if (socket && socket.emit) {
                             socket.emit('favorites-updated', { userId: user?.id });
                         }
@@ -1270,7 +1259,7 @@ const FileList = forwardRef(({
                         }
                     }
                 }
-                // Emit socket event for favorites update
+
                 if (socket && socket.emit) {
                     socket.emit('favorites-updated', { userId: user?.id });
                 }
@@ -1297,7 +1286,7 @@ const FileList = forwardRef(({
 
             case 'go-to-location':
                 if (items.length === 1 && items[0].path && onNavigateToFile) {
-                    // Extract the directory path from the file path
+
                     const filePath = items[0].path;
                     const dirPath = filePath.substring(0, filePath.lastIndexOf('/')) || '';
                     onNavigateToFile(dirPath);
@@ -1363,7 +1352,7 @@ const FileList = forwardRef(({
     const filteredFiles = files.filter(f => !f.path.includes('/.thumbnails/') && !f.name.startsWith('.thumbnails'));
     const sortedFolders = sortItems(filteredFolders, sortBy);
     const sortedFiles = sortItems(filteredFiles, sortBy);
-    // Combine in the exact order we render (folders, then files) to drive range selection
+
     const combinedSortedItems = useMemo(() => [...sortedFolders, ...sortedFiles], [sortedFolders, sortedFiles]);
     const pathIndexMap = useMemo(() => {
         const map = new Map();
@@ -1378,7 +1367,7 @@ const FileList = forwardRef(({
         (columnWidths.name || 0) + (columnWidths.dateModified || 0) + (columnWidths.type || 0) + (columnWidths.size || 0)
     ), [columnWidths]);
 
-    const isVirtualizableView = ['list', 'details'].includes(viewMode); // only apply to list/details now
+    const isVirtualizableView = ['list', 'details'].includes(viewMode);
     const allRenderableItems = useMemo(() => isVirtualizableView ? [...sortedFolders, ...sortedFiles] : null, [isVirtualizableView, sortedFolders, sortedFiles]);
     const totalCount = allRenderableItems ? allRenderableItems.length : 0;
 
@@ -1408,7 +1397,7 @@ const FileList = forwardRef(({
             const visibleCount = Math.ceil(containerHeight / itemHeight) + 20;
             const endIndex = Math.min(totalCount, startIndex + visibleCount);
             setVirtual(v => ({ ...v, start: startIndex, end: endIndex }));
-            // sync header horizontal scroll
+
             try {
                 const left = el.scrollLeft || 0;
                 if (headerInnerRef.current) headerInnerRef.current.style.transform = `translateX(${-left}px)`;
@@ -1419,13 +1408,12 @@ const FileList = forwardRef(({
         return () => el.removeEventListener('scroll', handleScroll);
     }, [isVirtualizableView, totalCount, virtual.itemHeight]);
 
-    // derive slice
     let virtualizedFolders = sortedFolders;
     let virtualizedFiles = sortedFiles;
     let topSpacer = 0;
     let bottomSpacer = 0;
     if (isVirtualizableView) {
-        // map combined index
+
         const start = virtual.start || 0;
         const end = virtual.end || 0;
         if (totalCount > 0) {
@@ -1443,8 +1431,6 @@ const FileList = forwardRef(({
         }
     }
 
-
-
     if (loading) {
         return <SoftLoading />;
     }
@@ -1453,7 +1439,7 @@ const FileList = forwardRef(({
         <div
             className={`${styles.fileList} ${mobile ? styles.mobile : ''}`}
         >
-            {/* Header - only show in list and details view */}
+            {}
             {viewMode === 'details' && (
                 <div className={styles.header}>
                     <div className={styles.headerTrack} ref={headerInnerRef} style={{ display: 'flex', position: 'relative', width: `${totalColumnWidth}px` }}>
@@ -1849,7 +1835,6 @@ const FileList = forwardRef(({
                 {isVirtualizableView && bottomSpacer > 0 && (
                     <div style={{ height: bottomSpacer, pointerEvents: 'none' }} />
                 )}
-
 
             </div>
 

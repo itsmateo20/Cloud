@@ -1,0 +1,110 @@
+name: Strip comments and format
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  strip-and-format:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install deps
+        run: |
+          npm ci --silent || npm install --no-audit --no-fund
+
+      - name: Install script deps
+        run: |
+          npm i strip-comments glob --no-audit --no-fund --no-save
+
+      - name: Run strip-comments script
+        run: |
+          node .github/scripts/strip-comments.js
+
+      - name: Format with Prettier (if installed)
+        run: |
+          if command -v npx >/dev/null 2>&1; then
+            npx prettier --write "**/*.{js,jsx,ts,tsx,css,scss,json,md,html}" || true
+          fi
+
+      - name: Commit and push changes
+        env:
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+          git commit -m "chore: strip non-top comments and format code (automated)"
+          git push origin HEAD:${{ github.ref_name }}
+name: Strip Comments
+
+on:
+  push:
+    branches:
+      - new
+      - main
+  pull_request:
+    branches:
+      - new
+      - main
+
+jobs:
+  strip-comments:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Install dependencies
+        run: npm install --save-dev strip-comments-cli
+      
+      - name: Run comment stripper script
+        run: node .github/scripts/strip-comments.js
+      
+      - name: Check for changes
+        id: git-check
+        run: |
+          git diff --exit-code || echo "changes=true" >> $GITHUB_OUTPUT
+      
+      - name: Commit changes
+        if: steps.git-check.outputs.changes == 'true'
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add -A
+          git commit -m "chore: strip inline comments (auto-cleanup)"
+      
+      - name: Push changes
+        if: steps.git-check.outputs.changes == 'true'
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ github.ref }}

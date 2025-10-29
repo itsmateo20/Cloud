@@ -69,7 +69,7 @@ export async function POST(request) {
         try {
             siteUrl = await getSiteUrl();
         } catch (error) {
-            siteUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
+            siteUrl = process.env.NEXTAUTH_URL || 'http:
         }
         const qrUrl = `${siteUrl}/qr/${token}`;
         const qrCodeDataUrl = await QRCode.toDataURL(qrUrl, {

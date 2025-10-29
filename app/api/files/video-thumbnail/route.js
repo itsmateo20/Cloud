@@ -6,12 +6,6 @@ import { getSession } from '@/lib/session';
 import { spawn } from 'child_process';
 import { getUserUploadPath } from '@/lib/paths';
 
-/**
- * Extracts first frame (at 0.5s) of a video into cached JPEG thumbnail.
- * Cache location: uploads/{userId}/.thumbnails/<relativePath>.video.jpg
- * If cached and source not newer, returns cached file.
- * Requires ffmpeg available in PATH on the server.
- */
 export async function GET(req) {
     const session = await getSession();
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

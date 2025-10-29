@@ -134,7 +134,7 @@
     height: 180px;
     background-color: var(--btn-background);
     border-radius: 12px;
-    /* border: 2px solid var(--border-color); */
+    
     cursor: pointer;
     transition: all 0.2s ease;
     display: flex;
@@ -533,7 +533,7 @@
     box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
 }
 
-/* Sort menu (dropdown from 3-dots) */
+
 .sortMenuOverlay {
     position: fixed;
     top: 0;
@@ -570,7 +570,7 @@
     }
 }
 
-/* Sort options menu (slide-up for sort by options) */
+
 .popupModalMenuOverlay {
     position: fixed;
     top: 0;
@@ -665,7 +665,7 @@
     background-color: var(--explorer-hover);
 }
 
-/* Sort options menu styles */
+
 .popupModalMenuHeader {
     display: flex;
     flex-direction: column;
@@ -733,7 +733,7 @@
     color: white;
 }
 
-/* Popup styles */
+
 .popupOverlay {
     position: fixed;
     top: 0;
@@ -830,7 +830,7 @@
     opacity: 0.9;
 }
 
-/* Thumbnail loading */
+
 .thumbnailLoading {
     position: absolute;
     top: 50%;
@@ -839,4 +839,3 @@
     z-index: 2;
 }
 
-/* Mobile container slide effects - REMOVED to prevent blank screen */

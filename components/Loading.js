@@ -9,7 +9,7 @@ export default function Loading({ fadeOut = false }) {
     const [isVisible, setIsVisible] = useState(true);
 
     useEffect(() => {
-        // Detect current theme
+
         const detectTheme = () => {
             if (typeof window !== 'undefined') {
                 const html = document.documentElement;
@@ -20,7 +20,7 @@ export default function Loading({ fadeOut = false }) {
                 } else if (theme === 'dark') {
                     setCurrentTheme('dark');
                 } else {
-                    // Device theme - detect system preference
+
                     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
                     setCurrentTheme(prefersDark ? 'dark' : 'light');
                 }
@@ -29,7 +29,6 @@ export default function Loading({ fadeOut = false }) {
 
         detectTheme();
 
-        // Listen for theme changes
         const observer = new MutationObserver((mutations) => {
             mutations.forEach((mutation) => {
                 if (mutation.type === 'attributes' && mutation.attributeName === 'data-theme') {
@@ -50,7 +49,7 @@ export default function Loading({ fadeOut = false }) {
 
     useEffect(() => {
         if (fadeOut) {
-            // Start fade out after a brief delay
+
             const timer = setTimeout(() => {
                 setIsVisible(false);
             }, 100);
@@ -62,7 +61,7 @@ export default function Loading({ fadeOut = false }) {
         let classes = style.loading;
 
         if (fadeOut || !isVisible) {
-            // Only apply fade out when fadeOut is true
+
             classes += ` ${style.fadeOut}`;
             if (currentTheme === 'light') {
                 classes += ` ${style.lightFade}`;
@@ -70,7 +69,6 @@ export default function Loading({ fadeOut = false }) {
                 classes += ` ${style.darkFade}`;
             }
         }
-        // Remove fade-in logic - loading screen should start normally visible
 
         return classes;
     };
