@@ -46,11 +46,11 @@ function stripComments(content, filePath) {
         let stringChar = null;
         let result = '';
         let i = 0;
-        
+
         while (i < line.length) {
           const char = line[i];
           const nextChar = line[i + 1];
-          
+
           if (!inString && (char === '"' || char === "'" || char === '`')) {
             inString = true;
             stringChar = char;
@@ -68,7 +68,7 @@ function stripComments(content, filePath) {
             i++;
           }
         }
-        
+
         return result.trimEnd();
       })
       .join('\n');

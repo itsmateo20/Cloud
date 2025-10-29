@@ -43,7 +43,7 @@
                 }
             };
         }
-    } catch {  }
+    } catch { }
 })();
 
 const { createServer } = require("http");
