@@ -47,5 +47,8 @@ jobs:
             echo "No changes to commit"
             exit 0
           fi
-          git commit -m "chore: strip non-top comments (automated)"
+          
+          MODIFIED_FILES=$(git diff --cached --name-only | sed 's/^/- /')
+          
+          git commit -m "chore: strip non-top comments (automated)" -m "" -m "Modified files:" -m "$MODIFIED_FILES"
           git push origin HEAD:${{ github.ref_name }}
