@@ -63,7 +63,7 @@ export async function GET(req) {
                         if (cacheStat.mtimeMs >= sourceMTimeMs) {
                             useCached = true;
                         }
-                    } catch {  }
+                    } catch { /* ignore */ }
                 }
 
                 if (!useCached) {
@@ -77,7 +77,7 @@ export async function GET(req) {
                 return new NextResponse(fileStream, {
                     headers: {
                         'Content-Type': 'image/jpeg',
-                        'Cache-Control': 'public, max-age=2592000, immutable',
+                        'Cache-Control': 'public, max-age=2592000, immutable', // 30 days + immutable
                         'ETag': etag,
                         'Expires': new Date(Date.now() + 2592000000).toUTCString()
                     }
@@ -88,7 +88,7 @@ export async function GET(req) {
             }
         } else if (isVideo) {
             const placeholderSvg = `
-                <svg width="64" height="64" xmlns="http:
+                <svg width="64" height="64" xmlns="http://www.w3.org/2000/svg">
                     <rect width="64" height="64" fill="#f0f0f0"/>
                     <text x="32" y="40" text-anchor="middle" font-family="Arial" font-size="24">🎬</text>
                 </svg>
