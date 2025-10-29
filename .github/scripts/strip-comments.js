@@ -43,6 +43,7 @@ function stripComments(content, filePath) {
       .split('\n')
       .map(line => {
         let inString = false;
+        let inRegex = false;
         let stringChar = null;
         let result = '';
         let i = 0;
@@ -50,18 +51,42 @@ function stripComments(content, filePath) {
         while (i < line.length) {
           const char = line[i];
           const nextChar = line[i + 1];
+          const prevChar = line[i - 1];
 
-          if (!inString && (char === '"' || char === "'" || char === '`')) {
+          if (!inString && !inRegex && char === '/' && prevChar !== '\\') {
+            let beforeSlash = line.substring(0, i).trimEnd();
+            const regexContext = /[=([,;:!&|?+\-*/%<>^~]\s*$|\breturn\s+$|\bconst\s+\w+\s*=\s*$|\blet\s+\w+\s*=\s*$|\bvar\s+\w+\s*=\s*$/.test(beforeSlash);
+
+            if (regexContext && nextChar !== '/') {
+              inRegex = true;
+              result += char;
+              i++;
+              continue;
+            }
+          }
+
+          if (inRegex && char === '/' && prevChar !== '\\') {
+            inRegex = false;
+            result += char;
+            i++;
+            while (i < line.length && /[gimsuvyd]/.test(line[i])) {
+              result += line[i];
+              i++;
+            }
+            continue;
+          }
+
+          if (!inString && !inRegex && (char === '"' || char === "'" || char === '`')) {
             inString = true;
             stringChar = char;
             result += char;
             i++;
-          } else if (inString && char === stringChar && line[i - 1] !== '\\') {
+          } else if (inString && char === stringChar && prevChar !== '\\') {
             inString = false;
             stringChar = null;
             result += char;
             i++;
-          } else if (!inString && char === '/' && nextChar === '/') {
+          } else if (!inString && !inRegex && char === '/' && nextChar === '/') {
             break;
           } else {
             result += char;
