@@ -1,7 +1,6 @@
 // app/api/auth/google/auth/route.js
 
 import { NextResponse } from "next/server";
-import { google } from "googleapis";
 import { cookies } from "next/headers";
 import { getSiteUrl } from "@/lib/getSiteUrl";
 import crypto from "crypto";
@@ -12,6 +11,7 @@ export async function GET(req) {
 
     const siteUrl = await getSiteUrl();
 
+    const { google } = await import("googleapis");
     const oauth2Client = new google.auth.OAuth2(
         process.env.GOOGLE_CLIENT_ID,
         process.env.GOOGLE_CLIENT_SECRET,

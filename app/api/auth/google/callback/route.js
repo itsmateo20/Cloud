@@ -1,7 +1,6 @@
 // app/api/auth/google/callback/route.js
 
 import { NextResponse } from "next/server";
-import { google } from "googleapis";
 import { createSession } from "@/lib/session";
 import { authenticationWithGoogle } from "@/lib/auth";
 
@@ -34,6 +33,7 @@ export async function GET(req) {
     const siteUrl = await getSiteUrl();
 
     try {
+        const { google } = await import("googleapis");
         const oauth2Client = new google.auth.OAuth2(
             process.env.GOOGLE_CLIENT_ID,
             process.env.GOOGLE_CLIENT_SECRET,
