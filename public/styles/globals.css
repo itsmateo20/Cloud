@@ -32,11 +32,9 @@
   --explorer-selected: #c7c7c7;
   --explorer-item: #f1f1f1;
 
-
   --modal-enter-duration: 180ms;
   --modal-exit-duration: 180ms;
   --modal-ease: cubic-bezier(.4, 0, .2, 1);
-
 
   --button-text-color: #ffffff;
   --button-primary: #2563eb;
@@ -47,7 +45,6 @@
   --button-danger: #dc2626;
   --button-danger-hover: #b91c1c;
 
-
   --message-success-bg: #f0f9ff;
   --message-success-text: #1e40af;
   --message-success-border: #dbeafe;
@@ -55,13 +52,11 @@
   --message-error-text: #dc2626;
   --message-error-border: #fecaca;
 
-
   --input-border: #d1d5db;
   --input-background: #ffffff;
   --file-input-button-bg: #dbeafe;
   --file-input-button-hover: #bfdbfe;
   --file-input-button-text: #1e40af;
-
 
   --font-size-xs: clamp(10px, 1.8vw, 12px);
   --font-size-sm: clamp(12px, 2vw, 14px);
@@ -71,12 +66,10 @@
   --font-size-2xl: clamp(20px, 4vw, 24px);
   --font-size-3xl: clamp(24px, 5vw, 30px);
 
-
   --font-size-display: clamp(32px, 6vw, 54px);
   --font-size-display-sm: clamp(26px, 5vw, 42px);
   --font-size-code: clamp(12px, 1.8vw, 14px);
   --font-size-micro: clamp(9px, 1.4vw, 11px);
-
 
   --spacing-xs: clamp(2px, 0.5vw, 4px);
   --spacing-sm: clamp(4px, 1vw, 8px);
@@ -85,11 +78,9 @@
   --spacing-xl: clamp(16px, 4vw, 20px);
   --spacing-2xl: clamp(20px, 5vw, 24px);
 
-
   --lh-tight: 1.1;
   --lh-normal: 1.35;
   --lh-relaxed: 1.5;
-
 
   --fw-regular: 400;
   --fw-medium: 500;

@@ -16,7 +16,7 @@ async function run(cmd, args, opts = {}) {
 }
 
 async function main() {
-    // Ensure DATABASE_URL is set for Prisma when not provided in environment
+
     process.env.DATABASE_URL = process.env.DATABASE_URL || 'file:./database.sqlite';
 
     const isWin = process.platform === 'win32';

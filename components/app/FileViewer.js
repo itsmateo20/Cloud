@@ -540,7 +540,7 @@ export function FileViewer({
 
             if (currentFile) {
                 loadFileContent(currentFile);
-                
+
                 setTimeout(() => {
                     if (currentFileIndex > 0 && files[currentFileIndex - 1]) {
                         preloadFile(files[currentFileIndex - 1]);
@@ -561,9 +561,9 @@ export function FileViewer({
 
     const preloadFile = (file) => {
         if (!file) return;
-        
+
         const fileType = getFileType(file.name);
-        
+
         if (fileType === 'image') {
             const img = new Image();
             img.src = getDownloadUrl(file);

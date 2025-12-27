@@ -92,7 +92,7 @@ export default function FolderTree({
         if (selectedPath && selectedPath !== "" && selectedPath !== 'favorites') {
             const pathParts = selectedPath.split('/').filter(Boolean);
             const newExpanded = new Set(expandedFolders);
-            
+
             for (let i = 0; i < pathParts.length; i++) {
                 const pathToExpand = pathParts.slice(0, i + 1).join('/');
                 if (!newExpanded.has(pathToExpand)) {
@@ -102,7 +102,7 @@ export default function FolderTree({
                     }
                 }
             }
-            
+
             if (newExpanded.size !== expandedFolders.size) {
                 setExpandedFolders(newExpanded);
             }
