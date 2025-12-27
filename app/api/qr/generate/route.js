@@ -3,7 +3,7 @@
 import { NextResponse } from "next/server";
 import QRCode from 'qrcode';
 import crypto from 'crypto';
-import { prisma } from '@/lib/db';
+import prisma from '@/lib/db';
 import { getSiteUrl } from '@/lib/getSiteUrl';
 import { getSession } from '@/lib/session';
 

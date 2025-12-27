@@ -3,8 +3,8 @@
 import { NextResponse } from 'next/server';
 import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
-import { prisma } from '@/lib/db';
-import { getUserUploadPath, ensureUserUploadPath } from '@/lib/paths';
+import prisma from '@/lib/db';
+import { ensureUserUploadPath } from '@/lib/paths';
 
 export async function POST(request) {
     try {
