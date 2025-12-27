@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 import fs from "fs/promises";
 import path from "path";
 import { getSession } from "@/lib/session";
-import { prisma } from "@/lib/db";
+import prisma from "@/lib/db";
 import { verifyFolderOwnership } from "@/lib/folderAuth";
 import { getUserUploadPath, getUserFileUrl } from "@/lib/paths";
 

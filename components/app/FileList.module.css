@@ -4,21 +4,15 @@
     display: flex;
     flex-direction: column;
     width: 100%;
-    
-    height: calc(100vh - var(--top-nav-height));
-    max-height: calc(100vh - var(--top-nav-height));
-    
+    height: 100%;
+    min-height: 0;
     overflow: hidden;
-    
     background-color: var(--background);
     transition: background-color 0.5s ease;
     font-family: var(--font-rubik);
     font-size: 14px;
-    
-    user-select: none;
     -webkit-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
+    user-select: none;
 }
 
 .fileList.mobile {
@@ -35,6 +29,14 @@
     font-weight: 600;
     font-size: 12px;
     color: var(--alt-text-2);
+    overflow-x: auto;
+    overflow-y: hidden;
+    min-width: 100%;
+}
+
+.header::-webkit-scrollbar {
+    height: 0;
+    display: none;
 }
 
 .headerCell {
@@ -42,9 +44,9 @@
     text-align: left;
     border-right: 1px solid var(--text);
     position: relative;
+    -webkit-user-select: none;
     user-select: none;
     flex: 0 0 auto;
-    
 }
 
 .headerCell:last-child {
@@ -74,7 +76,7 @@
 .content {
     flex: 1 1 auto;
     min-height: 0;
-    
+
     overflow-y: auto;
     overflow-x: hidden;
     height: 100%;
@@ -517,11 +519,11 @@
     align-items: start;
     justify-items: center;
     align-content: start;
-    
+
     justify-content: start;
-    
+
     grid-auto-rows: minmax(170px, auto);
-    
+
 }
 
 .largeIcons .item:hover {
@@ -682,6 +684,8 @@
     display: flex;
     flex-direction: column;
     padding: 0;
+    overflow-x: auto;
+    min-width: 100%;
 }
 
 .details .item {
@@ -691,7 +695,7 @@
     transition: background-color 0.15s ease;
     border-bottom: 1px solid var(--border-color);
     height: 40px;
-    width: 100%;
+    min-width: max-content;
     padding: 0px 8px;
     font-size: 13px;
 }
@@ -713,7 +717,7 @@
     overflow: hidden;
     text-align: left;
     flex: 0 0 auto;
-    
+
 }
 
 .details .itemIcon {
@@ -765,7 +769,7 @@
     display: block;
     animation: scrollMarquee 12s linear infinite;
     padding-right: 24px;
-    
+
 }
 
 @keyframes scrollMarquee {
@@ -1031,6 +1035,7 @@
     color: white;
     padding: 4px 8px;
     border-radius: 4px;
+    -webkit-backdrop-filter: blur(4px);
     backdrop-filter: blur(4px);
 }
 

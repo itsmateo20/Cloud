@@ -48,6 +48,23 @@ export async function GET(req) {
         }
         const isImage = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp'].includes(fileExtension);
         const isVideo = ['.mp4', '.avi', '.mov', '.wmv', '.webm', '.mkv'].includes(fileExtension);
+        const isSvg = fileExtension === '.svg';
+
+        if (isSvg) {
+            try {
+                const svgContent = await fs.readFile(fullPath, 'utf-8');
+                return new NextResponse(svgContent, {
+                    headers: {
+                        'Content-Type': 'image/svg+xml',
+                        'Cache-Control': 'public, max-age=2592000, immutable',
+                        'ETag': etag,
+                        'Expires': new Date(Date.now() + 2592000000).toUTCString()
+                    }
+                });
+            } catch (error) {
+                return NextResponse.json({ error: 'Failed to load SVG' }, { status: 500 });
+            }
+        }
 
         if (isImage) {
             try {
@@ -63,7 +80,7 @@ export async function GET(req) {
                         if (cacheStat.mtimeMs >= sourceMTimeMs) {
                             useCached = true;
                         }
-                    } catch {  }
+                    } catch { }
                 }
 
                 if (!useCached) {

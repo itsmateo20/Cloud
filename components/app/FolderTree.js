@@ -88,6 +88,27 @@ export default function FolderTree({
         checkTabVisibility();
     }, []);
 
+    useEffect(() => {
+        if (selectedPath && selectedPath !== "" && selectedPath !== 'favorites') {
+            const pathParts = selectedPath.split('/').filter(Boolean);
+            const newExpanded = new Set(expandedFolders);
+            
+            for (let i = 0; i < pathParts.length; i++) {
+                const pathToExpand = pathParts.slice(0, i + 1).join('/');
+                if (!newExpanded.has(pathToExpand)) {
+                    newExpanded.add(pathToExpand);
+                    if (!folderContents.has(pathToExpand)) {
+                        loadFolderContents(pathToExpand);
+                    }
+                }
+            }
+            
+            if (newExpanded.size !== expandedFolders.size) {
+                setExpandedFolders(newExpanded);
+            }
+        }
+    }, [selectedPath]);
+
     const handleFolderStructureUpdate = (payload) => {
         switch (payload.action) {
             case 'rename':

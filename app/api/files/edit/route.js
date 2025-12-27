@@ -1,6 +1,6 @@
 import { getSession } from "@/lib/session";
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
+import prisma from "@/lib/db";
 import { verifyFolderOwnership } from "@/lib/folderAuth";
 import fs from "fs";
 import path from "path";

@@ -538,9 +538,41 @@ export function FileViewer({
 
             setIsHtmlPreview(false);
 
-            if (currentFile) loadFileContent(currentFile);
+            if (currentFile) {
+                loadFileContent(currentFile);
+                
+                setTimeout(() => {
+                    if (currentFileIndex > 0 && files[currentFileIndex - 1]) {
+                        preloadFile(files[currentFileIndex - 1]);
+                    }
+                    if (currentFileIndex > 1 && files[currentFileIndex - 2]) {
+                        preloadFile(files[currentFileIndex - 2]);
+                    }
+                    if (currentFileIndex < files.length - 1 && files[currentFileIndex + 1]) {
+                        preloadFile(files[currentFileIndex + 1]);
+                    }
+                    if (currentFileIndex < files.length - 2 && files[currentFileIndex + 2]) {
+                        preloadFile(files[currentFileIndex + 2]);
+                    }
+                }, 300);
+            }
         }
     }, [currentFileIndex, isOpen]);
+
+    const preloadFile = (file) => {
+        if (!file) return;
+        
+        const fileType = getFileType(file.name);
+        
+        if (fileType === 'image') {
+            const img = new Image();
+            img.src = getDownloadUrl(file);
+        } else if (fileType === 'video') {
+            const video = document.createElement('video');
+            video.preload = 'metadata';
+            video.src = getDownloadUrl(file);
+        }
+    };
 
     useEffect(() => {
         const handleClickOutside = (event) => {

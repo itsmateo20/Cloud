@@ -5,7 +5,7 @@ import fs from "fs/promises";
 import path from "path";
 import { getSession } from "@/lib/session";
 import { verifyFolderOwnership } from "@/lib/folderAuth";
-import { prisma } from "@/lib/db";
+import prisma from "@/lib/db";
 import { getUserUploadPath } from "@/lib/paths";
 
 export async function POST(req) {

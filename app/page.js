@@ -54,6 +54,14 @@ export default function Page() {
   const [confirmState, setConfirmState] = useState({ open: false, title: '', message: '', action: '' });
   const [showSettings, setShowSettings] = useState(false);
   const [settingsLoaded, setSettingsLoaded] = useState(false);
+  const [sidebarWidth, setSidebarWidth] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('cloud-sidebar-width');
+      return saved ? parseInt(saved) : 300;
+    }
+    return 300;
+  });
+  const [controlsDisabled, setControlsDisabled] = useState(false);
 
   const [isGlobalDragOver, setIsGlobalDragOver] = useState(false);
   const [isDragInvalid, setIsDragInvalid] = useState(false);
@@ -925,7 +933,50 @@ export default function Page() {
   const handleProperties = (items = null) => {
     const itemsToUse = items || selectedItems;
     if (!itemsToUse || itemsToUse.length === 0) return;
+    setControlsDisabled(true);
     setPropertiesState({ open: true, items: itemsToUse.map(i => ({ ...i })) });
+  };
+
+  const handleCloseProperties = () => {
+    setPropertiesState({ open: false, items: [] });
+    setControlsDisabled(false);
+  };
+
+  const handleRefresh = async () => {
+    if (fileListRef.current) {
+      try {
+        const folderExists = await checkFolderExists(currentPath);
+        if (!folderExists) {
+          let checkPath = currentPath;
+          while (checkPath && checkPath !== '') {
+            const parentPath = checkPath.split('/').slice(0, -1).join('/');
+            const exists = await checkFolderExists(parentPath);
+            if (exists) {
+              setCurrentPath(parentPath);
+              toast?.addWarning(`Folder no longer exists. Navigated to: ${parentPath || 'Root'}`);
+              return;
+            }
+            checkPath = parentPath;
+          }
+          setCurrentPath('');
+          toast?.addWarning('Folder no longer exists. Navigated to Root');
+          return;
+        }
+        fileListRef.current.refresh?.();
+        toast?.addSuccess('Refreshed');
+      } catch (error) {
+        toast?.addError('Failed to refresh');
+      }
+    }
+  };
+
+  const checkFolderExists = async (path) => {
+    try {
+      const response = await api.get(`/api/files/list?path=${encodeURIComponent(path || '')}`);
+      return response.success;
+    } catch {
+      return false;
+    }
   };
 
   const handleSortChange = (newSortBy) => {
@@ -1021,7 +1072,7 @@ export default function Page() {
       onDrop={handleGlobalDrop}
       style={{ position: 'relative', height: '100%', width: '100%' }}
     >
-      {}
+      { }
       {isGlobalDragOver && (
         <div style={{
           position: 'fixed',
@@ -1080,9 +1131,8 @@ export default function Page() {
         <FilePropertiesModal
           open={propertiesState.open}
           items={propertiesState.items}
-          onClose={() => setPropertiesState({ open: false, items: [] })}
+          onClose={handleCloseProperties}
         />
-        {}
         {!isMobile && (
           <div className={style.desktopContainer}>
             <Controls
@@ -1100,10 +1150,17 @@ export default function Page() {
               onSortChange={handleSortChange}
               viewMode={viewMode}
               onViewChange={handleViewChange}
+              onRefresh={handleRefresh}
+              disabled={controlsDisabled || showSettings || propertiesState.open}
             />
             <div className={style.diskContainerRow}>
               <Resizable
-                defaultSize={{ width: 300, height: "100%" }}
+                size={{ width: sidebarWidth, height: "100%" }}
+                onResizeStop={(e, direction, ref, d) => {
+                  const newWidth = sidebarWidth + d.width;
+                  setSidebarWidth(newWidth);
+                  localStorage.setItem('cloud-sidebar-width', newWidth.toString());
+                }}
                 minWidth={200}
                 maxWidth={500}
                 minHeight="100%"
@@ -1165,7 +1222,6 @@ export default function Page() {
             </div>
           </div>
         )}
-        {}
         <NewItemModal
           isOpen={newItemModalOpen}
           existingNames={existingNames}
@@ -1230,7 +1286,10 @@ export default function Page() {
               <div className={style.storageList}>
                 <div
                   className={style.storageItem}
-                  onClick={() => setCurrentPath('')}
+                  onClick={() => {
+                    handleFolderSelect('');
+                    setShowSettings(false);
+                  }}
                 >
                   <div className={style.storageIcon}>
                     💾
@@ -1250,7 +1309,10 @@ export default function Page() {
                 {(favorites.files.length > 0 || favorites.folders.length > 0) && (
                   <div
                     className={style.storageItem}
-                    onClick={() => setCurrentPath('favorites')}
+                    onClick={() => {
+                      setCurrentPath('favorites');
+                      setShowSettings(false);
+                    }}
                   >
                     <div className={style.storageIcon}>
                       ⭐
@@ -1266,7 +1328,7 @@ export default function Page() {
               </div>
             </div>
 
-            {}
+            { }
             {currentPath !== undefined && (
               <div className={`${style.mobileExplorerContainer} ${style.active}`}>
                 <div className={style.mobileExplorerHeader}>
@@ -1343,7 +1405,7 @@ export default function Page() {
               </div>
             )}
 
-            {}
+            { }
             {showSortMenu && (
               <div className={style.sortMenuOverlay} onClick={() => setShowSortMenu(false)}>
                 <div className={style.sortMenu} onClick={(e) => e.stopPropagation()}>
@@ -1369,7 +1431,6 @@ export default function Page() {
               </div>
             )}
 
-            {}
             {showSortOptionsMenu && (
               <div className={style.popupModalMenuOverlay} onClick={() => {
                 setShowSortOptionsMenu(false);
@@ -1431,7 +1492,7 @@ export default function Page() {
               </div>
             )}
 
-            {}
+            { }
             {showNewFolderPopup && (
               <div className={style.popupOverlay} onClick={cancelNewFolder}>
                 <div className={style.popup} onClick={(e) => e.stopPropagation()}>

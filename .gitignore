@@ -1,8 +1,15 @@
 /node_modules
 /.next/
+/out/
 .env*
 /prisma/database.*
 /prisma/migrations/*
+/prisma/generated/*
 /uploads
 *.pdn
 /app/api/database
+
+# Capacitor
+android/
+ios/
+.capacitor/

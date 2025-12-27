@@ -134,7 +134,7 @@
     height: 180px;
     background-color: var(--btn-background);
     border-radius: 12px;
-    
+
     cursor: pointer;
     transition: all 0.2s ease;
     display: flex;
@@ -297,6 +297,33 @@
     border-radius: 12px;
     cursor: pointer;
     transition: background-color 0.2s ease;
+}
+
+@media (max-width: 768px) {
+    .main {
+        height: 100vh;
+        height: 100dvh;
+    }
+
+    .diskContainerRow {
+        flex-direction: column;
+    }
+
+    .fileListContainer {
+        padding-bottom: 100px;
+    }
+
+    .backButton,
+    .viewToggleButton,
+    .menuButton {
+        min-width: 44px;
+        min-height: 44px;
+        padding: 12px;
+    }
+
+    .explorerControls {
+        gap: 4px;
+    }
 }
 
 @media (max-width: 425px) {
@@ -833,4 +860,3 @@
     transform: translate(-50%, -50%);
     z-index: 2;
 }
-

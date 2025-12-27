@@ -1,7 +1,7 @@
 // app/api/files/download/route.js
 
 import { getSession } from "@/lib/session";
-import { prisma } from "@/lib/db";
+import prisma from "@/lib/db";
 import { verifyFolderOwnership } from "@/lib/folderAuth";
 import { getMimeType, shouldForceDownload } from "@/lib/mimeTypes";
 import { getUserUploadPath } from "@/lib/paths";

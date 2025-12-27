@@ -32,12 +32,12 @@
   --explorer-selected: #c7c7c7;
   --explorer-item: #f1f1f1;
 
-  
+
   --modal-enter-duration: 180ms;
   --modal-exit-duration: 180ms;
   --modal-ease: cubic-bezier(.4, 0, .2, 1);
 
-  
+
   --button-text-color: #ffffff;
   --button-primary: #2563eb;
   --button-primary-hover: #1d4ed8;
@@ -47,7 +47,7 @@
   --button-danger: #dc2626;
   --button-danger-hover: #b91c1c;
 
-  
+
   --message-success-bg: #f0f9ff;
   --message-success-text: #1e40af;
   --message-success-border: #dbeafe;
@@ -55,14 +55,14 @@
   --message-error-text: #dc2626;
   --message-error-border: #fecaca;
 
-  
+
   --input-border: #d1d5db;
   --input-background: #ffffff;
   --file-input-button-bg: #dbeafe;
   --file-input-button-hover: #bfdbfe;
   --file-input-button-text: #1e40af;
 
-  
+
   --font-size-xs: clamp(10px, 1.8vw, 12px);
   --font-size-sm: clamp(12px, 2vw, 14px);
   --font-size-base: clamp(14px, 2.5vw, 16px);
@@ -71,13 +71,13 @@
   --font-size-2xl: clamp(20px, 4vw, 24px);
   --font-size-3xl: clamp(24px, 5vw, 30px);
 
-  
+
   --font-size-display: clamp(32px, 6vw, 54px);
   --font-size-display-sm: clamp(26px, 5vw, 42px);
   --font-size-code: clamp(12px, 1.8vw, 14px);
   --font-size-micro: clamp(9px, 1.4vw, 11px);
 
-  
+
   --spacing-xs: clamp(2px, 0.5vw, 4px);
   --spacing-sm: clamp(4px, 1vw, 8px);
   --spacing-base: clamp(8px, 2vw, 12px);
@@ -85,12 +85,12 @@
   --spacing-xl: clamp(16px, 4vw, 20px);
   --spacing-2xl: clamp(20px, 5vw, 24px);
 
-  
+
   --lh-tight: 1.1;
   --lh-normal: 1.35;
   --lh-relaxed: 1.5;
 
-  
+
   --fw-regular: 400;
   --fw-medium: 500;
   --fw-semibold: 600;
@@ -169,14 +169,13 @@
   --file-input-button-text: #60a5fa;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
+:root:not([data-color-scheme]):not([data-theme]) {
+  @media (prefers-color-scheme: dark) {
     --background: #161616;
     --nav-background: #141414;
     --nav-background-filter: brightness(0) saturate(100%) invert(0%) sepia(1%) saturate(580%) hue-rotate(360deg) brightness(101%) contrast(84%);
     --nav-user-profile-background: #1A1A1A;
     --nav-user-profile-border: #272727;
-    --top-nav-height: 60px;
     --text: #ecedef;
     --text-color: #ecedef;
     --text-color-muted: #ADADAD;
@@ -189,13 +188,8 @@
     --btn-disabled-background: #2c2c2c;
     --border-color: #575757;
     --border-color-hover: #888888;
-
     --hover-background: #2c2c2c;
-
     --active-background: #3c3c3c;
-
-    --accent-color: #f1f1f1;
-    --accent-color-hover: #e1e1e1;
     --accent-color: #141414;
     --accent-color-hover: #1A1A1A;
 
@@ -206,31 +200,18 @@
     --explorer-hover: #2c2c2c;
     --explorer-selected: #3c3c3c;
     --explorer-item: #0f0f0f;
-
-    
-    --modal-enter-duration: 180ms;
-    --modal-exit-duration: 180ms;
-    --modal-ease: cubic-bezier(.4, 0, .2, 1);
-
-    --button-text-color: #ffffff;
-    --button-primary: #2563eb;
-    --button-primary-hover: #1d4ed8;
-    --button-success: #059669;
-    --button-success-hover: #047857;
-    --button-disabled: #3c3c3c;
-
+    --input-border: #575757;
+    --input-background: #1a1a1a;
+    --file-input-button-bg: rgba(37, 99, 235, 0.2);
+    --file-input-button-hover: rgba(37, 99, 235, 0.3);
+    --file-input-button-text: #60a5fa;
     --message-success-bg: rgba(59, 130, 246, 0.1);
     --message-success-text: #60a5fa;
     --message-success-border: #1e40af;
     --message-error-bg: rgba(239, 68, 68, 0.1);
     --message-error-text: #f87171;
     --message-error-border: #dc2626;
-
-    --input-border: #575757;
-    --input-background: #1a1a1a;
-    --file-input-button-bg: rgba(37, 99, 235, 0.2);
-    --file-input-button-hover: rgba(37, 99, 235, 0.3);
-    --file-input-button-text: #60a5fa;
+    --button-disabled: #3c3c3c;
   }
 }
 
@@ -310,14 +291,14 @@ input:autofill:focus {
   -webkit-text-fill-color: var(--text) !important;
   color: var(--text) !important;
   caret-color: var(--text) !important;
-  
+
   box-shadow: 0 0 0 1000px var(--input-background) inset !important;
   -webkit-box-shadow: 0 0 0 1000px var(--input-background) inset !important;
   border: 1px solid var(--input-border) !important;
   background: var(--input-background) !important;
   background-clip: padding-box !important;
   transition: background-color 0s ease-in-out 0s, color 0.15s ease;
-  
+
 }
 
 @media (prefers-color-scheme: dark) {
@@ -571,6 +552,7 @@ h6 {
   border-radius: 10px;
   border: 3px solid #606060;
   transition: all 1s ease-in-out;
+  -webkit-user-select: none;
   user-select: none;
 }
 

@@ -5,7 +5,6 @@ import React, { useRef, useState, useEffect, forwardRef, useImperativeHandle, us
 import { api } from "@/utils/api";
 import { downloadFile, downloadFolder } from "@/utils/downloadUtils";
 import styles from "./FileList.module.css";
-import { useNetworkTierConfig } from '@/utils/useNetworkQuality';
 import SoftLoading from "@/components/SoftLoading";
 import { ContextMenu } from "./ContextMenu";
 import { ConfirmModal } from "./ConfirmModal";
@@ -103,10 +102,6 @@ const ThumbnailWithLoader = ({ src, alt, cacheRef, queue, currentPath }) => {
                     setInView(true);
                 } else {
                     setInView(false);
-                    setCanStart(false);
-                    if (imgRef.current) {
-                        imgRef.current.src = '';
-                    }
                 }
             }, { rootMargin: '100px 0px 100px 0px', threshold: 0.01 });
 
@@ -313,11 +308,10 @@ const FileList = forwardRef(({
 }, ref) => {
     const toast = (() => { try { return useToast(); } catch { return null; } })();
 
-    const { quality: networkQuality, thumbnailConcurrency, sizeParam } = useNetworkTierConfig();
     const thumbnailCacheRef = useRef(new Map());
     const thumbnailQueueRef = useRef();
 
-    const optimalConcurrency = Math.min(thumbnailConcurrency, 6);
+    const optimalConcurrency = 6;
     if (!thumbnailQueueRef.current) thumbnailQueueRef.current = createConcurrencyQueue(optimalConcurrency);
     else if (thumbnailQueueRef.current.maxConcurrency !== optimalConcurrency) thumbnailQueueRef.current.setConcurrency(optimalConcurrency);
 
@@ -341,19 +335,19 @@ const FileList = forwardRef(({
             const fullPath = path === '/' ? `/${file.name}` : `${path}/${file.name}`;
             const mod = file.modified || file.modifiedAt || file.updatedAt || file.createdAt || '';
             const v = mod ? new Date(mod).getTime() : '';
-            return `/api/files/thumbnail?path=${encodeURIComponent(fullPath)}${v ? `&v=${v}` : ''}&size=${sizeParam}`;
+            return `/api/files/thumbnail?path=${encodeURIComponent(fullPath)}${v ? `&v=${v}` : ''}&size=medium`;
         }
         return null;
-    }, [sizeParam]);
+    }, []);
     getVideoThumbnailUrl = useCallback((file, path) => {
         if (isVideo(file.name)) {
             const fullPath = path === '/' ? `/${file.name}` : `${path}/${file.name}`;
             const mod = file.modified || file.modifiedAt || file.updatedAt || file.createdAt || '';
             const v = mod ? new Date(mod).getTime() : '';
-            return `/api/files/video-thumbnail?path=${encodeURIComponent(fullPath)}${v ? `&v=${v}` : ''}&size=${sizeParam}`;
+            return `/api/files/video-thumbnail?path=${encodeURIComponent(fullPath)}${v ? `&v=${v}` : ''}&size=medium`;
         }
         return null;
-    }, [sizeParam]);
+    }, []);
     const [folders, setFolders] = useState([]);
     const [files, setFiles] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -422,7 +416,7 @@ const FileList = forwardRef(({
     }, [columnWidths]);
 
     const [renaming, setRenaming] = useState({ active: false, items: [], value: "" });
-    const [qrModal, setQrModal] = useState({ visible: false, type: '', qrCode: '', items: [] });
+    const [qrModal, setQrModal] = useState({ visible: false, type: '', qrCode: '', items: [], loading: false });
     const renameInputRef = useRef(null);
 
     const handleResizeStart = (e, column) => {
@@ -602,6 +596,14 @@ const FileList = forwardRef(({
     };
 
     const generateQRCode = async (type, items) => {
+        setQrModal({
+            visible: true,
+            type,
+            qrCode: null,
+            items,
+            loading: true
+        });
+
         try {
             const response = await api.post('/api/qr/generate', {
                 type,
@@ -618,14 +620,16 @@ const FileList = forwardRef(({
                     visible: true,
                     type,
                     qrCode: response.qrCode,
-                    items
+                    items,
+                    loading: false
                 });
                 toast?.addSuccess(type === 'download' ? 'QR code ready (download)' : 'QR code ready (upload)');
             } else {
+                setQrModal({ visible: false, type: null, qrCode: null, items: [], loading: false });
                 toast?.addError('Failed to generate QR code');
             }
         } catch (error) {
-
+            setQrModal({ visible: false, type: null, qrCode: null, items: [], loading: false });
             toast?.addError('Error generating QR code');
         }
     };
@@ -1436,10 +1440,7 @@ const FileList = forwardRef(({
     }
 
     return (
-        <div
-            className={`${styles.fileList} ${mobile ? styles.mobile : ''}`}
-        >
-            {}
+        <div className={`${styles.fileList} ${mobile ? styles.mobile : ''}`}>
             {viewMode === 'details' && (
                 <div className={styles.header}>
                     <div className={styles.headerTrack} ref={headerInnerRef} style={{ display: 'flex', position: 'relative', width: `${totalColumnWidth}px` }}>
@@ -1893,40 +1894,50 @@ const FileList = forwardRef(({
                             </h3>
                             <button
                                 className={styles.qrModalClose}
-                                onClick={() => setQrModal({ visible: false, type: '', qrCode: '', items: [] })}
+                                onClick={() => setQrModal({ visible: false, type: '', qrCode: '', items: [], loading: false })}
                             >
                                 ×
                             </button>
                         </div>
                         <div className={styles.qrModalContent}>
-                            <div className={styles.qrCodeContainer}>
-                                <img src={qrModal.qrCode} alt="QR Code" className={styles.qrCodeImage} />
-                            </div>
-                            <div className={styles.qrInstructions}>
-                                <p>
-                                    {qrModal.type === 'download'
-                                        ? 'Scan this QR code with your mobile device to download the selected files.'
-                                        : 'Scan this QR code with your mobile device to upload files to this folder.'
-                                    }
-                                </p>
-                                <p><strong>This QR code expires in 1 hour.</strong></p>
-                                <p>No login required on mobile device.</p>
-                                {qrModal.type === 'download' && qrModal.items.length > 0 && (
-                                    <div className={styles.qrFileList}>
-                                        <p><strong>Files to download:</strong></p>
-                                        <ul>
-                                            {qrModal.items.map((item, index) => (
-                                                <li key={index}>{item.name}</li>
-                                            ))}
-                                        </ul>
+                            {qrModal.loading ? (
+                                <div className={styles.qrModalLoading}>
+                                    <SoftLoading />
+                                    <p>Generating QR code...</p>
+                                </div>
+                            ) : qrModal.qrCode ? (
+                                <>
+                                    <div className={styles.qrCodeContainer}>
+                                        <img src={qrModal.qrCode} alt="QR Code" className={styles.qrCodeImage} />
                                     </div>
-                                )}
-                            </div>
+                                    <div className={styles.qrInstructions}>
+                                        <p>
+                                            {qrModal.type === 'download'
+                                                ? 'Scan this QR code with your mobile device to download the selected files.'
+                                                : 'Scan this QR code with your mobile device to upload files to this folder.'
+                                            }
+                                        </p>
+                                        <p><strong>This QR code expires in 1 hour.</strong></p>
+                                        <p>No login required on mobile device.</p>
+                                        {qrModal.type === 'download' && qrModal.items.length > 0 && (
+                                            <div className={styles.qrFileList}>
+                                                <p><strong>Files to download:</strong></p>
+                                                <ul>
+                                                    {qrModal.items.map((item, index) => (
+                                                        <li key={index}>{item.name}</li>
+                                                    ))}
+                                                </ul>
+                                            </div>
+                                        )}
+                                    </div>
+                                </>
+                            ) : (
+                                <p className={styles.qrError}>Failed to generate QR code. Please try again.</p>
+                            )}
                         </div>
                     </div>
                 </div>
             )}
-
         </div>
     );
 });

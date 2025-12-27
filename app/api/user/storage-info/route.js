@@ -2,7 +2,7 @@
 
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
-import { prisma } from "@/lib/db";
+import prisma from "@/lib/db";
 
 export async function GET() {
     try {

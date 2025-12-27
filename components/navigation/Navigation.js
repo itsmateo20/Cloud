@@ -106,16 +106,17 @@ export function Navigation({ user, sideNav = false, currentPath, onOpenSettings 
         const openness = 1 - Math.abs(currentTransform) / (navWidthRef.current || 1);
 
         const shouldClose = () => {
-            if (velocity < -0.6) return true;
-            if (openness < 0.4) return true;
+            if (velocity < -0.5) return true;
+            if (openness < 0.5) return true;
+            if (deltaX < -50) return true;
             return false;
         };
 
         const closing = shouldClose();
-        const base = 220;
-        const speedFactor = Math.min(1.6, Math.max(0.45, Math.abs(velocity) * 140));
+        const base = 200;
+        const speedFactor = Math.min(2, Math.max(0.5, Math.abs(velocity) * 200));
         const duration = Math.round(base / speedFactor);
-        nav.style.transition = `transform ${duration}ms cubic-bezier(.4,0,.2,1), box-shadow 0.3s ease`;
+        nav.style.transition = `transform ${duration}ms cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s ease`;
 
         if (closing) {
             nav.style.transform = `translate(${-navWidthRef.current}px, 0%)`;
@@ -272,7 +273,7 @@ export function Navigation({ user, sideNav = false, currentPath, onOpenSettings 
         <>
             {isMobile && sideNav && currentPath == undefined && user && (
                 <div className={style.searchContainer}>
-                    <div className={style.searchBox}>
+                    <div className={`${style.searchBox} ${style.disabled}`}>
                         <div className={style.leftSide}>
                             <AlignJustify
                                 size={20}
@@ -282,6 +283,7 @@ export function Navigation({ user, sideNav = false, currentPath, onOpenSettings 
                                 data-hamburger-button="true"
                                 aria-label="Toggle navigation"
                                 aria-expanded={isOpened}
+                                style={{ opacity: 1, pointerEvents: 'auto', cursor: 'pointer' }}
                             />
                             <h1 className={style.searchTitle}>Search</h1>
                         </div>

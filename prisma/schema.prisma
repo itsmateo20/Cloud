@@ -1,14 +1,14 @@
 generator client {
-  provider = "prisma-client-js"
+  provider = "prisma-client"
+  output   = "./generated/prisma"
 }
 
 datasource db {
   provider = "sqlite"
-  url      = "file:./database.sqlite"
 }
 
 model User {
-  id          Int      @id @default(autoincrement())
+  id          Int      @id @unique @default(autoincrement())
   email       String?  @unique
   googleEmail String?  @unique
   password    String
@@ -26,14 +26,15 @@ model User {
 }
 
 model UserSettings {
-  id            Int    @id @default(autoincrement())
-  userId        Int    @unique
-  theme         String @default("device")
-  language      String @default("en_US")
-  defaultView   String @default("details")
-  defaultSort   String @default("name")
-  imageQuality  String @default("best")
-  uploadQuality String @default("best")
+  id                  Int    @id @unique @default(autoincrement())
+  userId              Int    @unique
+  theme               String @default("device")
+  language            String @default("en_US")
+  defaultView         String @default("details")
+  defaultSort         String @default("name")
+  imageQuality        String @default("best")
+  uploadQuality       String @default("best")
+  thumbnailResolution String @default("medium")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
@@ -55,7 +56,7 @@ model File {
 
   favoritedBy User[] @relation("UserFileFavorites")
 
-  @@unique([ownerId, path], name: "ownerId_path")
+  @@unique([ownerId, path], name: "file_ownerId_path")
 }
 
 model Folder {
@@ -75,14 +76,14 @@ model Folder {
   parent     Folder?  @relation("FolderHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
   subfolders Folder[] @relation("FolderHierarchy")
 
-  @@unique([ownerId, path], name: "ownerId_path")
+  @@unique([ownerId, path], name: "folder_ownerId_path")
 }
 
 model QrToken {
-  id        Int      @id @default(autoincrement())
+  id        Int      @id @unique @default(autoincrement())
   token     String   @unique
-  type      String // 'download' or 'upload'
-  data      String // JSON string with token data
+  type      String
+  data      String
   expiresAt DateTime
   createdAt DateTime @default(now())
 }

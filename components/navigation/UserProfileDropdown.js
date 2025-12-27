@@ -13,7 +13,7 @@ import Image from "next/image";
 
 import nav from "./UserProfileDropdown.module.css";
 
-import { Cog, LogOut, Settings } from "lucide-react";
+import { Cog, LogOut, Settings, User } from "lucide-react";
 
 export default function UserProfileDropdown({ user, mobile, onOpenSettings }) {
     const { signout } = useAuth();
@@ -82,6 +82,10 @@ export default function UserProfileDropdown({ user, mobile, onOpenSettings }) {
                     <Settings size={25} strokeWidth={2} />
                     <h1>Settings</h1>
                 </div>
+                <div className={`${nav.userProfileMobileListItem} ${nav.userProfileMobileSettings}`} onClick={() => window.open(`https://gravatar.com/emails/`, '_blank')}>
+                    <User size={25} strokeWidth={2} />
+                    <h1>Edit Gravatar</h1>
+                </div>
                 <div className={`${nav.userProfileMobileListItem} ${nav.userProfileMobileLogout}`} onClick={() => signout()}>
                     <LogOut size={23} strokeWidth={2} />
                     <h1>Logout</h1>
@@ -127,6 +131,7 @@ export default function UserProfileDropdown({ user, mobile, onOpenSettings }) {
             >
                 <ul>
                     <li onClick={onOpenSettings}><span>Settings</span><Cog size={22} strokeWidth={3} /></li>
+                    <li onClick={() => window.open(`https://en.gravatar.com/emails/`, '_blank')}><span>Edit Gravatar</span><User size={22} strokeWidth={3} /></li>
                 </ul>
                 <ul>
                     <li onClick={() => signout()}><span>Logout</span><LogOut size={22} strokeWidth={3} /></li>
