@@ -9,7 +9,7 @@
 *.pdn
 /app/api/database
 package-lock.json
-bun.lockb
+bun.*
 
 # Capacitor
 android/
