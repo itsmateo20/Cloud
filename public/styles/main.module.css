@@ -126,7 +126,6 @@
     display: none;
 }
 
-/* hide scrollbar in browsers that support scrollbar-width (e.g., Firefox) */
 @supports (scrollbar-width: none) {
     .favouritesList {
         scrollbar-width: none;
