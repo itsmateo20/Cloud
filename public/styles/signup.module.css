@@ -53,6 +53,7 @@
     left: 12px;
     padding: 0 4px;
     background-color: var(--background);
+    -webkit-user-select: none;
     user-select: none;
     font-family: var(--font-rubik);
     font-weight: 600;

@@ -55,6 +55,7 @@
     padding: 0 4px;
     background-color: var(--background);
 
+    -webkit-user-select: none;
     user-select: none;
     font-family: var(--font-rubik);
     font-weight: 600;
@@ -190,6 +191,7 @@
     font-weight: 800;
     font-size: clamp(13px, 2vw, 16px);
     margin: clamp(8px, 2vw, 10px);
+    -webkit-user-select: none;
     user-select: none;
 }
 

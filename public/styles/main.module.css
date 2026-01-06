@@ -119,13 +119,18 @@
     gap: 12px;
     overflow-x: auto;
     padding: 8px 16px;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
     -ms-overflow-style: none;
 }
 
 .favouritesList::-webkit-scrollbar {
     display: none;
+}
+
+/* hide scrollbar in browsers that support scrollbar-width (e.g., Firefox) */
+@supports (scrollbar-width: none) {
+    .favouritesList {
+        scrollbar-width: none;
+    }
 }
 
 .favouriteItem {

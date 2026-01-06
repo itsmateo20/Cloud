@@ -283,8 +283,8 @@ input:autofill:focus {
   color: var(--text) !important;
   caret-color: var(--text) !important;
 
-  box-shadow: 0 0 0 1000px var(--input-background) inset !important;
   -webkit-box-shadow: 0 0 0 1000px var(--input-background) inset !important;
+  box-shadow: 0 0 0 1000px var(--input-background) inset !important;
   border: 1px solid var(--input-border) !important;
   background: var(--input-background) !important;
   background-clip: padding-box !important;
@@ -306,8 +306,8 @@ input:autofill:focus {
   input:autofill,
   input:autofill:hover,
   input:autofill:focus {
-    box-shadow: 0 0 0 1000px var(--input-background) inset !important;
     -webkit-box-shadow: 0 0 0 1000px var(--input-background) inset !important;
+    box-shadow: 0 0 0 1000px var(--input-background) inset !important;
   }
 }
 
@@ -323,9 +323,9 @@ input[type="password"]::-webkit-password-toggle-button {
 }
 
 input[type="password"] {
-  appearance: none;
   -webkit-appearance: none;
   -moz-appearance: none;
+  appearance: none;
 }
 
 html,
@@ -363,8 +363,13 @@ body {
   box-sizing: border-box;
   padding: 0;
   margin: 0;
-  scrollbar-width: thin;
-  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+@supports (scrollbar-width: thin) {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+  }
 }
 
 button {
