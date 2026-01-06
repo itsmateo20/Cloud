@@ -8,6 +8,8 @@
 /uploads
 *.pdn
 /app/api/database
+package-lock.json
+bun.lockb
 
 # Capacitor
 android/
