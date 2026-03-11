@@ -6,3 +6,4 @@
 <!-- - Ads (maybe very maybe) (i really don't want it) -->
 - sharing files/folders
 - checking newest version of project upon starting (if there is a new version then try to update, if its a safety and security update then block the app from starting and force the user to update or auto force update, if the app is running offline then notify that the user is running this project on there own risk for security purposes and that they should update when they are online if there is a new version)
+- https://typesense.org/ (search bar + image searching by description using ai)
