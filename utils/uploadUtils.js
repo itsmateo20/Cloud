@@ -5,9 +5,9 @@ import { api } from './api';
 export class Uploader {
     constructor() {
         this.uploadQueue = new Map();
-        this.CHUNK_SIZE = 2 * 1024 * 1024;
-        this.MAX_CONCURRENT_CHUNKS = 1;
-        this.RETRY_ATTEMPTS = 6;
+        this.CHUNK_SIZE = 25 * 1024 * 1024;
+        this.MAX_CONCURRENT_CHUNKS = 4;
+        this.RETRY_ATTEMPTS = 3;
         this.RETRY_DELAY = 1000;
     }
 
@@ -181,7 +181,7 @@ export class Uploader {
 
                         await new Promise(resolve => setTimeout(resolve, this.RETRY_DELAY * chunk.retries));
                     } else {
-                        reject(new Error(`Chunk ${chunk.number + 1} failed after ${this.RETRY_ATTEMPTS} retries: ${error.message}`));
+                        reject(error);
                         return;
                     }
                 } finally {
@@ -200,19 +200,14 @@ export class Uploader {
     }
 
     async uploadSingleChunk(chunk, uploadToken, signal) {
-        const result = await api.post('/api/files/upload/chunk', chunk.blob, {
-            'Content-Type': 'application/octet-stream',
-            'X-Upload-Token': uploadToken,
-            'X-Chunk-Number': chunk.number.toString()
-        });
+        const formData = new FormData();
+        formData.append('chunk', chunk.blob);
+        formData.append('chunkNumber', chunk.number.toString());
+        formData.append('uploadToken', uploadToken);
+
+        const result = await api.upload('/api/files/upload/chunk', formData, { signal });
 
         if (!result.success) {
-            const isParserFailure = result.code === 'invalid_json' || result.code === 'non_json_response';
-            if (isParserFailure) {
-                const status = result.httpStatus ? `HTTP ${result.httpStatus}` : 'unknown status';
-                throw new Error(`Upload connection was interrupted while sending chunk ${chunk.number + 1} (${status}).`);
-            }
-
             throw new Error(result.message || `Chunk ${chunk.number} upload failed`);
         }
 
