@@ -47,7 +47,6 @@ const nextConfig = {
 
     experimental: {
         browserDebugInfoInTerminal: true,
-        proxyClientMaxBodySize: 10 * 1024 * 1024,
     },
 };
 
