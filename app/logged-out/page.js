@@ -3,10 +3,10 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { api } from "@/utils/api";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import style from "@/public/styles/login.module.css";
 
-export default function LoggedOutPage() {
+function LoggedOutContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const [submitting, setSubmitting] = useState(false);
@@ -44,5 +44,19 @@ export default function LoggedOutPage() {
                 </button>
             </div>
         </main>
+    );
+}
+
+export default function LoggedOutPage() {
+    return (
+        <Suspense
+            fallback={
+                <main className={style.main} style={{ justifyContent: "center", alignItems: "center", textAlign: "center", gap: 16 }}>
+                    <h1 className={style.title}>Preparing sign-out view...</h1>
+                </main>
+            }
+        >
+            <LoggedOutContent />
+        </Suspense>
     );
 }
