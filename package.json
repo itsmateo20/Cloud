@@ -22,8 +22,10 @@
     "homepage": "https://github.com/itsmateo20/Cloud#readme",
     "scripts": {
         "dev": "bun server.js",
+        "dev2": "node server.js",
         "build": "next build",
         "start": "cross-env NODE_ENV=production bun server.js",
+        "start2": "cross-env NODE_ENV=production node server.js",
         "setup": "bun setup.js"
     },
     "dependencies": {
