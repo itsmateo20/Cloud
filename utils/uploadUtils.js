@@ -5,10 +5,10 @@ import { api } from './api';
 export class Uploader {
     constructor() {
         this.uploadQueue = new Map();
-        this.CHUNK_SIZE = 25 * 1024 * 1024;
-        this.MAX_CONCURRENT_CHUNKS = 4;
-        this.RETRY_ATTEMPTS = 3;
-        this.RETRY_DELAY = 1000;
+        this.CHUNK_SIZE = 8 * 1024 * 1024;
+        this.MAX_CONCURRENT_CHUNKS = 2;
+        this.RETRY_ATTEMPTS = 4;
+        this.RETRY_DELAY = 1250;
     }
 
     async uploadFile(file, currentPath, onProgress, signal) {
@@ -208,6 +208,11 @@ export class Uploader {
         const result = await api.upload('/api/files/upload/chunk', formData, { signal });
 
         if (!result.success) {
+            const isParserFailure = result.code === 'invalid_json' || result.code === 'non_json_response';
+            if (isParserFailure) {
+                throw new Error(`Upload connection was interrupted while sending chunk ${chunk.number + 1}. Retrying...`);
+            }
+
             throw new Error(result.message || `Chunk ${chunk.number} upload failed`);
         }
 

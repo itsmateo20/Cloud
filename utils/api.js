@@ -10,12 +10,26 @@ async function getBaseUrl() {
 
 async function safeJsonParse(response) {
     const text = await response.text();
+    const contentType = (response.headers.get('content-type') || '').toLowerCase();
 
     if (!text) return {
         success: false,
         code: 'empty_response',
-        message: 'Server returned empty response'
+        message: 'Server returned empty response',
+        httpStatus: response.status
     };
+
+    const probablyJson = contentType.includes('application/json') || text.trim().startsWith('{') || text.trim().startsWith('[');
+
+    if (!probablyJson) {
+        return {
+            success: false,
+            code: 'non_json_response',
+            message: `Server returned non-JSON response (HTTP ${response.status})`,
+            httpStatus: response.status,
+            rawResponse: text.slice(0, 400)
+        };
+    }
 
     try {
         return JSON.parse(text);
@@ -23,7 +37,8 @@ async function safeJsonParse(response) {
         return {
             success: false,
             code: 'invalid_json',
-            message: 'Server returned invalid JSON',
+            message: `Server returned invalid JSON (HTTP ${response.status})`,
+            httpStatus: response.status,
             rawResponse: text
         };
     }
