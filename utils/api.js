@@ -8,6 +8,27 @@ async function getBaseUrl() {
     return await getSiteUrl();
 }
 
+function resolveRequestOptions(customHeadersOrOptions = null) {
+    if (!customHeadersOrOptions) {
+        return { headers: null, signal: undefined };
+    }
+
+    if (
+        typeof customHeadersOrOptions === 'object' &&
+        (
+            'signal' in customHeadersOrOptions ||
+            'headers' in customHeadersOrOptions
+        )
+    ) {
+        return {
+            headers: customHeadersOrOptions.headers || null,
+            signal: customHeadersOrOptions.signal,
+        };
+    }
+
+    return { headers: customHeadersOrOptions, signal: undefined };
+}
+
 async function safeJsonParse(response) {
     const text = await response.text();
 
@@ -65,15 +86,16 @@ async function handleBlobResponse(response) {
     return { success: true, blob };
 }
 
-async function makeRequest(method, url, body = null, customHeaders = null) {
+async function makeRequest(method, url, body = null, customHeadersOrOptions = null) {
     try {
         const baseUrl = await getBaseUrl();
         const fullUrl = url.startsWith('http') ? url : `${baseUrl}${url}`;
+        const requestOptions = resolveRequestOptions(customHeadersOrOptions);
 
         const isFormData = body instanceof FormData;
         const isBlob = body instanceof Blob;
 
-        let headers = { ...customHeaders };
+        let headers = { ...(requestOptions.headers || {}) };
         let processedBody = body;
 
         if (body && !isFormData && !isBlob && !headers['Content-Type']) {
@@ -86,6 +108,7 @@ async function makeRequest(method, url, body = null, customHeaders = null) {
             headers: Object.keys(headers).length > 0 ? headers : undefined,
             credentials: "same-origin",
             body: processedBody,
+            signal: requestOptions.signal,
         });
 
         return response;

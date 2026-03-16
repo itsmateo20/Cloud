@@ -31,13 +31,34 @@ export async function POST(req) {
         }
 
         const body = await req.json();
-        const { fileName, fileSize, chunkCount, currentPath, lastModified } = body;
+        const { fileName, fileSize, chunkCount, chunkSize, currentPath, lastModified } = body;
 
-        if (!fileName || !fileSize || !chunkCount) {
+        if (!fileName || !fileSize) {
             return NextResponse.json({
                 success: false,
                 code: 'missing_parameters',
                 message: 'Missing required parameters'
+            }, { status: 400 });
+        }
+
+        const safeChunkSize = Math.max(
+            1 * 1024 * 1024,
+            Math.min(32 * 1024 * 1024, Number(chunkSize) || 8 * 1024 * 1024)
+        );
+        const expectedChunkCount = Math.ceil(Number(fileSize) / safeChunkSize);
+        if (!Number.isFinite(expectedChunkCount) || expectedChunkCount <= 0) {
+            return NextResponse.json({
+                success: false,
+                code: 'invalid_chunking',
+                message: 'Invalid file size or chunk configuration'
+            }, { status: 400 });
+        }
+
+        if (Number(chunkCount) && Number(chunkCount) !== expectedChunkCount) {
+            return NextResponse.json({
+                success: false,
+                code: 'invalid_chunk_count',
+                message: 'Chunk count does not match file size'
             }, { status: 400 });
         }
 
@@ -107,7 +128,8 @@ export async function POST(req) {
             userId,
             fileName,
             fileSize,
-            chunkCount,
+            chunkCount: expectedChunkCount,
+            chunkSize: safeChunkSize,
             currentPath,
             lastModified,
             tempDir,
@@ -120,7 +142,8 @@ export async function POST(req) {
         return NextResponse.json({
             success: true,
             uploadToken,
-            chunkSize: 25 * 1024 * 1024,
+            chunkSize: safeChunkSize,
+            chunkCount: expectedChunkCount,
             expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
         });
 

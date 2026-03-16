@@ -5,8 +5,8 @@ import { api } from './api';
 export class Uploader {
     constructor() {
         this.uploadQueue = new Map();
-        this.CHUNK_SIZE = 25 * 1024 * 1024;
-        this.MAX_CONCURRENT_CHUNKS = 4;
+        this.CHUNK_SIZE = 8 * 1024 * 1024;
+        this.MAX_CONCURRENT_CHUNKS = 2;
         this.RETRY_ATTEMPTS = 3;
         this.RETRY_DELAY = 1000;
     }
@@ -128,6 +128,7 @@ export class Uploader {
         const response = await api.post('/api/files/upload/init', {
             fileName: file.name,
             fileSize: file.size,
+            chunkSize: this.CHUNK_SIZE,
             chunkCount: Math.ceil(file.size / this.CHUNK_SIZE),
             currentPath: currentPath,
             lastModified: file.lastModified
@@ -146,6 +147,15 @@ export class Uploader {
 
         let chunkIndex = 0;
         const activeUploads = new Set();
+        let completedBytes = 0;
+        const inFlightBytes = new Map();
+
+        const emitProgress = () => {
+            const inFlightTotal = Array.from(inFlightBytes.values()).reduce((sum, value) => sum + value, 0);
+            const uploaded = Math.min(uploadState.totalSize, completedBytes + inFlightTotal);
+            uploadState.uploadedBytes = uploaded;
+            if (onProgress) onProgress(uploaded, uploadState.totalSize);
+        };
 
         return new Promise((resolve, reject) => {
             if (hasAbortSignal) {
@@ -165,16 +175,29 @@ export class Uploader {
 
                 const chunk = chunks[chunkIndex++];
                 activeUploads.add(chunk.number);
+                inFlightBytes.set(chunk.number, 0);
 
                 try {
-                    await this.uploadSingleChunk(chunk, uploadToken, signal);
+                    await this.uploadSingleChunk(
+                        chunk,
+                        uploadToken,
+                        signal,
+                        (loaded) => {
+                            inFlightBytes.set(chunk.number, loaded);
+                            emitProgress();
+                        }
+                    );
 
                     uploadState.uploadedChunks.add(chunk.number);
-                    uploadState.uploadedBytes += chunk.size;
+                    completedBytes += chunk.size;
+                    inFlightBytes.delete(chunk.number);
 
-                    if (onProgress) onProgress(uploadState.uploadedBytes, uploadState.totalSize);
+                    emitProgress();
 
                 } catch (error) {
+                    inFlightBytes.delete(chunk.number);
+                    emitProgress();
+
                     if (chunk.retries < this.RETRY_ATTEMPTS) {
                         chunk.retries++;
                         chunkIndex--;
@@ -199,19 +222,76 @@ export class Uploader {
         });
     }
 
-    async uploadSingleChunk(chunk, uploadToken, signal) {
-        const formData = new FormData();
-        formData.append('chunk', chunk.blob);
-        formData.append('chunkNumber', chunk.number.toString());
-        formData.append('uploadToken', uploadToken);
-
-        const result = await api.upload('/api/files/upload/chunk', formData, { signal });
-
-        if (!result.success) {
-            throw new Error(result.message || `Chunk ${chunk.number} upload failed`);
+    async uploadSingleChunk(chunk, uploadToken, signal, onProgress) {
+        if (typeof window === 'undefined' || typeof XMLHttpRequest === 'undefined') {
+            throw new Error('Chunked upload is only supported in browser environment');
         }
 
-        return result;
+        return new Promise((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', '/api/files/upload/chunk', true);
+            xhr.withCredentials = true;
+            xhr.responseType = 'text';
+            xhr.setRequestHeader('X-Upload-Token', uploadToken);
+            xhr.setRequestHeader('X-Chunk-Number', String(chunk.number));
+            xhr.setRequestHeader('Content-Type', 'application/octet-stream');
+
+            const onAbort = () => {
+                xhr.abort();
+                reject(new Error('Upload cancelled'));
+            };
+
+            if (signal && typeof signal.addEventListener === 'function') {
+                if (signal.aborted) {
+                    reject(new Error('Upload cancelled'));
+                    return;
+                }
+                signal.addEventListener('abort', onAbort, { once: true });
+            }
+
+            xhr.upload.onprogress = (event) => {
+                if (!event.lengthComputable) return;
+                if (onProgress) onProgress(event.loaded);
+            };
+
+            xhr.onload = () => {
+                if (signal && typeof signal.removeEventListener === 'function') {
+                    signal.removeEventListener('abort', onAbort);
+                }
+
+                let parsed = null;
+                try {
+                    parsed = xhr.responseText ? JSON.parse(xhr.responseText) : null;
+                } catch {
+                    reject(new Error(`Server returned invalid JSON for chunk ${chunk.number}`));
+                    return;
+                }
+
+                if (xhr.status >= 200 && xhr.status < 300 && parsed?.success) {
+                    if (onProgress) onProgress(chunk.size);
+                    resolve(parsed);
+                    return;
+                }
+
+                reject(new Error(parsed?.message || `Chunk ${chunk.number} upload failed`));
+            };
+
+            xhr.onerror = () => {
+                if (signal && typeof signal.removeEventListener === 'function') {
+                    signal.removeEventListener('abort', onAbort);
+                }
+                reject(new Error(`Network error while uploading chunk ${chunk.number}`));
+            };
+
+            xhr.onabort = () => {
+                if (signal && typeof signal.removeEventListener === 'function') {
+                    signal.removeEventListener('abort', onAbort);
+                }
+                reject(new Error('Upload cancelled'));
+            };
+
+            xhr.send(chunk.blob);
+        });
     }
 
     async completeChunkedUpload(uploadToken, signal) {
