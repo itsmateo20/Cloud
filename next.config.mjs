@@ -42,7 +42,8 @@ const nextConfig = {
     },
 
     allowedDevOrigins: [
-        'localhost'
+        'localhost',
+        'itsmateo20.ddns.net'
     ],
 
     experimental: {
