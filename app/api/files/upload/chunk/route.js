@@ -17,12 +17,29 @@ export async function POST(req) {
             }, { status: 401 });
         }
 
-        const formData = await req.formData();
-        const chunk = formData.get('chunk');
-        const chunkNumber = parseInt(formData.get('chunkNumber'));
-        const uploadToken = formData.get('uploadToken');
+        const headerUploadToken = req.headers.get('x-upload-token');
+        const headerChunkNumber = req.headers.get('x-chunk-number');
 
-        if (!chunk || chunkNumber === undefined || !uploadToken) {
+        let uploadToken = headerUploadToken;
+        let chunkNumber = Number.parseInt(headerChunkNumber ?? '', 10);
+        let chunkBuffer = null;
+
+        if (headerUploadToken && Number.isFinite(chunkNumber)) {
+            const arrayBuffer = await req.arrayBuffer();
+            chunkBuffer = Buffer.from(arrayBuffer);
+        } else {
+            const formData = await req.formData();
+            const chunk = formData.get('chunk');
+            chunkNumber = Number.parseInt(formData.get('chunkNumber'), 10);
+            uploadToken = formData.get('uploadToken');
+
+            if (chunk && typeof chunk.arrayBuffer === 'function') {
+                const arrayBuffer = await chunk.arrayBuffer();
+                chunkBuffer = Buffer.from(arrayBuffer);
+            }
+        }
+
+        if (!chunkBuffer || Number.isNaN(chunkNumber) || !uploadToken) {
             return NextResponse.json({
                 success: false,
                 code: 'missing_parameters',
@@ -73,10 +90,7 @@ export async function POST(req) {
         const chunkPath = path.join(uploadSession.tempDir, `chunk_${chunkNumber}`);
 
         try {
-            const arrayBuffer = await chunk.arrayBuffer();
-            const buffer = Buffer.from(arrayBuffer);
-
-            await fs.writeFile(chunkPath, buffer);
+            await fs.writeFile(chunkPath, chunkBuffer);
 
             uploadSession.uploadedChunks.add(chunkNumber);
 
