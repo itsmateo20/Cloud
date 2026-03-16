@@ -1,0 +1,272 @@
+.shared {
+    width: 100%;
+    height: 100%;
+    max-height: 100%;
+    min-height: 0;
+    background: var(--background);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.sharedHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 24px 32px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.sharedHeader h3 {
+    margin: 0;
+    font-size: 32px;
+    font-weight: 600;
+    font-family: var(--font-poppins);
+}
+
+.sharedContent {
+    flex: 1;
+    height: 100%;
+    display: flex;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.sharedSidebar {
+    width: 260px;
+    border-right: 1px solid var(--border-color);
+    padding: 20px 14px;
+    overflow-y: auto;
+    display: grid;
+    align-content: start;
+    gap: 8px;
+}
+
+.shareRow {
+    display: flex;
+    align-items: center;
+    border-radius: 8px;
+    overflow: hidden;
+    background: transparent;
+}
+
+.shareRowActive {
+    background: var(--button-primary);
+}
+
+.shareRowMain {
+    border: none;
+    background: transparent;
+    color: var(--text-color-muted);
+    text-align: left;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 12px 14px;
+    flex: 1;
+}
+
+.shareRowMain:hover {
+    background: var(--hover-background);
+    color: var(--text);
+}
+
+.shareRowActive .shareRowMain,
+.shareRowActive .iconButton {
+    color: #fff;
+}
+
+.shareRowActive .shareRowMain:hover,
+.shareRowActive .iconButton:hover {
+    background: rgba(255, 255, 255, 0.14);
+}
+
+.shareRowTitle {
+    font-weight: 600;
+}
+
+.shareRowMeta {
+    font-size: 12px;
+    opacity: 0.75;
+}
+
+.iconButton {
+    border: none;
+    background: transparent;
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--text-color-muted);
+    margin-right: 6px;
+}
+
+.iconButton:hover {
+    background: var(--hover-background);
+    color: var(--text);
+}
+
+.sharedMainContent {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    padding: 24px 32px;
+    display: grid;
+    align-content: start;
+    gap: 14px;
+}
+
+.mainHeaderRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.mainHeaderRow h4 {
+    margin: 0;
+    font-size: 22px;
+}
+
+.metaLine {
+    margin: 4px 0 0;
+    color: var(--text-color-muted);
+    font-size: 13px;
+}
+
+.itemsList {
+    display: grid;
+    gap: 10px;
+}
+
+.itemRow {
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    background: var(--surface);
+    padding: 10px 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+
+.itemTitle {
+    font-weight: 600;
+}
+
+.itemMeta {
+    font-size: 12px;
+    color: var(--text-color-muted);
+}
+
+.input {
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--surface);
+    color: var(--text);
+    padding: 8px 10px;
+    width: min(320px, 100%);
+}
+
+.primaryButton,
+.secondaryButton,
+.dangerButton {
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    padding: 8px 12px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    text-decoration: none;
+}
+
+.primaryButton {
+    background: var(--button-primary);
+    color: #fff;
+    border-color: transparent;
+    width: fit-content;
+}
+
+.secondaryButton {
+    background: var(--surface);
+    color: var(--text);
+}
+
+.dangerButton {
+    background: rgba(239, 68, 68, 0.08);
+    color: #ef4444;
+    border-color: rgba(239, 68, 68, 0.5);
+    width: fit-content;
+}
+
+.passcodePanel {
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    background: var(--surface);
+    padding: 16px;
+    display: grid;
+    gap: 10px;
+}
+
+.passcodePanel h4 {
+    margin: 0;
+}
+
+.emptyHint {
+    margin: 0;
+    color: var(--text-color-muted);
+}
+
+.errorText {
+    margin: 0;
+    color: #ef4444;
+    font-size: 13px;
+}
+
+.loadingCenter {
+    min-height: 180px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+@media (max-width: 900px) {
+    .sharedContent {
+        flex-direction: column;
+    }
+
+    .sharedHeader {
+        padding: 16px 20px;
+    }
+
+    .sharedHeader h3 {
+        font-size: 24px;
+    }
+
+    .sharedSidebar {
+        width: 100%;
+        border-right: none;
+        border-bottom: 1px solid var(--border-color);
+        max-height: 40vh;
+        padding: 14px 12px;
+    }
+
+    .sharedMainContent {
+        padding: 14px 16px;
+    }
+
+    .mainHeaderRow {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .itemRow {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}

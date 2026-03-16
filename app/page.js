@@ -17,12 +17,15 @@ import FolderTree from "@/components/app/FolderTree";
 import FileList from "@/components/app/FileList";
 import Controls from "@/components/app/Controls";
 import Settings from "@/components/app/Settings";
+import SharedWithYou from "@/components/app/SharedWithYou";
+import { UploadManager } from "@/components/app/UploadManager";
 import SoftLoading from "@/components/SoftLoading";
 import Loading from "@/components/Loading";
 
 import { downloadFile, downloadFolder } from "@/utils/downloadUtils";
 import { api } from "@/utils/api";
 import { appendMetadataToFormData } from "@/utils/fileMetadata.client";
+import { uploadFile as uploadLargeFile } from "@/utils/uploadUtils";
 import { useIsMobile } from "@/utils/useIsMobile";
 
 import { Resizable } from "re-resizable";
@@ -49,10 +52,16 @@ export default function Page() {
   const [sortMenuSwipePosition, setSortMenuSwipePosition] = useState(0);
   const [isSwipingSort, setIsSwipingSort] = useState(false);
   const [sortMenuInitialY, setSortMenuInitialY] = useState(0);
+  const [sortMenuTransitionMs, setSortMenuTransitionMs] = useState(200);
+  const sortTouchLastYRef = useRef(0);
+  const sortTouchLastTimeRef = useRef(0);
+  const sortTouchVelocityRef = useRef(0);
   const [showNewFolderPopup, setShowNewFolderPopup] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
   const [confirmState, setConfirmState] = useState({ open: false, title: '', message: '', action: '' });
   const [showSettings, setShowSettings] = useState(false);
+  const [showShares, setShowShares] = useState(false);
+  const [showSharedWithYou, setShowSharedWithYou] = useState(false);
   const [settingsLoaded, setSettingsLoaded] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -67,10 +76,27 @@ export default function Page() {
   const [isDragInvalid, setIsDragInvalid] = useState(false);
   const dragCounterRef = useRef(0);
   const [propertiesState, setPropertiesState] = useState({ open: false, items: [] });
+  const [showPageLoading, setShowPageLoading] = useState(true);
+  const [fadeOutPageLoading, setFadeOutPageLoading] = useState(false);
 
   const isMobile = useIsMobile();
 
   const viewMode = isMobile ? mobileViewMode : desktopViewMode;
+
+  useEffect(() => {
+    if (loading || !settingsLoaded) {
+      setShowPageLoading(true);
+      setFadeOutPageLoading(false);
+      return;
+    }
+
+    setFadeOutPageLoading(true);
+    const timer = setTimeout(() => {
+      setShowPageLoading(false);
+    }, 420);
+
+    return () => clearTimeout(timer);
+  }, [loading, settingsLoaded]);
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -208,10 +234,21 @@ export default function Page() {
       } catch { }
     });
 
+    const handleAuthTokenRecheck = async () => {
+      try {
+        const sessionCheck = await api.post('/api/auth/session');
+        if (!sessionCheck?.success && sessionCheck?.code === 'token_revoked') {
+          window.location.href = '/logged-out?reason=remote';
+        }
+      } catch { }
+    };
+    socket.on('auth-token-recheck', handleAuthTokenRecheck);
+
     return () => {
       socket.off('folder-structure-updated', handleFolderStructure);
       socket.off('favorites-updated');
       socket.off('file-updated', handleFileUpdated);
+      socket.off('auth-token-recheck', handleAuthTokenRecheck);
       socket.off('connect', handleConnect);
       debounceMap.forEach(t => clearTimeout(t));
     };
@@ -290,9 +327,9 @@ export default function Page() {
         onClick={() => onFavoriteClick(file)}
       >
         <div className={style.favouriteMediaContainer}>
-          {imageLoading && thumbnail && (
+          {thumbnail && (
             <div className={style.thumbnailLoading}>
-              <SoftLoading />
+              <SoftLoading active={imageLoading} />
             </div>
           )}
           {thumbnail ? (
@@ -449,7 +486,25 @@ export default function Page() {
   const handleFolderSelect = (folderPath) => {
     navigateToFolder(folderPath);
     setShowSettings(false);
+    setShowShares(false);
+    setShowSharedWithYou(false);
+    fileListRef.current?.closeShareManager?.();
   };
+
+  const handleOpenShares = useCallback(() => {
+    setShowSettings(false);
+    setShowShares(true);
+    setShowSharedWithYou(false);
+    setCurrentPath('');
+  }, []);
+
+  const handleOpenSharedWithYou = useCallback(() => {
+    setShowSettings(false);
+    setShowShares(false);
+    setShowSharedWithYou(true);
+    setCurrentPath('');
+    fileListRef.current?.closeShareManager?.();
+  }, []);
 
   const handleThemeChange = (newTheme) => {
 
@@ -539,6 +594,7 @@ export default function Page() {
     setSortBy(sortOption);
     setShowSortOptionsMenu(false);
     setSortMenuSwipePosition(0);
+    setSortMenuTransitionMs(200);
     if (fileListRef.current) {
       fileListRef.current.refresh();
     }
@@ -549,31 +605,45 @@ export default function Page() {
     setSortMenuInitialY(touch.clientY);
     setIsSwipingSort(true);
     setSortMenuSwipePosition(0);
+    sortTouchLastYRef.current = touch.clientY;
+    sortTouchLastTimeRef.current = performance.now();
+    sortTouchVelocityRef.current = 0;
   };
 
   const handleSortMenuTouchMove = (e) => {
     if (!isSwipingSort) return;
     const touch = e.touches[0];
     const currentY = touch.clientY;
+    const now = performance.now();
+    const dt = Math.max(1, now - sortTouchLastTimeRef.current);
+    const dy = currentY - sortTouchLastYRef.current;
+    sortTouchVelocityRef.current = dy / dt;
+    sortTouchLastYRef.current = currentY;
+    sortTouchLastTimeRef.current = now;
     const deltaY = currentY - sortMenuInitialY;
 
     if (deltaY > 0) {
-      const containerHeight = window.innerHeight;
-      const maxSwipe = containerHeight * 0.3;
-      const normalizedPosition = Math.min(deltaY / maxSwipe, 1) * 100;
-      setSortMenuSwipePosition(normalizedPosition);
+      setSortMenuSwipePosition(deltaY);
     } else {
       setSortMenuSwipePosition(0);
     }
   };
 
-  const handleSortMenuTouchEnd = (e) => {
+  const handleSortMenuTouchEnd = () => {
     setIsSwipingSort(false);
 
-    if (sortMenuSwipePosition > 25) {
-      setShowSortOptionsMenu(false);
-      setSortMenuSwipePosition(0);
-      setSortMenuInitialY(0);
+    const velocity = Math.max(0, sortTouchVelocityRef.current || 0);
+    const shouldClose = sortMenuSwipePosition > 100 || velocity > 0.9;
+    const duration = Math.max(110, Math.min(280, Math.round(260 - velocity * 140)));
+    setSortMenuTransitionMs(duration);
+
+    if (shouldClose) {
+      setSortMenuSwipePosition(window.innerHeight);
+      setTimeout(() => {
+        setShowSortOptionsMenu(false);
+        setSortMenuSwipePosition(0);
+        setSortMenuInitialY(0);
+      }, duration);
     } else {
       setSortMenuSwipePosition(0);
     }
@@ -640,12 +710,31 @@ export default function Page() {
   const uploadFiles = async (files) => {
     if (!files || files.length === 0) return;
 
-    const maxFileSize = 500 * 1024 * 1024;
-    const oversizedFiles = files.filter(file => file.size > maxFileSize);
-    if (oversizedFiles.length > 0) {
-      toast.addError(`Files too large: ${oversizedFiles.map(f => f.name).join(', ')}. Max size: 500MB`);
-      return;
-    }
+    const totalFilesCount = files.length;
+    const totalBytes = files.reduce((sum, file) => sum + (file.size || 0), 0);
+    let uploadedBytesCommitted = 0;
+    const uploadId = crypto.randomUUID();
+    let lastProgressAt = Date.now();
+    let lastLoaded = 0;
+
+    const emitUploadProgress = (loaded, total = totalBytes) => {
+      const now = Date.now();
+      const deltaSeconds = Math.max(0.001, (now - lastProgressAt) / 1000);
+      const speed = Math.max(0, (loaded - lastLoaded) / deltaSeconds);
+      lastProgressAt = now;
+      lastLoaded = loaded;
+      window.dispatchEvent(new CustomEvent('uploadProgress', { detail: { id: uploadId, loaded, total, speed } }));
+    };
+
+    window.dispatchEvent(new CustomEvent('uploadStart', {
+      detail: {
+        id: uploadId,
+        fileName: totalFilesCount === 1 ? files[0].name : `${totalFilesCount} files`,
+        fileSize: totalBytes,
+        type: totalFilesCount > 1 ? 'multi' : 'file'
+      }
+    }));
+    emitUploadProgress(0, totalBytes);
 
     try {
 
@@ -719,11 +808,13 @@ export default function Page() {
             if (!result.success && result.code !== 'exists') {
               console.warn(`Failed to create folder ${folderName}: ${result.message}`);
               toast.addError(`Failed to create folder: ${folderName}`);
+              window.dispatchEvent(new CustomEvent('uploadComplete', { detail: { id: uploadId, success: false, error: `Failed to create folder: ${folderName}` } }));
               return;
             }
           } catch (error) {
             console.warn(`Error creating folder ${folderPath}:`, error);
             toast.addError(`Error creating folder: ${folderPath}`);
+            window.dispatchEvent(new CustomEvent('uploadComplete', { detail: { id: uploadId, success: false, error: `Error creating folder: ${folderPath}` } }));
             return;
           }
         }
@@ -742,53 +833,80 @@ export default function Page() {
       toast.addInfo(`Uploading ${files.length} file${files.length > 1 ? 's' : ''} (${sizeText})...`);
 
       for (const [folderPath, fileGroup] of folderStructure) {
-        const formData = new FormData();
         const targetPath = folderPath
           ? (currentPath ? `${currentPath}/${folderPath}` : folderPath)
           : (currentPath || '');
 
-        formData.append('path', targetPath);
+        const smallFiles = [];
 
         for (const { file } of fileGroup) {
-          formData.append('files', file);
+          if (file.size > 50 * 1024 * 1024) {
+            const baseBytes = uploadedBytesCommitted;
+
+            const largeResult = await uploadLargeFile(file, targetPath, (uploaded, total) => {
+              const currentUploaded = Math.min(baseBytes + uploaded, totalBytes);
+              emitUploadProgress(currentUploaded, totalBytes);
+            });
+
+            if (largeResult?.success) {
+              totalUploaded += 1;
+              uploadedBytesCommitted += file.size;
+              emitUploadProgress(uploadedBytesCommitted, totalBytes);
+            } else {
+              toast.addError(`${largeResult?.error || 'Upload failed'} (${file.name})`);
+            }
+          } else {
+            smallFiles.push(file);
+          }
         }
 
-        appendMetadataToFormData(formData, fileGroup.map(f => f.file));
+        if (smallFiles.length > 0) {
+          const formData = new FormData();
+          formData.append('path', targetPath);
 
-        try {
-          const result = await api.upload('/api/files/upload', formData);
-
-          if (result.success) {
-            totalUploaded += fileGroup.length;
-          } else {
-            let errorMsg = 'Upload failed';
-            switch (result.code) {
-              case 'no_files':
-                errorMsg = 'No files selected for upload';
-                break;
-              case 'directory_error':
-                errorMsg = `Directory access error: ${result.message}`;
-                break;
-              case 'upload_failed':
-                errorMsg = `Upload failed: ${result.message}`;
-                break;
-              case 'network_error':
-                errorMsg = 'Network error occurred during upload';
-                break;
-              case 'folder_auth_failed':
-                errorMsg = 'Permission denied for current folder';
-                break;
-              case 'explorer_invalid_path':
-                errorMsg = 'Invalid file path detected';
-                break;
-              default:
-                errorMsg = result.message || 'Unknown upload error';
-            }
-            toast.addError(`${errorMsg} (folder: ${folderPath || 'root'})`);
+          for (const file of smallFiles) {
+            formData.append('files', file);
           }
-        } catch (error) {
-          console.error('Upload error:', error);
-          toast.addError(`Network error uploading to folder: ${folderPath || 'root'}`);
+
+          appendMetadataToFormData(formData, smallFiles);
+
+          try {
+            const result = await api.upload('/api/files/upload', formData);
+
+            if (result.success) {
+              totalUploaded += smallFiles.length;
+              uploadedBytesCommitted += smallFiles.reduce((sum, file) => sum + (file.size || 0), 0);
+              emitUploadProgress(uploadedBytesCommitted, totalBytes);
+            } else {
+              let errorMsg = 'Upload failed';
+              switch (result.code) {
+                case 'no_files':
+                  errorMsg = 'No files selected for upload';
+                  break;
+                case 'directory_error':
+                  errorMsg = `Directory access error: ${result.message}`;
+                  break;
+                case 'upload_failed':
+                  errorMsg = `Upload failed: ${result.message}`;
+                  break;
+                case 'network_error':
+                  errorMsg = 'Network error occurred during upload';
+                  break;
+                case 'folder_auth_failed':
+                  errorMsg = 'Permission denied for current folder';
+                  break;
+                case 'explorer_invalid_path':
+                  errorMsg = 'Invalid file path detected';
+                  break;
+                default:
+                  errorMsg = result.message || 'Unknown upload error';
+              }
+              toast.addError(`${errorMsg} (folder: ${folderPath || 'root'})`);
+            }
+          } catch (error) {
+            console.error('Upload error:', error);
+            toast.addError(`Network error uploading to folder: ${folderPath || 'root'}`);
+          }
         }
       }
 
@@ -799,6 +917,9 @@ export default function Page() {
         }
       }
 
+      emitUploadProgress(totalBytes, totalBytes);
+      window.dispatchEvent(new CustomEvent('uploadComplete', { detail: { id: uploadId, success: true } }));
+
     } catch (error) {
       if (error.name === 'AbortError') {
         toast.addWarning('Upload cancelled');
@@ -807,6 +928,13 @@ export default function Page() {
       } else {
         toast.addError(`Upload failed: ${error.message || 'Unknown error'}`);
       }
+      window.dispatchEvent(new CustomEvent('uploadComplete', {
+        detail: {
+          id: uploadId,
+          success: false,
+          error: error?.message || 'Upload failed'
+        }
+      }));
     }
   };
 
@@ -1060,8 +1188,8 @@ export default function Page() {
 
   if (!user) return null;
 
-  if (loading || !settingsLoaded) {
-    return <Loading />;
+  if (showPageLoading) {
+    return <Loading fadeOut={fadeOutPageLoading} />;
   }
 
   return (
@@ -1114,10 +1242,14 @@ export default function Page() {
         </div>
       )}
 
+      <UploadManager />
+
       <Layout styleStyle={style.main} loading={loading} user={user} sideNav={true} currentPath={currentPath} onOpenSettings={() => {
         setShowSettings(true);
+        setShowShares(false);
+        setShowSharedWithYou(false);
         setCurrentPath('');
-      }}>
+      }} onOpenShares={handleOpenShares}>
         <ConfirmModal
           open={confirmState.open}
           title={confirmState.title}
@@ -1151,7 +1283,8 @@ export default function Page() {
               viewMode={viewMode}
               onViewChange={handleViewChange}
               onRefresh={handleRefresh}
-              disabled={controlsDisabled || showSettings || propertiesState.open}
+              onShare={(items) => fileListRef.current?.openShareCreate?.(items)}
+              disabled={controlsDisabled || showSettings || showShares || showSharedWithYou || propertiesState.open}
             />
             <div className={style.diskContainerRow}>
               <Resizable
@@ -1188,12 +1321,13 @@ export default function Page() {
                   <FolderTree
                     socket={socket}
                     onFolderSelect={handleFolderSelect}
+                    onOpenSharedWithYou={handleOpenSharedWithYou}
                     selectedPath={currentPath}
                     mobile={isMobile}
                   />
                 </div>
               </Resizable>
-              <div className={style.fileListContainer}>
+              <div className={`${style.fileListContainer} ${showSharedWithYou ? style.fileListContainerFullPanel : ''}`}>
                 {showSettings ? (
                   <Settings
                     onClose={() => setShowSettings(false)}
@@ -1202,8 +1336,32 @@ export default function Page() {
                     onSortByChange={setSortBy}
                     isMobile={false}
                   />
+                ) : showSharedWithYou ? (
+                  <SharedWithYou toast={toast} />
+                ) : showShares ? (
+                  <FileList
+                    key="desktop-shares"
+                    ref={fileListRef}
+                    socket={socket}
+                    currentPath={currentPath}
+                    onFolderDoubleClick={handleFolderDoubleClick}
+                    onSelectionChange={handleSelectionChange}
+                    onFilesUpload={handleFilesUpload}
+                    onNavigateToFile={(path) => {
+                      setCurrentPath(path);
+                      setShowShares(false);
+                      setShowSharedWithYou(false);
+                    }}
+                    onProperties={handleProperties}
+                    sortBy={sortBy}
+                    viewMode={viewMode}
+                    user={user}
+                    mobile={isMobile}
+                    sharesOnly={true}
+                  />
                 ) : (
                   <FileList
+                    key="desktop-explorer"
                     ref={fileListRef}
                     socket={socket}
                     currentPath={currentPath}
@@ -1289,6 +1447,8 @@ export default function Page() {
                   onClick={() => {
                     handleFolderSelect('');
                     setShowSettings(false);
+                    setShowShares(false);
+                    setShowSharedWithYou(false);
                   }}
                 >
                   <div className={style.storageIcon}>
@@ -1312,6 +1472,8 @@ export default function Page() {
                     onClick={() => {
                       setCurrentPath('favorites');
                       setShowSettings(false);
+                      setShowShares(false);
+                      setShowSharedWithYou(false);
                     }}
                   >
                     <div className={style.storageIcon}>
@@ -1372,7 +1534,7 @@ export default function Page() {
                     })}
                   </div>
                 </div>
-                <div className={style.mobileFileListContainer}>
+                <div className={`${style.mobileFileListContainer} ${showSharedWithYou ? style.fileListContainerFullPanel : ''}`}>
                   {showSettings ? (
                     <Settings
                       onClose={() => setShowSettings(false)}
@@ -1381,8 +1543,32 @@ export default function Page() {
                       onSortByChange={setSortBy}
                       isMobile={isMobile}
                     />
+                  ) : showSharedWithYou ? (
+                    <SharedWithYou toast={toast} />
+                  ) : showShares ? (
+                    <FileList
+                      key="mobile-shares"
+                      ref={fileListRef}
+                      socket={socket}
+                      currentPath={currentPath}
+                      onFolderDoubleClick={handleFolderDoubleClick}
+                      onSelectionChange={handleSelectionChange}
+                      onFilesUpload={handleFilesUpload}
+                      onNavigateToFile={(path) => {
+                        setCurrentPath(path);
+                        setShowShares(false);
+                        setShowSharedWithYou(false);
+                      }}
+                      onProperties={handleProperties}
+                      sortBy={sortBy}
+                      viewMode={viewMode}
+                      user={user}
+                      mobile={isMobile}
+                      sharesOnly={true}
+                    />
                   ) : (
                     <FileList
+                      key="mobile-explorer"
                       ref={fileListRef}
                       socket={socket}
                       currentPath={currentPath}
@@ -1436,11 +1622,13 @@ export default function Page() {
                 setShowSortOptionsMenu(false);
                 setSortMenuSwipePosition(0);
                 setSortMenuInitialY(0);
+                setSortMenuTransitionMs(200);
               }}>
                 <div
                   className={style.popupModalMenu}
                   style={{
-                    transform: `translateY(${sortMenuSwipePosition}%)`
+                    transform: `translateY(${sortMenuSwipePosition}px)`,
+                    transition: isSwipingSort ? 'none' : `transform ${sortMenuTransitionMs}ms cubic-bezier(0.22, 0.61, 0.36, 1)`
                   }}
                   onTouchStart={handleSortMenuTouchStart}
                   onTouchMove={handleSortMenuTouchMove}
@@ -1455,6 +1643,7 @@ export default function Page() {
                         setShowSortOptionsMenu(false);
                         setSortMenuSwipePosition(0);
                         setSortMenuInitialY(0);
+                        setSortMenuTransitionMs(200);
                       }}><X /></button>
                     </div>
                   </div>

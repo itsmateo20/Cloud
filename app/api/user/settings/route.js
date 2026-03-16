@@ -25,7 +25,8 @@ export async function GET() {
                     defaultView: 'details',
                     defaultSort: 'name',
                     imageQuality: 'best',
-                    uploadQuality: 'best'
+                    uploadQuality: 'best',
+                    thumbnailResolution: 'medium'
                 }
             });
         }
@@ -38,7 +39,8 @@ export async function GET() {
                 defaultView: userSettings.defaultView,
                 defaultSort: userSettings.defaultSort,
                 imageQuality: userSettings.imageQuality,
-                uploadQuality: userSettings.uploadQuality
+                uploadQuality: userSettings.uploadQuality,
+                thumbnailResolution: userSettings.thumbnailResolution
             }
         });
     } catch (error) {
@@ -57,12 +59,13 @@ export async function POST(req) {
         }
 
         const userId = session.user.id;
-        const { theme, language, defaultView, defaultSort, imageQuality, uploadQuality } = await req.json();
+        const { theme, language, defaultView, defaultSort, imageQuality, uploadQuality, thumbnailResolution } = await req.json();
 
         const validThemes = ['light', 'dark', 'high-contrast', 'device'];
-        const validViews = ['list', 'details', 'tiles'];
+        const validViews = ['extraLargeIcons', 'largeIcons', 'mediumIcons', 'smallIcons', 'list', 'details', 'tiles'];
         const validSorts = ['name', 'date', 'size', 'type'];
         const validQualities = ['best', 'medium', 'low'];
+        const validThumbnailResolutions = ['high', 'medium', 'low'];
 
         if (theme && !validThemes.includes(theme)) {
             return NextResponse.json({ success: false, message: 'Invalid theme' }, { status: 400 });
@@ -84,6 +87,10 @@ export async function POST(req) {
             return NextResponse.json({ success: false, message: 'Invalid upload quality' }, { status: 400 });
         }
 
+        if (thumbnailResolution && !validThumbnailResolutions.includes(thumbnailResolution)) {
+            return NextResponse.json({ success: false, message: 'Invalid thumbnail resolution' }, { status: 400 });
+        }
+
         const updateData = {};
         if (theme !== undefined) updateData.theme = theme;
         if (language !== undefined) updateData.language = language;
@@ -91,6 +98,7 @@ export async function POST(req) {
         if (defaultSort !== undefined) updateData.defaultSort = defaultSort;
         if (imageQuality !== undefined) updateData.imageQuality = imageQuality;
         if (uploadQuality !== undefined) updateData.uploadQuality = uploadQuality;
+        if (thumbnailResolution !== undefined) updateData.thumbnailResolution = thumbnailResolution;
 
         const userSettings = await prisma.userSettings.upsert({
             where: { userId: userId },
@@ -102,7 +110,8 @@ export async function POST(req) {
                 defaultView: defaultView || 'details',
                 defaultSort: defaultSort || 'name',
                 imageQuality: imageQuality || 'best',
-                uploadQuality: uploadQuality || 'best'
+                uploadQuality: uploadQuality || 'best',
+                thumbnailResolution: thumbnailResolution || 'medium'
             }
         });
 
@@ -115,7 +124,8 @@ export async function POST(req) {
                 defaultView: userSettings.defaultView,
                 defaultSort: userSettings.defaultSort,
                 imageQuality: userSettings.imageQuality,
-                uploadQuality: userSettings.uploadQuality
+                uploadQuality: userSettings.uploadQuality,
+                thumbnailResolution: userSettings.thumbnailResolution
             }
         });
     } catch (error) {

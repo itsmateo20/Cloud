@@ -12,6 +12,7 @@ import {
     Info,
     Upload,
     Edit3,
+    Share2,
     Star,
     StarOff,
     RotateCcw,
@@ -112,6 +113,11 @@ export function ContextMenu({
                         Download file{isMultipleSelected ? `s` : ""} via QR Code {isMultipleSelected ? ` (${selectedItems.length})` : ""}
                     </div>
 
+                    <div className={styles.menuItem} onClick={() => handleAction("share")}>
+                        <span className={styles.icon}><Share2 size={16} /></span>
+                        Share{isMultipleSelected ? ` (${selectedItems.length})` : ""}
+                    </div>
+
                     <div className={styles.separator}></div>
 
                     <div className={styles.menuItem} onClick={() => handleAction("go-to-location")}>
@@ -172,6 +178,11 @@ export function ContextMenu({
                     <div className={styles.menuItem} onClick={() => handleAction("rename")}>
                         <span className={styles.icon}><Edit3 size={16} /></span>
                         Rename{isMultipleSelected ? ` (${selectedItems.length})` : ""}
+                    </div>
+
+                    <div className={styles.menuItem} onClick={() => handleAction("share")}>
+                        <span className={styles.icon}><Share2 size={16} /></span>
+                        Share{isMultipleSelected ? ` (${selectedItems.length})` : ""}
                     </div>
 
                     {shouldShowSubmenu ? (

@@ -24,7 +24,8 @@ import {
   Eye,
   Settings as SettingsIcon,
   AlertTriangle,
-  User as UserIcon
+  User as UserIcon,
+  Shield
 } from "lucide-react";
 import { useAuth } from "@/context/AuthProvider";
 import ConfirmModal from "./ConfirmModal";
@@ -55,6 +56,11 @@ export default function Settings({ onClose, onViewModeChange, onSortByChange, on
   const [isDeleting, setIsDeleting] = useState(false);
 
   const [initialSettings, setInitialSettings] = useState(null);
+  const [sessionTokens, setSessionTokens] = useState([]);
+  const [tokensLoading, setTokensLoading] = useState(false);
+  const [tokensError, setTokensError] = useState("");
+  const [revokingTokenId, setRevokingTokenId] = useState("");
+  const [sessionActionLoading, setSessionActionLoading] = useState("");
 
   const saveSettings = async (settingsToUpdate, showNotification = true) => {
     setIsSaving(true);
@@ -206,6 +212,98 @@ export default function Settings({ onClose, onViewModeChange, onSortByChange, on
     }
   }, [defaultSort, onSortByChange, settingsLoaded]);
 
+  const loadSessionTokens = async () => {
+    setTokensLoading(true);
+    setTokensError("");
+    try {
+      const response = await api.get('/api/user/client-tokens');
+      if (response?.success) {
+        setSessionTokens(Array.isArray(response.tokens) ? response.tokens : []);
+      } else {
+        setTokensError('Failed to load session tokens.');
+      }
+    } catch {
+      setTokensError('Failed to load session tokens.');
+    } finally {
+      setTokensLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!user) return;
+    loadSessionTokens();
+  }, [user]);
+
+  const handleRevokeToken = async (tokenId) => {
+    if (!tokenId) return;
+    setRevokingTokenId(tokenId);
+
+    const previous = sessionTokens;
+    setSessionTokens((current) => current.filter((token) => token.tokenId !== tokenId));
+
+    try {
+      const response = await api.post('/api/user/client-tokens', { action: 'revoke', tokenId });
+      if (!response?.success) {
+        setSessionTokens(previous);
+        setTokensError('Failed to revoke token.');
+        return;
+      }
+
+      if (Array.isArray(response.tokens)) {
+        setSessionTokens(response.tokens);
+      }
+    } catch {
+      setSessionTokens(previous);
+      setTokensError('Failed to revoke token.');
+    } finally {
+      setRevokingTokenId('');
+    }
+  };
+
+  const handleClearRevokedTokens = async () => {
+    setSessionActionLoading('clear_revoked');
+    setTokensError('');
+    try {
+      const response = await api.post('/api/user/client-tokens', { action: 'clear_revoked' });
+      if (!response?.success) {
+        setTokensError('Failed to clear revoked tokens.');
+        return;
+      }
+
+      if (Array.isArray(response.tokens)) {
+        setSessionTokens(response.tokens);
+      } else {
+        await loadSessionTokens();
+      }
+    } catch {
+      setTokensError('Failed to clear revoked tokens.');
+    } finally {
+      setSessionActionLoading('');
+    }
+  };
+
+  const handleRevokeAllOtherDevices = async () => {
+    setSessionActionLoading('revoke_all_other');
+    setTokensError('');
+    try {
+      const response = await api.post('/api/user/client-tokens', { action: 'revoke_all_other' });
+      if (!response?.success) {
+        setTokensError('Failed to revoke other devices.');
+        return;
+      }
+
+      if (Array.isArray(response.tokens)) {
+        setSessionTokens(response.tokens);
+      } else {
+        await loadSessionTokens();
+      }
+    } catch {
+      setTokensError('Failed to revoke other devices.');
+    } finally {
+      setSessionActionLoading('');
+    }
+  };
+
   const handleDeleteAccount = async () => {
     if (deleteEmail !== user.email) {
       alert("Email doesn't match your account email.");
@@ -277,6 +375,7 @@ export default function Settings({ onClose, onViewModeChange, onSortByChange, on
 
   const sections = [
     { id: "profile", label: "Profile", icon: <UserIcon size={20} /> },
+    { id: "sessions", label: "Sessions", icon: <Shield size={20} /> },
     { id: "appearance", label: "Appearance", icon: <Palette size={20} /> },
     { id: "view", label: "View & Display", icon: <Eye size={20} /> },
     { id: "performance", label: "Performance", icon: <SettingsIcon size={20} /> },
@@ -422,6 +521,69 @@ export default function Settings({ onClose, onViewModeChange, onSortByChange, on
                     />
                   ))}
                 </div>
+              </SettingCard>
+            )}
+
+            {activeSection === "sessions" && (
+              <SettingCard
+                title="Session Tokens"
+                description="View and revoke active browser sessions for your account"
+              >
+                <div className={style.sessionActions}>
+                  <button className={style.resetButton} onClick={loadSessionTokens} disabled={tokensLoading}>
+                    {tokensLoading ? 'Loading...' : 'Refresh'}
+                  </button>
+                  <button
+                    className={style.resetButton}
+                    onClick={handleClearRevokedTokens}
+                    disabled={sessionActionLoading === 'clear_revoked' || tokensLoading || !!revokingTokenId}
+                  >
+                    {sessionActionLoading === 'clear_revoked' ? 'Clearing...' : 'Clear Revoked Tokens'}
+                  </button>
+                  <button
+                    className={style.dangerButton}
+                    onClick={handleRevokeAllOtherDevices}
+                    disabled={sessionActionLoading === 'revoke_all_other' || tokensLoading || !!revokingTokenId}
+                  >
+                    {sessionActionLoading === 'revoke_all_other' ? 'Revoking...' : 'Revoke Every Device'}
+                  </button>
+                </div>
+
+                {tokensError ? <p className={style.sessionError}>{tokensError}</p> : null}
+
+                {sessionTokens.length === 0 && !tokensLoading ? (
+                  <p className={style.sessionEmpty}>No active session tokens found.</p>
+                ) : (
+                  <div className={style.sessionTokenList}>
+                    {sessionTokens.map((token) => (
+                      <div key={token.tokenId} className={style.sessionTokenItem}>
+                        <div className={style.sessionTokenMeta}>
+                          <div className={style.sessionTokenTitle}>{token.label || 'Web Session'}</div>
+                          <div className={style.sessionTokenDetails}>
+                            <span>{token.platform || 'unknown'}</span>
+                            <span>•</span>
+                            <span>{token.ipAddress || 'unknown ip'}</span>
+                            <span>•</span>
+                            <span>Last used: {token.lastUsedAt ? new Date(token.lastUsedAt).toLocaleString() : 'n/a'}</span>
+                            {token.tokenId === user?.tid ? (
+                              <>
+                                <span>•</span>
+                                <span>This Device</span>
+                              </>
+                            ) : null}
+                          </div>
+                        </div>
+                        <button
+                          className={style.dangerButton}
+                          onClick={() => handleRevokeToken(token.tokenId)}
+                          disabled={revokingTokenId === token.tokenId}
+                        >
+                          {revokingTokenId === token.tokenId ? 'Revoking...' : 'Revoke'}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </SettingCard>
             )}
 

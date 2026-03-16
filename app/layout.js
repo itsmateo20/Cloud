@@ -34,9 +34,13 @@ export async function generateMetadata() {
     title: "Home | Cloud Storage App",
     description: "The Cloud Storage App is a web-based application designed for users to store and manage their files and folders in the cloud. It offers a convenient way to organize, upload, download, and delete files and folders, making it easy to access your data from anywhere.",
     keywords: "cloud, storage, cloudstorage, file management, online storage, secure storage",
-    authors: [{ name: "itsmateo20" }],
+    authors: [{ name: "itsmateo20 (Mateusz Starkiewicz)", url: "https://github.com/itsmateo20/Cloud" }],
     creator: "itsmateo20",
     publisher: "itsmateo20",
+    other: {
+      copyright: "itsmateo20 (Mateusz Starkiewicz)",
+      source: "https://github.com/itsmateo20/Cloud"
+    },
     category: "Technology",
     alternates: {
       canonical: siteUrl,

@@ -29,7 +29,8 @@ import {
     List,
     BarChart3,
     LayoutGrid,
-    RefreshCw
+    RefreshCw,
+    Share2
 } from 'lucide-react';
 
 const Controls = ({
@@ -48,6 +49,7 @@ const Controls = ({
     viewMode,
     onViewChange,
     onRefresh,
+    onShare,
     disabled = false
 }) => {
     const selectedArray = Array.isArray(selectedItems)
@@ -267,6 +269,16 @@ const Controls = ({
                 >
                     <span className={styles.icon}><Edit3 size={16} /></span>
                     <span className={styles.label}>Rename</span>
+                </button>
+
+                <button
+                    className={`${styles.button} ${!hasSelection ? styles.disabled : ''}`}
+                    onClick={() => onShare?.(selectedArray)}
+                    disabled={!hasSelection || disabled}
+                    title="Share"
+                >
+                    <span className={styles.icon}><Share2 size={16} /></span>
+                    <span className={styles.label}>Share</span>
                 </button>
 
                 <button

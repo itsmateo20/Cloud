@@ -108,15 +108,32 @@ async function streamFile(req, filePath, fileName = null) {
             if (start >= fileSize || end >= fileSize || start > end) {
                 return new Response('Range Not Satisfiable', { status: 416 });
             }
-            const file = await fs.open(filePath, 'r');
-            const buffer = Buffer.alloc(chunksize);
-            const { bytesRead } = await file.read(buffer, 0, chunksize, start);
-            await file.close();
+
+            const stream = createReadStream(filePath, { start, end });
+            const readableStream = new ReadableStream({
+                start(controller) {
+                    stream.on('data', (chunk) => {
+                        controller.enqueue(new Uint8Array(chunk));
+                    });
+
+                    stream.on('end', () => {
+                        controller.close();
+                    });
+
+                    stream.on('error', (error) => {
+                        controller.error(error);
+                    });
+                },
+
+                cancel() {
+                    stream.destroy();
+                }
+            });
 
             const headers = {
                 'Content-Range': `bytes ${start}-${end}/${fileSize}`,
                 'Accept-Ranges': 'bytes',
-                'Content-Length': bytesRead.toString(),
+                'Content-Length': chunksize.toString(),
                 'Content-Type': contentType,
                 'Cache-Control': 'no-cache',
                 'Access-Control-Allow-Origin': '*',
@@ -124,7 +141,7 @@ async function streamFile(req, filePath, fileName = null) {
                 'Access-Control-Allow-Headers': 'Range, Content-Type'
             };
 
-            return new Response(buffer.slice(0, bytesRead), {
+            return new Response(readableStream, {
                 status: 206,
                 headers
             });

@@ -13,9 +13,9 @@ import Image from "next/image";
 
 import nav from "./UserProfileDropdown.module.css";
 
-import { Cog, LogOut, Settings, User } from "lucide-react";
+import { Cog, LogOut, Settings, User, Share2 } from "lucide-react";
 
-export default function UserProfileDropdown({ user, mobile, onOpenSettings }) {
+export default function UserProfileDropdown({ user, mobile, onOpenSettings, onOpenShares }) {
     const { signout } = useAuth();
     const userProfileRef = useRef(null);
     const userDropdownRef = useRef(null);
@@ -86,6 +86,10 @@ export default function UserProfileDropdown({ user, mobile, onOpenSettings }) {
                     <User size={25} strokeWidth={2} />
                     <h1>Edit Gravatar</h1>
                 </div>
+                <div className={`${nav.userProfileMobileListItem} ${nav.userProfileMobileSettings}`} onClick={onOpenShares}>
+                    <Share2 size={25} strokeWidth={2} />
+                    <h1>Shared Files</h1>
+                </div>
                 <div className={`${nav.userProfileMobileListItem} ${nav.userProfileMobileLogout}`} onClick={() => signout()}>
                     <LogOut size={23} strokeWidth={2} />
                     <h1>Logout</h1>
@@ -132,6 +136,7 @@ export default function UserProfileDropdown({ user, mobile, onOpenSettings }) {
                 <ul>
                     <li onClick={onOpenSettings}><span>Settings</span><Cog size={22} strokeWidth={3} /></li>
                     <li onClick={() => window.open(`https://en.gravatar.com/emails/`, '_blank')}><span>Edit Gravatar</span><User size={22} strokeWidth={3} /></li>
+                    <li onClick={onOpenShares}><span>Shared Files</span><Share2 size={22} strokeWidth={3} /></li>
                 </ul>
                 <ul>
                     <li onClick={() => signout()}><span>Logout</span><LogOut size={22} strokeWidth={3} /></li>

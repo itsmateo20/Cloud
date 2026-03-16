@@ -12,6 +12,7 @@ import Link from "next/link";
 import { GoogleAuth } from "@/components/authentication/GoogleAuth";
 import Layout from "@/components/Layout";
 import SoftLoading from "@/components/SoftLoading";
+import { useIsMobile } from "@/utils/useIsMobile";
 
 import { X, Check } from "lucide-react";
 
@@ -19,6 +20,7 @@ import { getError } from "@/public/error/errors";
 
 export default function Page() {
     const { loading, softLoading, user, signup, authWithGoogle } = useAuth();
+    const isMobile = useIsMobile();
 
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
@@ -80,7 +82,7 @@ export default function Page() {
     }, [password, repeatPassword]);
 
     return (
-        <Layout mainStyle={style.main} loading={loading} user={user}>
+        <Layout mainStyle={style.main} loading={loading} user={user} showNavigation={isMobile === false}>
             <h1 className={style.title}>Signup</h1>
             <h2 className={style.subtitle}>Make an account for your cloud storage</h2>
             <fieldset className={style.inputWithText}>

@@ -6,7 +6,7 @@ import { useState, useEffect } from "react";
 import { Navigation } from "./navigation/Navigation";
 import Loading from "./Loading";
 
-export default function Layout({ children, mainStyle, loading = true, user = null, sideNav = false, currentPath, onOpenSettings }) {
+export default function Layout({ children, mainStyle, loading = true, user = null, sideNav = false, currentPath, onOpenSettings, onOpenShares, showNavigation = true }) {
     const [showLoading, setShowLoading] = useState(loading);
     const [fadeOut, setFadeOut] = useState(false);
 
@@ -32,7 +32,7 @@ export default function Layout({ children, mainStyle, loading = true, user = nul
 
     return (
         <main className={mainStyle}>
-            <Navigation user={user} sideNav={sideNav} currentPath={currentPath} onOpenSettings={onOpenSettings} />
+            {showNavigation ? <Navigation user={user} sideNav={sideNav} currentPath={currentPath} onOpenSettings={onOpenSettings} onOpenShares={onOpenShares} /> : null}
             {children}
         </main>
     );

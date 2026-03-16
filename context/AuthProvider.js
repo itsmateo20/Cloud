@@ -22,6 +22,7 @@ export const AuthProvider = ({ children, locked = true }) => {
         "/login/google",
         "/signup",
         "/signup/google",
+        "/logged-out",
     ];
 
     const isPublicRoute = (currentPath) => {
@@ -33,11 +34,19 @@ export const AuthProvider = ({ children, locked = true }) => {
             return true;
         }
 
+        if (currentPath.startsWith('/shared/') && currentPath.split('/').length === 3) {
+            return true;
+        }
+
         return false;
     };
 
     const shouldRedirectAuthenticated = (currentPath) => {
         if (currentPath.startsWith('/qr/') && currentPath.split('/').length === 3) {
+            return false;
+        }
+
+        if (currentPath.startsWith('/shared/') && currentPath.split('/').length === 3) {
             return false;
         }
 
@@ -57,6 +66,13 @@ export const AuthProvider = ({ children, locked = true }) => {
 
                 const sessionRes = await api.post("/api/auth/session");
                 const isAuthenticated = sessionRes.success;
+
+                if (!isAuthenticated && sessionRes?.code === "token_revoked") {
+                    if (pathname !== "/logged-out") {
+                        router.push("/logged-out?reason=remote");
+                    }
+                    return;
+                }
 
                 if (isAuthenticated) {
                     setUser(sessionRes.user);

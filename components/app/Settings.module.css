@@ -471,6 +471,63 @@
   gap: 12px;
 }
 
+.sessionActions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.sessionError {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  color: rgb(239, 68, 68);
+}
+
+.sessionEmpty {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text-color-muted);
+}
+
+.sessionTokenList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sessionTokenItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.sessionTokenMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.sessionTokenTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.sessionTokenDetails {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-color-muted);
+}
+
 .gravatarButton {
   display: inline-flex;
   align-items: center;

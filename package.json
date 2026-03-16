@@ -21,33 +21,32 @@
     },
     "homepage": "https://github.com/itsmateo20/Cloud#readme",
     "scripts": {
-        "dev": "dotenvx run -- bun server.js",
-        "build": "dotenvx run -- next build",
-        "start": "dotenvx run -- cross-env NODE_ENV=production bun server.js",
-        "setup": "dotenvx run -- bun setup.js"
+        "dev": "bun server.js",
+        "build": "next build",
+        "start": "cross-env NODE_ENV=production bun server.js",
+        "setup": "bun setup.js"
     },
     "dependencies": {
-        "@dotenvx/dotenvx": "^1.51.2",
         "@monaco-editor/react": "^4.7.0",
-        "@prisma/adapter-libsql": "^7.2.0",
-        "@prisma/client": "^7.2.0",
+        "@prisma/adapter-libsql": "^7.5.0",
+        "@prisma/client": "^7.5.0",
         "archiver": "^7.0.1",
         "bcryptjs": "^2.4.3",
         "chalk": "4.1.2",
-        "dotenv": "^17.2.3",
+        "dotenv": "^17.3.1",
         "googleapis": "^144.0.0",
         "gravatar": "^1.8.2",
         "jsonwebtoken": "^9.0.3",
         "jszip": "^3.10.1",
         "lucide-react": "^0.525.0",
-        "next": "^15.5.9",
+        "next": "^15.5.12",
         "path": "^0.12.7",
-        "prisma": "^7.2.0",
+        "prisma": "^7.5.0",
         "prismjs": "^1.30.0",
         "qrcode": "^1.5.4",
         "re-resizable": "^6.11.2",
-        "react": "^19.2.3",
-        "react-dom": "^19.2.3",
+        "react": "^19.2.4",
+        "react-dom": "^19.2.4",
         "sharp": "^0.34.5",
         "socket.io": "^4.8.3",
         "socket.io-client": "^4.8.3"
@@ -57,6 +56,6 @@
         "cross-env": "^10.1.0"
     },
     "peerDependencies": {
-        "typescript": "^5.6.3"
+        "typescript": "^5.9.3"
     }
 }

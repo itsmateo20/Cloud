@@ -12,6 +12,7 @@ import { redirect } from "next/navigation";
 
 import Layout from "@/components/Layout";
 import SoftLoading from "@/components/SoftLoading";
+import { useIsMobile } from "@/utils/useIsMobile";
 
 import { X, Check } from "lucide-react";
 
@@ -19,6 +20,7 @@ import { getError } from "@/public/error/errors";
 
 export default function Page({ searchParams }) {
     const { loading, softLoading, user, signupwiththirdparty } = useAuth();
+    const isMobile = useIsMobile();
 
     const { email, signature } = use(searchParams) || {};
     const [password, setPassword] = useState("");
@@ -101,7 +103,7 @@ export default function Page({ searchParams }) {
     }, [password, repeatPassword]);
 
     return (
-        <Layout mainStyle={style.main} loading={loading} user={user}>
+        <Layout mainStyle={style.main} loading={loading} user={user} showNavigation={isMobile === false}>
             <h1 className={style.title}>Google Signup</h1>
             <h2 className={style.subtitle}>Create a password for your account.</h2>
             <fieldset className={style.inputWithText}>

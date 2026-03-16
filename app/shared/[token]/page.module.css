@@ -1,0 +1,152 @@
+.pageShell {
+    min-height: 100dvh;
+    padding: clamp(20px, 3vw, 36px);
+    color: var(--text);
+}
+
+.heroCard {
+    max-width: 560px;
+    margin: 6vh auto 0;
+    padding: 24px;
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    background: color-mix(in srgb, var(--surface) 86%, transparent);
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.22);
+}
+
+.headerPanel {
+    max-width: 1040px;
+    margin: 0 auto;
+    padding: 20px;
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    background: color-mix(in srgb, var(--surface) 90%, transparent);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+
+.heroTitle {
+    margin: 0;
+    font-size: clamp(26px, 3vw, 36px);
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    font-family: var(--font-poppins);
+}
+
+.subtleText {
+    margin: 6px 0 0;
+    opacity: 0.78;
+}
+
+.unlockForm {
+    margin-top: 14px;
+    display: grid;
+    gap: 8px;
+}
+
+.unlockLabel {
+    font-size: 13px;
+    font-weight: 600;
+    opacity: 0.88;
+}
+
+.unlockInput {
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    background: var(--background);
+    color: var(--text);
+    padding: 10px 12px;
+}
+
+.primaryButton,
+.secondaryButton {
+    border-radius: 10px;
+    border: 1px solid var(--border-color);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.primaryButton {
+    padding: 10px 14px;
+    background: var(--button-primary, var(--surface));
+    color: #fff;
+    border-color: transparent;
+}
+
+.secondaryButton {
+    padding: 8px 12px;
+    background: var(--surface);
+    color: var(--text);
+}
+
+.itemsGrid {
+    max-width: 1040px;
+    margin: 18px auto 0;
+    display: grid;
+    gap: 12px;
+}
+
+.itemCard {
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 12px 14px;
+    background: color-mix(in srgb, var(--surface) 95%, transparent);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+
+.itemMeta {
+    min-width: 0;
+    display: grid;
+    gap: 4px;
+}
+
+.itemName {
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.itemType {
+    font-size: 12px;
+    text-transform: uppercase;
+    opacity: 0.68;
+}
+
+.emptyState {
+    border: 1px dashed var(--border-color);
+    border-radius: 12px;
+    padding: 18px;
+    opacity: 0.85;
+    background: color-mix(in srgb, var(--surface) 88%, transparent);
+}
+
+@media (max-width: 680px) {
+    .pageShell {
+        padding: 14px;
+    }
+
+    .heroCard {
+        margin-top: 5vh;
+        padding: 18px;
+    }
+
+    .headerPanel {
+        padding: 14px;
+    }
+
+    .itemCard {
+        align-items: stretch;
+        flex-direction: column;
+    }
+}

@@ -13,6 +13,7 @@
     font-size: 14px;
     -webkit-user-select: none;
     user-select: none;
+    position: relative;
 }
 
 .fileList.mobile {
@@ -1177,6 +1178,561 @@
     max-height: 200px;
     width: auto;
     height: auto;
+}
+
+.shareModalOverlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    z-index: 10001;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.shareModal {
+    width: min(940px, 96vw);
+    max-height: 90vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    background: var(--background);
+}
+
+.shareManagerModal {
+    width: 100%;
+    height: 100%;
+    max-height: 100%;
+    border-radius: 0;
+    border: none;
+    background: var(--background);
+}
+
+.shareManagerOverlay {
+    position: absolute;
+    inset: 0;
+    background: var(--background);
+    z-index: 1;
+}
+
+.shareManagerStandalone {
+    position: relative;
+    inset: auto;
+    z-index: auto;
+    background: var(--background);
+}
+
+.shareManagerStandaloneModal {
+    width: 100%;
+    height: 100%;
+    max-height: 100%;
+    border-radius: 0;
+    border: none;
+}
+
+.sharesOnlyRoot {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: var(--background);
+}
+
+.Shares_ShareFiles {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: var(--background);
+}
+
+.Shares_ShareFilesOverlay {
+    position: relative;
+    inset: auto;
+    width: 100%;
+    height: 100%;
+    z-index: auto;
+    background: var(--background);
+    display: block;
+}
+
+.Shares_ShareFilesModal {
+    width: 100%;
+    height: 100%;
+    max-height: 100%;
+    border-radius: 0;
+    border: none;
+}
+
+.Shares_ShareFilesGrid {
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    height: 100%;
+    min-height: 0;
+    flex: 1;
+}
+
+.shareModalHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 24px 32px;
+    border-bottom: 1px solid var(--border-color);
+    background: var(--background);
+}
+
+.shareModalHeader h3 {
+    margin: 0;
+    font-size: 32px;
+    font-weight: 600;
+    font-family: var(--font-poppins);
+}
+
+.shareCloseButton {
+    border: 1px solid var(--border-color);
+    background: var(--surface);
+    border-radius: 8px;
+    width: 34px;
+    height: 34px;
+    cursor: pointer;
+}
+
+.shareModalBody {
+    padding: 16px;
+    overflow: auto;
+    display: grid;
+    gap: 10px;
+}
+
+.shareEditForm {
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    background: var(--surface);
+    padding: 14px;
+    display: grid;
+    gap: 10px;
+}
+
+.shareFieldLabel {
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.shareInput,
+.shareTextarea,
+.shareSelect,
+.shareInputSmall {
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--surface);
+    color: var(--text);
+    padding: 8px 10px;
+}
+
+.shareTextarea {
+    min-height: 80px;
+    resize: vertical;
+}
+
+.shareEmailEditor {
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    background: var(--background);
+    padding: 10px;
+    display: grid;
+    gap: 8px;
+}
+
+.shareEmailRow {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+    align-items: center;
+}
+
+.shareEmailHint {
+    margin: 0;
+    font-size: 12px;
+    opacity: 0.72;
+}
+
+.shareEmailAddButton,
+.shareEmailRemoveButton {
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    background: var(--surface);
+    color: var(--text);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.shareEmailAddButton {
+    padding: 8px 10px;
+    justify-self: start;
+}
+
+.shareEmailRemoveButton {
+    width: 34px;
+    height: 34px;
+    padding: 0;
+}
+
+.shareEmailAddButton:hover,
+.shareEmailRemoveButton:hover {
+    background: var(--hover-background);
+}
+
+.shareInputSmall {
+    width: 90px;
+}
+
+.shareDurationRow {
+    display: grid;
+    gap: 8px;
+}
+
+.shareDurationControls {
+    display: flex;
+    gap: 8px;
+}
+
+.shareCheckboxRow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.shareItemsPreview ul {
+    margin: 8px 0 0;
+    padding-left: 18px;
+}
+
+.shareModalFooter {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 12px 16px;
+    border-top: 1px solid var(--border-color);
+}
+
+.shareModalFooterInline {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.sharePrimaryButton,
+.shareSecondaryButton,
+.shareLinkButton {
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    padding: 8px 12px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.sharePrimaryButton {
+    background: var(--accent-color, #2563eb);
+    color: #fff;
+    border-color: transparent;
+}
+
+.shareSecondaryButton,
+.shareLinkButton {
+    background: var(--surface);
+    color: var(--text);
+}
+
+.shareManagerGrid {
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    height: 100%;
+    min-height: 0;
+    flex: 1;
+}
+
+.shareListPane {
+    border-right: 1px solid var(--border-color);
+    overflow-y: auto;
+    overflow-x: visible;
+    padding: 24px 16px;
+    position: relative;
+    min-height: 0;
+}
+
+.shareDetailsPane {
+    overflow: auto;
+    padding: 24px 32px;
+    display: grid;
+    gap: 12px;
+    align-content: start;
+    grid-auto-rows: max-content;
+    min-height: 0;
+}
+
+.shareRow {
+    border: none;
+    border-radius: 8px;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0;
+    position: relative;
+    overflow: visible;
+    background: transparent;
+}
+
+.shareRowActive {
+    background: var(--button-primary);
+}
+
+.shareRowMain {
+    border: none;
+    background: transparent;
+    color: var(--text-color-muted);
+    text-align: left;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 12px 16px;
+    flex: 1;
+    border-radius: 8px;
+}
+
+.shareRowMain:hover {
+    background: var(--hover-background);
+    color: var(--text);
+}
+
+.shareRowActive .shareRowMain {
+    color: white;
+}
+
+.shareRowActive .shareRowMain:hover {
+    background: transparent;
+    color: white;
+}
+
+.shareRowTitle {
+    font-weight: 600;
+}
+
+.shareRowMeta {
+    font-size: 12px;
+    opacity: 0.7;
+}
+
+.shareRowActionsWrap {
+    position: relative;
+    z-index: 3;
+    flex-shrink: 0;
+}
+
+.shareIconButton {
+    border: none;
+    background: transparent;
+    border-radius: 8px;
+    width: 30px;
+    height: 30px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--text-color-muted);
+}
+
+.shareIconButton:hover {
+    background: var(--hover-background);
+    color: var(--text);
+}
+
+.shareRowActive .shareIconButton {
+    color: white;
+}
+
+.shareRowActive .shareIconButton:hover {
+    background: rgba(255, 255, 255, 0.14);
+}
+
+.shareDropdownMenu {
+    position: absolute;
+    right: 0;
+    top: 34px;
+    background: var(--background);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    box-shadow: 0 12px 26px rgba(0, 0, 0, 0.25);
+    z-index: 100;
+    min-width: 150px;
+    overflow: hidden;
+}
+
+.shareLoadingCenter {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 180px;
+}
+
+.shareModeRow {
+    display: grid;
+    gap: 8px;
+}
+
+.shareDropdownMenu button {
+    width: 100%;
+    text-align: left;
+    border: none;
+    background: transparent;
+    color: var(--text);
+    padding: 8px 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+}
+
+.shareDropdownMenu button:hover {
+    background: var(--explorer-hover);
+}
+
+.shareDangerButton {
+    color: #ef4444 !important;
+}
+
+.shareInfoLine {
+    margin: 0;
+    opacity: 0.85;
+}
+
+.shareItemsSection {
+    border-top: 1px solid var(--border-color);
+    padding-top: 10px;
+}
+
+.shareItemsSection h5 {
+    margin: 0 0 10px;
+}
+
+.shareItemRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 10px;
+    margin-bottom: 8px;
+    background: var(--surface);
+}
+
+.shareItemButtons {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.shareDangerFlatButton {
+    border-radius: 8px;
+    border: 1px solid rgba(239, 68, 68, 0.55);
+    background: rgba(239, 68, 68, 0.08);
+    color: #ef4444;
+    padding: 8px 12px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.shareItemRow small {
+    display: block;
+    opacity: 0.7;
+}
+
+.shareLogsSection {
+    border-top: 1px solid var(--border-color);
+    padding-top: 10px;
+}
+
+.shareLogsSection h5 {
+    margin: 0 0 10px;
+}
+
+.shareLogsHeaderRow {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.shareLogButtonsRow {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.shareLogsList {
+    display: grid;
+    gap: 8px;
+    max-height: 220px;
+    overflow: auto;
+}
+
+.shareLogRow {
+    border: none;
+    border-radius: 8px;
+    padding: 8px 10px;
+    display: grid;
+    gap: 4px;
+    background: var(--surface);
+}
+
+.shareLogPrimary {
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.shareLogSecondary {
+    font-size: 12px;
+    opacity: 0.72;
+    word-break: break-word;
+}
+
+@media (max-width: 900px) {
+    .shareManagerGrid {
+        grid-template-columns: 1fr;
+        height: auto;
+    }
+
+    .shareModalHeader {
+        padding: 16px 20px;
+    }
+
+    .shareModalHeader h3 {
+        font-size: 24px;
+    }
+
+    .shareListPane {
+        border-right: none;
+        border-bottom: 1px solid var(--border-color);
+        max-height: 36vh;
+        padding: 14px 12px;
+    }
+
+    .shareDetailsPane {
+        padding: 14px 16px;
+    }
 }
 
 .qrInstructions {

@@ -36,6 +36,13 @@
     align-items: center;
     height: 100%;
     width: 100%;
+    opacity: 1;
+    transition: opacity 220ms ease;
+}
+
+.softFadeOut {
+    opacity: 0;
+    pointer-events: none;
 }
 
 .softLoading svg {

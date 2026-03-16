@@ -9,12 +9,12 @@ import Image from "next/image";
 import Link from "next/link";
 import { useIsMobile } from "@/utils/useIsMobile";
 
-import Loading from "@/components/Loading";
 import UserProfileDropdown from "./UserProfileDropdown";
 import { AlignJustify, Search } from "lucide-react";
 
-export function Navigation({ user, sideNav = false, currentPath, onOpenSettings }) {
+export function Navigation({ user, sideNav = false, currentPath, onOpenSettings, onOpenShares }) {
     const isMobile = useIsMobile();
+    const deviceResolved = typeof isMobile === "boolean";
     const pathname = usePathname();
     const navRef = useRef(null);
     const [isDragging, setIsDragging] = useState(false);
@@ -22,9 +22,12 @@ export function Navigation({ user, sideNav = false, currentPath, onOpenSettings 
     const [startX, setStartX] = useState(0);
     const [currentX, setCurrentX] = useState(0);
     const [initialTransform, setInitialTransform] = useState(0);
-    const [lastX, setLastX] = useState(0);
-    const [lastTime, setLastTime] = useState(0);
     const navWidthRef = useRef(0);
+    const lastMoveXRef = useRef(0);
+    const lastMoveTimeRef = useRef(0);
+    const velocityRef = useRef(0);
+
+    const isSideNavMobileSearch = sideNav && currentPath == undefined && user;
 
     const toggleNavigation = () => {
         if (!isMobile) return;
@@ -62,8 +65,9 @@ export function Navigation({ user, sideNav = false, currentPath, onOpenSettings 
         setIsDragging(true);
         setStartX(clientX);
         setCurrentX(clientX);
-        setLastX(clientX);
-        setLastTime(performance.now());
+        lastMoveXRef.current = clientX;
+        lastMoveTimeRef.current = performance.now();
+        velocityRef.current = 0;
 
         const transform = getComputedStyle(nav).transform;
         const matrix = new DOMMatrix(transform);
@@ -81,13 +85,16 @@ export function Navigation({ user, sideNav = false, currentPath, onOpenSettings 
 
         setCurrentX(clientX);
         const now = performance.now();
+        const dt = Math.max(1, now - lastMoveTimeRef.current);
+        const dxSinceLast = clientX - lastMoveXRef.current;
+        velocityRef.current = dxSinceLast / dt;
         const deltaX = clientX - startX;
         const newTransform = Math.min(0, Math.max(-navWidthRef.current, initialTransform + deltaX));
         nav.style.transform = `translate(${newTransform}px, 0%)`;
         nav.style.boxShadow = "none";
 
-        setLastX(clientX);
-        setLastTime(now);
+        lastMoveXRef.current = clientX;
+        lastMoveTimeRef.current = now;
     };
 
     const handleEnd = () => {
@@ -99,23 +106,22 @@ export function Navigation({ user, sideNav = false, currentPath, onOpenSettings 
         nav.style.willChange = "";
 
         const deltaX = currentX - startX;
-        const dt = Math.max(16, performance.now() - lastTime);
-        const velocity = (currentX - lastX) / dt;
+        const velocity = velocityRef.current;
 
         const currentTransform = new DOMMatrix(getComputedStyle(nav).transform).m41;
         const openness = 1 - Math.abs(currentTransform) / (navWidthRef.current || 1);
 
         const shouldClose = () => {
-            if (velocity < -0.5) return true;
+            if (velocity < -0.45) return true;
+            if (velocity > 0.45) return false;
             if (openness < 0.5) return true;
             if (deltaX < -50) return true;
             return false;
         };
 
         const closing = shouldClose();
-        const base = 200;
-        const speedFactor = Math.min(2, Math.max(0.5, Math.abs(velocity) * 200));
-        const duration = Math.round(base / speedFactor);
+        const absVelocity = Math.abs(velocity);
+        const duration = Math.max(90, Math.min(260, Math.round(240 - absVelocity * 180)));
         nav.style.transition = `transform ${duration}ms cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s ease`;
 
         if (closing) {
@@ -131,6 +137,7 @@ export function Navigation({ user, sideNav = false, currentPath, onOpenSettings 
 
     const handleTouchStart = (e) => {
         if (!isMobile) return;
+        if (!isOpened && e.touches?.[0]?.clientX > 30) return;
         e.preventDefault();
         e.stopPropagation();
         handleStart(e.touches[0].clientX);
@@ -271,9 +278,9 @@ export function Navigation({ user, sideNav = false, currentPath, onOpenSettings 
 
     return (
         <>
-            {isMobile && sideNav && currentPath == undefined && user && (
+            {isMobile && isSideNavMobileSearch && (
                 <div className={style.searchContainer}>
-                    <div className={`${style.searchBox} ${style.disabled}`}>
+                    <div className={style.searchBox}>
                         <div className={style.leftSide}>
                             <AlignJustify
                                 size={20}
@@ -283,7 +290,6 @@ export function Navigation({ user, sideNav = false, currentPath, onOpenSettings 
                                 data-hamburger-button="true"
                                 aria-label="Toggle navigation"
                                 aria-expanded={isOpened}
-                                style={{ opacity: 1, pointerEvents: 'auto', cursor: 'pointer' }}
                             />
                             <h1 className={style.searchTitle}>Search</h1>
                         </div>
@@ -326,7 +332,7 @@ export function Navigation({ user, sideNav = false, currentPath, onOpenSettings 
             )}
             <nav
                 ref={navRef}
-                className={`${style.navigation} ${isMobile ? style.mobile : ''} ${isMobile && isOpened ? style.opened : ''}`}
+                className={`${style.navigation} ${isSideNavMobileSearch ? style.mobileSideNav : ''} ${isMobile ? style.mobile : ''} ${isOpened ? style.opened : ''}`}
                 style={(!isMobile && pathname !== "/") ? { filter: "drop-shadow(3px 0px 50px rgba(0, 0, 0, 0.3))" } : null}
                 role="navigation"
                 aria-label="Primary"
@@ -337,13 +343,13 @@ export function Navigation({ user, sideNav = false, currentPath, onOpenSettings 
             >
                 <div className={style.titleContainer}>
                     <Link className={style.logo} href="/">
-                        <Suspense fallback={<Loading />}>
+                        <Suspense fallback={null}>
                             <Image src="/assets/logo/logo.png" alt="Cloud Storage Icon" width={54} height={33} quality={100} loading="eager" priority />
                         </Suspense>
                     </Link>
                     <h1 className={style.title}>Cloud</h1>
                 </div>
-                {user ? <UserProfileDropdown user={user} mobile={isMobile} onOpenSettings={onOpenSettings} /> : null}
+                {user && deviceResolved ? <UserProfileDropdown user={user} mobile={isMobile} onOpenSettings={onOpenSettings} onOpenShares={onOpenShares} /> : null}
             </nav>
         </>
     );

@@ -4,6 +4,7 @@
 import style from './FileViewer.module.css';
 import mainStyle from '@/public/styles/main.module.css';
 import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
+import NextImage from 'next/image';
 import SoftLoading from '@/components/SoftLoading';
 import { CodeEditor } from './CodeEditor';
 import { downloadFile } from '@/utils/downloadUtils';
@@ -75,6 +76,7 @@ export function FileViewer({
     mobile = false
 }) {
     const isMobile = useIsMobile();
+    const isMobileView = mobile === true || isMobile === true;
     const [isLoading, setIsLoading] = useState(true);
     const [showDropdown, setShowDropdown] = useState(false);
     const [fileError, setFileError] = useState(false);
@@ -96,11 +98,20 @@ export function FileViewer({
     const [fileInfoMenuInitialY, setFileInfoMenuInitialY] = useState(0);
     const [deleteMenuSwipePosition, setDeleteMenuSwipePosition] = useState(0);
     const [deleteMenuInitialY, setDeleteMenuInitialY] = useState(0);
+    const [isDraggingFileInfoSheet, setIsDraggingFileInfoSheet] = useState(false);
+    const [isDraggingDeleteSheet, setIsDraggingDeleteSheet] = useState(false);
+    const [isClosingFileInfoSheet, setIsClosingFileInfoSheet] = useState(false);
+    const [isClosingDeleteSheet, setIsClosingDeleteSheet] = useState(false);
+    const [fileInfoSheetTransitionMs, setFileInfoSheetTransitionMs] = useState(200);
+    const [deleteSheetTransitionMs, setDeleteSheetTransitionMs] = useState(200);
     const [isVideoMuted, setIsVideoMuted] = useState(false);
     const [isVideoFullscreen, setIsVideoFullscreen] = useState(false);
     const [isEmpty, setIsEmpty] = useState(false);
     const [isHtmlPreview, setIsHtmlPreview] = useState(false);
     const [autoFitImage, setAutoFitImage] = useState(false);
+    const [isImageSmallLoaded, setIsImageSmallLoaded] = useState(false);
+    const [isImageMediumLoaded, setIsImageMediumLoaded] = useState(false);
+    const [isImageFullLoaded, setIsImageFullLoaded] = useState(false);
     const [fileMetadata, setFileMetadata] = useState(null);
     const [metadataLoading, setMetadataLoading] = useState(false);
     const imagePositionRef = useRef({ x: 0, y: 0 });
@@ -109,12 +120,25 @@ export function FileViewer({
     const animationFrameRef = useRef(null);
     const videoRef = useRef(null);
     const progressBarRef = useRef(null);
+    const swipeStartXRef = useRef(0);
+    const swipeStartYRef = useRef(0);
+    const isSwipingFileRef = useRef(false);
+    const fileInfoSheetRef = useRef(null);
+    const deleteSheetRef = useRef(null);
+    const fileInfoTouchLastYRef = useRef(0);
+    const deleteTouchLastYRef = useRef(0);
+    const fileInfoTouchLastTimeRef = useRef(0);
+    const deleteTouchLastTimeRef = useRef(0);
+    const fileInfoTouchVelocityRef = useRef(0);
+    const deleteTouchVelocityRef = useRef(0);
+    const preloadVideoElementsRef = useRef([]);
 
     const contentRef = useRef(null);
     const containerRef = useRef(null);
     const sidePanelRef = useRef(null);
     const lastFocusedElementRef = useRef(null);
     const dropdownRef = useRef(null);
+    const preloadedImageUrlsRef = useRef(new Set());
 
     const toggleVideoPlay = () => {
         if (videoRef.current) {
@@ -372,6 +396,33 @@ export function FileViewer({
         params.set('path', file.path);
         return `/api/files/download?${params.toString()}`;
     };
+    const getThumbnailUrl = (file, size = 'large') => {
+        const params = new URLSearchParams();
+        params.set('path', file.path);
+        params.set('size', size);
+        return `/api/files/thumbnail?${params.toString()}`;
+    };
+
+    const releaseMediaResources = useCallback(() => {
+        if (videoRef.current) {
+            try {
+                videoRef.current.pause();
+                videoRef.current.removeAttribute('src');
+                videoRef.current.load();
+            } catch {
+            }
+        }
+
+        preloadVideoElementsRef.current.forEach((video) => {
+            try {
+                video.pause?.();
+                video.removeAttribute('src');
+                video.load?.();
+            } catch {
+            }
+        });
+        preloadVideoElementsRef.current = [];
+    }, []);
 
     useEffect(() => {
         if (!isOpen) return;
@@ -482,13 +533,15 @@ export function FileViewer({
             }
         };
 
-        if (containerRef.current) containerRef.current.addEventListener('wheel', handleWheel, { passive: false });
+        const containerEl = containerRef.current;
+        if (containerEl) containerEl.addEventListener('wheel', handleWheel, { passive: false });
 
         document.addEventListener('keydown', handleKeyDown);
         document.body.style.overflow = 'hidden';
 
         return () => {
             document.removeEventListener('keydown', handleKeyDown);
+            if (containerEl) containerEl.removeEventListener('wheel', handleWheel);
             document.body.style.overflow = 'unset';
             if (animationFrameRef.current) {
                 cancelAnimationFrame(animationFrameRef.current);
@@ -496,6 +549,13 @@ export function FileViewer({
             }
         };
     }, [isOpen, currentFileIndex, files.length, onClose, onNavigate, showFileInfoModal, showCodeEditor]);
+
+    useEffect(() => {
+        if (!isOpen) {
+            preloadedImageUrlsRef.current.clear();
+            releaseMediaResources();
+        }
+    }, [isOpen, releaseMediaResources]);
 
     useEffect(() => {
         if (!sidePanelRef.current) return;
@@ -521,11 +581,15 @@ export function FileViewer({
 
     useEffect(() => {
         if (isOpen) {
+            releaseMediaResources();
             setIsLoading(true);
             setFileError(false);
             setIsEmpty(false);
             setFileContent('');
             setAutoFitImage(false);
+            setIsImageSmallLoaded(false);
+            setIsImageMediumLoaded(false);
+            setIsImageFullLoaded(false);
             setFileMetadata(null);
             setMetadataLoading(false);
             resetZoom();
@@ -541,36 +605,82 @@ export function FileViewer({
             if (currentFile) {
                 loadFileContent(currentFile);
 
-                setTimeout(() => {
-                    if (currentFileIndex > 0 && files[currentFileIndex - 1]) {
-                        preloadFile(files[currentFileIndex - 1]);
+                if (getFileType(currentFile.name) === 'image') {
+                    preloadFile(currentFile, {
+                        includeFull: true,
+                        includeThumbnailSizes: ['small', 'medium'],
+                        fullPriority: 'high'
+                    });
+                }
+
+                const previousImages = [];
+                for (let i = currentFileIndex - 1; i >= 0 && previousImages.length < 2; i--) {
+                    const candidate = files[i];
+                    if (candidate && getFileType(candidate.name) === 'image') {
+                        previousImages.push(candidate);
                     }
-                    if (currentFileIndex > 1 && files[currentFileIndex - 2]) {
-                        preloadFile(files[currentFileIndex - 2]);
+                }
+
+                const nextImages = [];
+                for (let i = currentFileIndex + 1; i < files.length && nextImages.length < 2; i++) {
+                    const candidate = files[i];
+                    if (candidate && getFileType(candidate.name) === 'image') {
+                        nextImages.push(candidate);
                     }
-                    if (currentFileIndex < files.length - 1 && files[currentFileIndex + 1]) {
-                        preloadFile(files[currentFileIndex + 1]);
-                    }
-                    if (currentFileIndex < files.length - 2 && files[currentFileIndex + 2]) {
-                        preloadFile(files[currentFileIndex + 2]);
-                    }
-                }, 300);
+                }
+
+                [...previousImages, ...nextImages].forEach((file) => {
+                    preloadFile(file, {
+                        includeFull: false,
+                        includeThumbnailSizes: ['small'],
+                        fullPriority: 'low'
+                    });
+                });
             }
         }
-    }, [currentFileIndex, isOpen]);
+    }, [currentFileIndex, isOpen, releaseMediaResources]);
 
-    const preloadFile = (file) => {
+    const preloadImageUrl = (url, fetchPriority = 'auto') => {
+        if (!url || preloadedImageUrlsRef.current.has(url)) return;
+
+        if (preloadedImageUrlsRef.current.size >= 240) {
+            const oldestUrl = preloadedImageUrlsRef.current.values().next().value;
+            if (oldestUrl) {
+                preloadedImageUrlsRef.current.delete(oldestUrl);
+            }
+        }
+
+        preloadedImageUrlsRef.current.add(url);
+        const img = new window.Image();
+        img.decoding = 'async';
+        img.loading = 'eager';
+        img.fetchPriority = fetchPriority;
+        img.src = url;
+        if (typeof img.decode === 'function') {
+            img.decode().catch(() => { });
+        }
+    };
+
+    const preloadFile = (file, options = {}) => {
         if (!file) return;
 
         const fileType = getFileType(file.name);
+        const {
+            includeFull = true,
+            includeThumbnailSizes = [],
+            fullPriority = 'low'
+        } = options;
 
         if (fileType === 'image') {
-            const img = new Image();
-            img.src = getDownloadUrl(file);
+            includeThumbnailSizes.forEach((size) => preloadImageUrl(getThumbnailUrl(file, size), 'high'));
+            if (includeFull) {
+                preloadImageUrl(getStreamUrl(file), fullPriority);
+            }
         } else if (fileType === 'video') {
             const video = document.createElement('video');
             video.preload = 'metadata';
             video.src = getDownloadUrl(file);
+            preloadVideoElementsRef.current.push(video);
         }
     };
 
@@ -594,86 +704,133 @@ export function FileViewer({
     const handleFileInfoMenuTouchStart = (e) => {
         const touch = e.touches[0];
         setFileInfoMenuInitialY(touch.clientY);
+        setIsDraggingFileInfoSheet(true);
+        setIsClosingFileInfoSheet(false);
+        fileInfoTouchLastYRef.current = touch.clientY;
+        fileInfoTouchLastTimeRef.current = performance.now();
+        fileInfoTouchVelocityRef.current = 0;
     };
 
     const handleFileInfoMenuTouchMove = (e) => {
         const touch = e.touches[0];
         const deltaY = touch.clientY - fileInfoMenuInitialY;
+        const now = performance.now();
+        const dt = Math.max(1, now - fileInfoTouchLastTimeRef.current);
+        const dy = touch.clientY - fileInfoTouchLastYRef.current;
+        fileInfoTouchVelocityRef.current = dy / dt;
+        fileInfoTouchLastYRef.current = touch.clientY;
+        fileInfoTouchLastTimeRef.current = now;
         if (deltaY > 0) {
             setFileInfoMenuSwipePosition(deltaY);
         }
     };
 
     const handleFileInfoMenuTouchEnd = () => {
-        if (fileInfoMenuSwipePosition > 100) {
-            setShowFileInfoModal(false);
+        const velocity = Math.max(0, fileInfoTouchVelocityRef.current || 0);
+        const shouldClose = fileInfoMenuSwipePosition > 100 || velocity > 0.9;
+        const duration = Math.max(110, Math.min(280, Math.round(260 - velocity * 140)));
+        setFileInfoSheetTransitionMs(duration);
+
+        if (shouldClose) {
+            const sheetHeight = fileInfoSheetRef.current?.offsetHeight || window.innerHeight;
+            setIsClosingFileInfoSheet(true);
+            setFileInfoMenuSwipePosition(sheetHeight);
+            setTimeout(() => {
+                setShowFileInfoModal(false);
+                setIsClosingFileInfoSheet(false);
+                setFileInfoMenuSwipePosition(0);
+                setFileInfoMenuInitialY(0);
+            }, duration);
+        } else {
+            setFileInfoMenuSwipePosition(0);
+            setFileInfoMenuInitialY(0);
         }
-        setFileInfoMenuSwipePosition(0);
-        setFileInfoMenuInitialY(0);
+        setIsDraggingFileInfoSheet(false);
     };
 
     const handleDeleteMenuTouchStart = (e) => {
         const touch = e.touches[0];
         setDeleteMenuInitialY(touch.clientY);
+        setIsDraggingDeleteSheet(true);
+        setIsClosingDeleteSheet(false);
+        deleteTouchLastYRef.current = touch.clientY;
+        deleteTouchLastTimeRef.current = performance.now();
+        deleteTouchVelocityRef.current = 0;
     };
 
     const handleDeleteMenuTouchMove = (e) => {
         const touch = e.touches[0];
         const deltaY = touch.clientY - deleteMenuInitialY;
+        const now = performance.now();
+        const dt = Math.max(1, now - deleteTouchLastTimeRef.current);
+        const dy = touch.clientY - deleteTouchLastYRef.current;
+        deleteTouchVelocityRef.current = dy / dt;
+        deleteTouchLastYRef.current = touch.clientY;
+        deleteTouchLastTimeRef.current = now;
         if (deltaY > 0) {
             setDeleteMenuSwipePosition(deltaY);
         }
     };
 
     const handleDeleteMenuTouchEnd = () => {
-        if (deleteMenuSwipePosition > 100) {
-            setShowDeleteModal(false);
+        const velocity = Math.max(0, deleteTouchVelocityRef.current || 0);
+        const shouldClose = deleteMenuSwipePosition > 100 || velocity > 0.9;
+        const duration = Math.max(110, Math.min(280, Math.round(260 - velocity * 140)));
+        setDeleteSheetTransitionMs(duration);
+
+        if (shouldClose) {
+            const sheetHeight = deleteSheetRef.current?.offsetHeight || window.innerHeight;
+            setIsClosingDeleteSheet(true);
+            setDeleteMenuSwipePosition(sheetHeight);
+            setTimeout(() => {
+                setShowDeleteModal(false);
+                setIsClosingDeleteSheet(false);
+                setDeleteMenuSwipePosition(0);
+                setDeleteMenuInitialY(0);
+            }, duration);
+        } else {
+            setDeleteMenuSwipePosition(0);
+            setDeleteMenuInitialY(0);
         }
-        setDeleteMenuSwipePosition(0);
-        setDeleteMenuInitialY(0);
+        setIsDraggingDeleteSheet(false);
     };
 
-    const [swipeStartX, setSwipeStartX] = useState(0);
-    const [swipeStartY, setSwipeStartY] = useState(0);
-    const [isSwipingFile, setIsSwipingFile] = useState(false);
-
     const handleFileSwipeStart = (e) => {
-        if (mobile) {
-            const touch = e.touches[0];
-            setSwipeStartX(touch.clientX);
-            setSwipeStartY(touch.clientY);
-            setIsSwipingFile(false);
-        }
+        if (!isMobileView || !e.touches?.length || imageScale > 1) return;
+        const touch = e.touches[0];
+        swipeStartXRef.current = touch.clientX;
+        swipeStartYRef.current = touch.clientY;
+        isSwipingFileRef.current = false;
     };
 
     const handleFileSwipeMove = (e) => {
-        if (mobile && swipeStartX) {
-            const touch = e.touches[0];
-            const deltaX = touch.clientX - swipeStartX;
-            const deltaY = touch.clientY - swipeStartY;
+        if (!isMobileView || !swipeStartXRef.current || !e.touches?.length || imageScale > 1) return;
+        const touch = e.touches[0];
+        const deltaX = touch.clientX - swipeStartXRef.current;
+        const deltaY = touch.clientY - swipeStartYRef.current;
 
-            if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 50) {
-                setIsSwipingFile(true);
-            }
+        if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 24) {
+            isSwipingFileRef.current = true;
+            e.preventDefault();
         }
     };
 
     const handleFileSwipeEnd = (e) => {
-        if (mobile && swipeStartX && isSwipingFile) {
+        if (isMobileView && swipeStartXRef.current && isSwipingFileRef.current && e.changedTouches?.length) {
             const touch = e.changedTouches[0];
-            const deltaX = touch.clientX - swipeStartX;
+            const deltaX = touch.clientX - swipeStartXRef.current;
 
-            if (deltaX > 100 && currentFileIndex > 0) {
+            if (deltaX > 70 && currentFileIndex > 0) {
                 goToPreviousFile();
             }
-            else if (deltaX < -100 && currentFileIndex < files.length - 1) {
+            else if (deltaX < -70 && currentFileIndex < files.length - 1) {
                 goToNextFile();
             }
         }
 
-        setSwipeStartX(0);
-        setSwipeStartY(0);
-        setIsSwipingFile(false);
+        swipeStartXRef.current = 0;
+        swipeStartYRef.current = 0;
+        isSwipingFileRef.current = false;
     };
 
     const getFileType = (filename) => {
@@ -698,23 +855,6 @@ export function FileViewer({
         }
 
         return 'unknown';
-    };
-
-    const isFileTooBig = (file) => {
-        if (!file || !file.size) return false;
-
-        const fileType = getFileType(file.name);
-        const size = file.size;
-        const limits = {
-            image: 1000 * 1024 * 1024,
-            video: 5000 * 1024 * 1024,
-            text: 1000 * 1024 * 1024,
-            code: 1000 * 1024 * 1024,
-            pdf: 1000 * 1024 * 1024,
-            unknown: 0
-        };
-
-        return size > (limits[fileType] || 0);
     };
 
     const loadFileContent = async (file) => {
@@ -918,6 +1058,21 @@ export function FileViewer({
         if (currentFile) downloadFile(currentFile.path, currentFile.name);
     };
 
+    const handlePrint = () => {
+        if (!currentFile || getFileType(currentFile.name) !== 'image') return;
+        const printWindow = window.open('', '_blank');
+        if (!printWindow) return;
+        const imageUrl = getDownloadUrl(currentFile);
+        printWindow.document.write(`
+            <html>
+                <head><title>Print ${currentFile.name}</title></head>
+                <body style="margin: 0; text-align: center;">
+                    <img src="${imageUrl}" style="max-width: 100%; height: auto;" onload="window.print(); window.close();" />
+                </body>
+            </html>
+        `);
+    };
+
     const handleAction = (action) => {
         onAction(action, currentFile);
         setShowDropdown(false);
@@ -956,29 +1111,6 @@ export function FileViewer({
         if (!currentFile) return null;
 
         const fileType = getFileType(currentFile.name);
-        if (isFileTooBig(currentFile)) {
-            const formatFileSize = (bytes) => {
-                if (bytes === 0) return '0 B';
-                const k = 1024;
-                const sizes = ['B', 'KB', 'MB', 'GB'];
-                const i = Math.floor(Math.log(bytes) / Math.log(k));
-                return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
-            };
-
-            return (
-                <div className={style.error}>
-                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
-                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-5h2v2h-2zm0-8h2v6h-2z" fill="currentColor" />
-                    </svg>
-                    <p>File too large for preview</p>
-                    <p className={style.fileSize}>{formatFileSize(currentFile.size)} - This file is too large to preview in the browser</p>
-                    <button onClick={handleDownload} className={style.downloadButton}>
-                        Download to view
-                    </button>
-                </div>
-            );
-        }
-
         if (fileError) {
             return (
                 <div className={style.error}>
@@ -1011,27 +1143,61 @@ export function FileViewer({
                         onMouseUp={handleMouseUp}
                         onMouseLeave={handleMouseUp}
                     >
-                        <img
+                        <div
                             ref={contentRef}
-                            src={getStreamUrl(currentFile)}
-                            alt={currentFile.name}
-                            className={`${style.image} ${autoFitImage ? style.autoFitImage : ''}`}
+                            className={style.imageStage}
                             style={{
                                 willChange: imageScale > 1 ? 'transform' : 'auto',
                                 cursor: imageScale > 1 ? (isDragging ? 'grabbing' : 'grab') : 'default'
                             }}
-                            onLoad={(e) => {
-                                const img = e.currentTarget;
-                                const vw = window.innerWidth;
-                                const vh = window.innerHeight;
-                                const tooWide = img.naturalWidth > vw * 0.95;
-                                const tooTall = img.naturalHeight > vh * 0.95;
-                                setAutoFitImage(tooWide || tooTall);
-                                handleFileLoad();
-                            }}
-                            onError={handleFileError}
-                            draggable={false}
-                        />
+                        >
+                            <NextImage
+                                src={getThumbnailUrl(currentFile, 'small')}
+                                alt={currentFile.name}
+                                fill
+                                unoptimized
+                                sizes="92vw"
+                                className={`${style.image} ${style.imagePreview} ${autoFitImage ? style.autoFitImage : ''} ${(isImageMediumLoaded || isImageFullLoaded) ? style.imageHidden : style.imageVisible}`}
+                                onLoad={() => setIsImageSmallLoaded(true)}
+                                onError={() => setIsImageSmallLoaded(false)}
+                                draggable={false}
+                                priority
+                            />
+                            <NextImage
+                                src={getThumbnailUrl(currentFile, 'medium')}
+                                alt={currentFile.name}
+                                fill
+                                unoptimized
+                                sizes="92vw"
+                                className={`${style.image} ${style.imageMedium} ${autoFitImage ? style.autoFitImage : ''} ${(isImageMediumLoaded && !isImageFullLoaded) ? style.imageVisible : style.imageHidden}`}
+                                onLoad={() => setIsImageMediumLoaded(true)}
+                                onError={() => setIsImageMediumLoaded(false)}
+                                draggable={false}
+                            />
+                            <NextImage
+                                src={getStreamUrl(currentFile)}
+                                alt={currentFile.name}
+                                fill
+                                unoptimized
+                                sizes="92vw"
+                                className={`${style.image} ${style.imageFull} ${autoFitImage ? style.autoFitImage : ''} ${isImageFullLoaded ? style.imageVisible : style.imageHidden}`}
+                                onLoad={(e) => {
+                                    const img = e.currentTarget;
+                                    const vw = window.innerWidth;
+                                    const vh = window.innerHeight;
+                                    const tooWide = img.naturalWidth > vw * 0.95;
+                                    const tooTall = img.naturalHeight > vh * 0.95;
+                                    setAutoFitImage(tooWide || tooTall);
+                                    setIsImageFullLoaded(true);
+                                    handleFileLoad();
+                                }}
+                                onError={handleFileError}
+                                draggable={false}
+                            />
+                            {!isImageSmallLoaded && !isImageMediumLoaded && !isImageFullLoaded && (
+                                <div className={style.imagePreviewBackdrop} />
+                            )}
+                        </div>
                     </div>
                 );
 
@@ -1041,6 +1207,7 @@ export function FileViewer({
                         <div className={style.contentContainer}>
                             <video
                                 ref={videoRef}
+                                src={getStreamUrl(currentFile)}
                                 className={`${style.video} ${isVideoVertical ? style.videoVertical : ''}`}
                                 loop
                                 preload="metadata"
@@ -1054,15 +1221,11 @@ export function FileViewer({
                                 }}
                                 onClick={handleVideoClick}
                             >
-                                <source
-                                    src={getStreamUrl(currentFile)}
-                                    type={getVideoMimeType(currentFile.name)}
-                                />
                                 Your browser does not support the video tag.
                             </video>
                         </div>
 
-                        {}
+
                         {getFileType(currentFile.name) === 'video' && showControls && (
                             <div
                                 className={`${style.customVideoControls} ${isVideoVertical ? style.customVideoControlsVertical : ''}`}
@@ -1293,15 +1456,14 @@ export function FileViewer({
 
     return (
         <>
-            {}
-            <div className={`${style.overlay} ${mobile ? style.mobileOverlay : ''}`} style={{ display: showCodeEditor ? 'none' : 'flex' }}>
-                <div className={`${style.container} ${!mobile && showFileInfoModal ? style.containerWithPanelSpace : ''} ${mobile ? style.mobileContainer : ''}`} ref={containerRef}>
-                    {}
+
+            <div className={`${style.overlay} ${isMobileView ? style.mobileOverlay : ''}`} style={{ display: showCodeEditor ? 'none' : 'flex' }}>
+                <div className={`${style.container} ${!isMobileView && showFileInfoModal ? style.containerWithPanelSpace : ''} ${isMobileView ? style.mobileContainer : ''}`} ref={containerRef}>
+
                     <div className={style.mainContentArea}>
-                        {}
                         {showControls && (
-                            <div className={`${style.header} ${mobile ? style.mobileHeader : ''}`}>
-                                {mobile ? (
+                            <div className={`${style.header} ${isMobileView ? style.mobileHeader : ''}`}>
+                                {isMobileView ? (
                                     <>
                                         <button
                                             className={style.mobileBackButton}
@@ -1348,18 +1510,7 @@ export function FileViewer({
                                                         {getFileType(currentFile.name) === 'image' && (
                                                             <button
                                                                 className={style.dropdownItem}
-                                                                onClick={() => {
-                                                                    const printWindow = window.open('', '_blank');
-                                                                    const imageUrl = getDownloadUrl(currentFile);
-                                                                    printWindow.document.write(`
-                                                                <html>
-                                                                    <head><title>Print ${currentFile.name}</title></head>
-                                                                    <body style="margin: 0; text-align: center;">
-                                                                        <img src="${imageUrl}" style="max-width: 100%; height: auto;" onload="window.print(); window.close();" />
-                                                                    </body>
-                                                                </html>
-                                                            `);
-                                                                }}
+                                                                onClick={handlePrint}
                                                             >
                                                                 Print
                                                             </button>
@@ -1425,7 +1576,7 @@ export function FileViewer({
 
                                                 {showDropdown && (
                                                     <div className={style.dropdownMenu}>
-                                                        {}
+
                                                         {(currentFile.canRename) && (
                                                             <>
                                                                 <button
@@ -1433,6 +1584,19 @@ export function FileViewer({
                                                                     onClick={() => handleAction('rename')}
                                                                 >
                                                                     Rename
+                                                                </button>
+
+                                                                <div className={style.dropdownSeparator}></div>
+                                                            </>
+                                                        )}
+
+                                                        {getFileType(currentFile.name) === 'image' && (
+                                                            <>
+                                                                <button
+                                                                    className={style.dropdownItem}
+                                                                    onClick={handlePrint}
+                                                                >
+                                                                    Print
                                                                 </button>
 
                                                                 <div className={style.dropdownSeparator}></div>
@@ -1462,8 +1626,8 @@ export function FileViewer({
                             </div>
                         )}
 
-                        {}
-                        {!mobile && showControls && currentFileIndex > 0 && (
+
+                        {!isMobileView && showControls && currentFileIndex > 0 && (
                             <button
                                 className={`${style.navButton} ${style.navLeft}`}
                                 onClick={() => onNavigate(currentFileIndex - 1)}
@@ -1473,7 +1637,7 @@ export function FileViewer({
                             </button>
                         )}
 
-                        {!mobile && showControls && currentFileIndex < files.length - 1 && (
+                        {!isMobileView && showControls && currentFileIndex < files.length - 1 && (
                             <button
                                 className={`${style.navButton} ${style.navRight}`}
                                 onClick={() => onNavigate(currentFileIndex + 1)}
@@ -1483,7 +1647,7 @@ export function FileViewer({
                             </button>
                         )}
 
-                        {}
+
                         <div
                             className={`${style.fileContainer} ${(getFileType(currentFile?.name) === 'image' && imageScale > 1) ? style.zoomActive : ''}`}
                             onClick={toggleControls}
@@ -1495,8 +1659,8 @@ export function FileViewer({
                             {!isLoading && renderFileContent()}
                         </div>
 
-                        {}
-                        {mobile && showControls && (
+
+                        {isMobileView && showControls && (
                             <>
                                 {currentFileIndex > 0 && (
                                     <button
@@ -1520,9 +1684,9 @@ export function FileViewer({
                             </>
                         )}
 
-                        {}
+
                         {supportsZoom && !isLoading && !fileError && showControls && (
-                            <div className={`${style.zoomControls} ${!mobile && showFileInfoModal ? style.zoomControlsWithSidePanel : ''}`}>
+                            <div className={`${style.zoomControls} ${!isMobileView && showFileInfoModal ? style.zoomControlsWithSidePanel : ''}`}>
                                 <button
                                     className={style.zoomButton}
                                     onClick={handleZoomOut}
@@ -1554,11 +1718,11 @@ export function FileViewer({
                         )}
                     </div>
                 </div>
-                {}
+
             </div>
 
-            {}
-            {!mobile && (
+
+            {!isMobileView && (
                 <div ref={sidePanelRef} className={`${style.sidePanel} ${showFileInfoModal ? style.sidePanelOpen : ''}`}>
                     <div className={style.sidePanelHeader}>
                         <h3>File Properties</h3>
@@ -1652,17 +1816,19 @@ export function FileViewer({
                 </div>
             )}
 
-            {}
-            {mobile && showFileInfoModal && (
-                <div className={mainStyle.popupModalMenuOverlay} onClick={() => {
+
+            {isMobileView && showFileInfoModal && (
+                <div className={mainStyle.popupModalMenuOverlay} style={{ zIndex: 3100 }} onClick={() => {
                     setShowFileInfoModal(false);
                     setFileInfoMenuSwipePosition(0);
                     setFileInfoMenuInitialY(0);
                 }}>
                     <div
+                        ref={fileInfoSheetRef}
                         className={mainStyle.popupModalMenu}
                         style={{
-                            transform: `translateY(${fileInfoMenuSwipePosition}%)`
+                            transform: `translateY(${fileInfoMenuSwipePosition}px)`,
+                            transition: isDraggingFileInfoSheet ? 'none' : `transform ${fileInfoSheetTransitionMs}ms cubic-bezier(0.22, 0.61, 0.36, 1)`
                         }}
                         onTouchStart={handleFileInfoMenuTouchStart}
                         onTouchMove={handleFileInfoMenuTouchMove}
@@ -1680,8 +1846,8 @@ export function FileViewer({
                                 }}><X /></button>
                             </div>
                         </div>
-                        <div className={mainStyle.popupModalMenuOptions}>
-                            {}
+                        <div className={`${mainStyle.popupModalMenuOptions} ${style.mobileSheetContent}`}>
+
                             <div className={style.propertySection}>
                                 <h4 className={style.sectionTitle}>General</h4>
                                 <div className={style.fileInfoItem}>
@@ -1708,7 +1874,7 @@ export function FileViewer({
                                 </div>
                             </div>
 
-                            {}
+
                             <div className={style.propertySection}>
                                 <h4 className={style.sectionTitle}>Dates</h4>
                                 {currentFile.createdAt && (
@@ -1731,7 +1897,7 @@ export function FileViewer({
                                 )}
                             </div>
 
-                            {}
+
                             <div className={style.propertySection}>
                                 <h4 className={style.sectionTitle}>Technical Details</h4>
                                 {currentFile.mime && (
@@ -1754,7 +1920,7 @@ export function FileViewer({
                                 )}
                             </div>
 
-                            {}
+
                             {hasGPSData(currentFile) && (
                                 <div className={style.propertySection}>
                                     <h4 className={style.sectionTitle}>Location</h4>
@@ -1777,7 +1943,7 @@ export function FileViewer({
                                 </div>
                             )}
 
-                            {}
+
                             {fileMetadata?.camera && (
                                 <div className={style.propertySection}>
                                     <h4 className={style.sectionTitle}>Camera Information</h4>
@@ -1820,7 +1986,7 @@ export function FileViewer({
                                 </div>
                             )}
 
-                            {}
+
                             {fileMetadata && (fileMetadata.image || fileMetadata.settings) && (
                                 <div className={style.propertySection}>
                                     <h4 className={style.sectionTitle}>Image Details</h4>
@@ -1875,7 +2041,7 @@ export function FileViewer({
                                 </div>
                             )}
 
-                            {}
+
                             {fileMetadata?.device && (
                                 <div className={style.propertySection}>
                                     <h4 className={style.sectionTitle}>Device Information</h4>
@@ -1910,17 +2076,19 @@ export function FileViewer({
                 </div>
             )}
 
-            {}
+
             {showDeleteModal && (
-                <div className={mainStyle.popupModalMenuOverlay} onClick={() => {
+                <div className={mainStyle.popupModalMenuOverlay} style={{ zIndex: 3100 }} onClick={() => {
                     setShowDeleteModal(false);
                     setDeleteMenuSwipePosition(0);
                     setDeleteMenuInitialY(0);
                 }}>
                     <div
+                        ref={deleteSheetRef}
                         className={mainStyle.popupModalMenu}
                         style={{
-                            transform: `translateY(${deleteMenuSwipePosition}%)`
+                            transform: `translateY(${deleteMenuSwipePosition}px)`,
+                            transition: isDraggingDeleteSheet ? 'none' : `transform ${deleteSheetTransitionMs}ms cubic-bezier(0.22, 0.61, 0.36, 1)`
                         }}
                         onTouchStart={handleDeleteMenuTouchStart}
                         onTouchMove={handleDeleteMenuTouchMove}
@@ -1966,7 +2134,7 @@ export function FileViewer({
                 </div>
             )}
 
-            {}
+
             {showCodeEditor && isEditableFile(currentFile?.name) && (
                 <CodeEditor
                     file={currentFile}

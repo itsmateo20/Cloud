@@ -5,6 +5,7 @@
 <!-- <a href="https://github.com/itsmateo20/Cloud/releases/latest"><img src="https://img.shields.io/github/v/release/itsmateo20/Cloud?include_prereleases&sort=date&display_name=tag&style=for-the-badge&labelColor=white&color=gray" alt="Latest Release"/></a> -->
 </div>
 <h3 align="center">A new version of my Cloud Storage project, the entire design and functionality, can be found on <a href="https://www.figma.com/design/Nh5xaQlZEsJm8IMBb3ZCtk/Cloud">Figma</a></h3>
+<h4 align="center">Copyright itsmateo20 (Mateusz Starkiewicz) · Source: <a href="https://github.com/itsmateo20/Cloud">https://github.com/itsmateo20/Cloud</a></h4>
 
 <div align="center" style="display: flex; align-items: center; align-content: space-around; justify-content: center; flex-direction: row;">
   <a href="https://www.figma.com/design/Nh5xaQlZEsJm8IMBb3ZCtk/Cloud?node-id=6-332&t=0EGHgIoLrqkkhduz-1" style="text-decoration: none;"><img src="https://github.com/user-attachments/assets/e37964c8-d3d8-4d12-950f-9d4327fbdd0d" width="48%" height="auto" alt="Login Design"/>

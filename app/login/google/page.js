@@ -12,11 +12,13 @@ import Image from "next/image";
 
 import Layout from "@/components/Layout";
 import SoftLoading from "@/components/SoftLoading";
+import { useIsMobile } from "@/utils/useIsMobile";
 
 import { getError } from "@/public/error/errors";
 
 export default function Page({ searchParams }) {
     const { loading, softLoading, user, linkAccount } = useAuth();
+    const isMobile = useIsMobile();
 
     const { email, signature } = use(searchParams) || {};
     const [emailLink, setEmail] = useState(email);
@@ -65,7 +67,7 @@ export default function Page({ searchParams }) {
     }
 
     return (
-        <Layout mainStyle={style.main} loading={loading} user={user}>
+        <Layout mainStyle={style.main} loading={loading} user={user} showNavigation={isMobile === false}>
             <h1 className={style.title}>Google Login Issue</h1>
             <h2 className={style.subtitle}>The Google account you're trying to use isn't linked to any registered account. Please enter your credentials to link it.</h2>
             <fieldset className={style.inputWithText}>

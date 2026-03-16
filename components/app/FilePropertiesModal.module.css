@@ -109,6 +109,56 @@
     cursor: pointer;
     padding: 4px;
     border-radius: 6px;
+
+    .modalMobile {
+        width: 100%;
+        max-width: 100%;
+        margin-top: auto;
+        border-radius: 16px 16px 0 0;
+        border-left: none;
+        border-right: none;
+        border-bottom: none;
+        animation: sheetIn .2s ease;
+    }
+
+    .modalDragging {
+        transition: none !important;
+    }
+
+    .mobileHandle {
+        width: 44px;
+        height: 5px;
+        border-radius: 999px;
+        background: var(--text-secondary, #888);
+        opacity: 0.55;
+        margin: 10px auto 0;
+        flex-shrink: 0;
+    }
+
+    @keyframes sheetIn {
+        from {
+            opacity: 0.98;
+            transform: translateY(100%);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @keyframes sheetOut {
+        from {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        to {
+            opacity: 0.98;
+            transform: translateY(100%);
+        }
+    }
+
     line-height: 0;
 }
 

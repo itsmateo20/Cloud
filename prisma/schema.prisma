@@ -21,8 +21,9 @@ model User {
   folders  Folder[]
   settings UserSettings?
 
-  favoritedFiles   File[]   @relation("UserFileFavorites")
-  favoritedFolders Folder[] @relation("UserFolderFavorites")
+  favoritedFiles   File[]        @relation("UserFileFavorites")
+  favoritedFolders Folder[]      @relation("UserFolderFavorites")
+  clientTokens     ClientToken[]
 }
 
 model UserSettings {
@@ -79,11 +80,24 @@ model Folder {
   @@unique([ownerId, path], name: "folder_ownerId_path")
 }
 
-model QrToken {
-  id        Int      @id @unique @default(autoincrement())
-  token     String   @unique
-  type      String
-  data      String
-  expiresAt DateTime
-  createdAt DateTime @default(now())
+model ClientToken {
+  id         Int       @id @default(autoincrement())
+  tokenId    String    @unique
+  kind       String
+  label      String?
+  ipAddress  String?
+  userAgent  String?
+  platform   String?
+  issuedAt   DateTime  @default(now())
+  lastUsedAt DateTime  @default(now())
+  expiresAt  DateTime?
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  userId Int
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, kind])
+  @@index([userId, revokedAt])
 }

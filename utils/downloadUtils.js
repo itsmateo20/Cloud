@@ -25,6 +25,7 @@ export class DownloadManager {
         let progressTimeout;
         let hasReceivedProgress = false;
         let isCompleted = false;
+        let handleCancel = null;
 
         try {
             window.dispatchEvent(new CustomEvent('downloadStart', {
@@ -38,7 +39,7 @@ export class DownloadManager {
 
             const abortController = new AbortController();
             this.activeDownloads.set(downloadId, abortController);
-            const handleCancel = (event) => {
+            handleCancel = (event) => {
                 if (event.detail.id === downloadId) {
                     abortController.abort();
                 }
@@ -184,7 +185,6 @@ export class DownloadManager {
                 detail: { id: downloadId, fileName, type, success: true }
             }));
 
-            window.removeEventListener('downloadCancel', handleCancel);
             this.activeDownloads.delete(downloadId);
 
         } catch (error) {
@@ -202,6 +202,10 @@ export class DownloadManager {
                 }));
             }
             throw error;
+        } finally {
+            if (handleCancel) {
+                window.removeEventListener('downloadCancel', handleCancel);
+            }
         }
     }
 

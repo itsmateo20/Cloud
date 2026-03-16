@@ -5,6 +5,8 @@ import { useState, useEffect, useRef } from 'react';
 import { Resizable } from "re-resizable";
 import style from './DownloadManager.module.css';
 
+const MAX_HISTORY_ITEMS = 200;
+
 export function DownloadManager() {
     const [isExpanded, setIsExpanded] = useState(false);
     const [downloads, setDownloads] = useState([]);
@@ -35,7 +37,7 @@ export function DownloadManager() {
                             endTime: now
                         })),
                         ...prevHistory
-                    ]);
+                    ].slice(0, MAX_HISTORY_ITEMS));
                 }
 
                 return activeDownloads;
@@ -108,7 +110,7 @@ export function DownloadManager() {
                     setHistory(prevHistory => {
                         const alreadyInHistory = prevHistory.some(h => h.id === id);
                         if (!alreadyInHistory) {
-                            return [completedDownload, ...prevHistory];
+                            return [completedDownload, ...prevHistory].slice(0, MAX_HISTORY_ITEMS);
                         }
                         return prevHistory;
                     });

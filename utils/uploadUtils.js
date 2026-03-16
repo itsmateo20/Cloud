@@ -142,14 +142,18 @@ export class Uploader {
             throw new Error('Upload state not found');
         }
 
+        const hasAbortSignal = Boolean(signal && typeof signal.addEventListener === 'function');
+
         let chunkIndex = 0;
         const activeUploads = new Set();
 
         return new Promise((resolve, reject) => {
-            signal.addEventListener('abort', () => { reject(new Error('Upload cancelled')); });
+            if (hasAbortSignal) {
+                signal.addEventListener('abort', () => { reject(new Error('Upload cancelled')); });
+            }
 
             const uploadNextChunk = async () => {
-                if (signal.aborted) {
+                if (hasAbortSignal && signal.aborted) {
                     reject(new Error('Upload cancelled'));
                     return;
                 }
@@ -237,7 +241,7 @@ export class Uploader {
         }
 
         for (let i = 0; i < fileArray.length; i++) {
-            if (signal.aborted) {
+            if (signal?.aborted) {
                 break;
             }
 

@@ -12,11 +12,13 @@ import Link from "next/link";
 import Layout from "@/components/Layout";
 import { GoogleAuth } from "@/components/authentication/GoogleAuth";
 import SoftLoading from "@/components/SoftLoading";
+import { useIsMobile } from "@/utils/useIsMobile";
 
 import { getError } from "@/public/error/errors";
 
 export default function Page() {
     const { loading, softLoading, user, login, authWithGoogle } = useAuth();
+    const isMobile = useIsMobile();
 
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
@@ -72,7 +74,7 @@ export default function Page() {
     }, [password]);
 
     return (
-        <Layout mainStyle={style.main} loading={loading} user={user}>
+        <Layout mainStyle={style.main} loading={loading} user={user} showNavigation={isMobile === false}>
             <h1 className={style.title}>Login</h1>
             <h2 className={style.subtitle}>Login into your cloud storage account</h2>
             <fieldset className={style.inputWithText}>

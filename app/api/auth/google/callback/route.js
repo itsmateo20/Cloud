@@ -61,7 +61,7 @@ export async function GET(req) {
                         email: loginResponse.user?.email,
                         googleEmail: googleUser.email,
                         provider: loginResponse.user.provider
-                    });
+                    }, req);
 
                     return new NextResponse(JSON.stringify({ success: true, code: "authentication_success" }), { status: 301, headers: { Location: "/" } });
                 } else if (response.code === "user_not_found") return NextResponse.redirect(`${siteUrl}/signup/google?email=${encodeURIComponent(googleUser.email)}&signature=${signEmail(googleUser.email)}`);
@@ -75,7 +75,7 @@ export async function GET(req) {
             email: response.user?.email,
             googleEmail: googleUser.email,
             provider: response.user.provider
-        });
+        }, req);
 
         const finalCookieStore = await cookies();
         finalCookieStore.delete("oauth_state");

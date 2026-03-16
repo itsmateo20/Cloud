@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useEffect, useCallback, useState } from 'react';
+import React, { useEffect, useCallback, useRef, useState } from 'react';
 import styles from './FilePropertiesModal.module.css';
 import { X, Copy, Star, FileText, Image, Video, Music, Archive } from 'lucide-react';
+import { useIsMobile } from '@/utils/useIsMobile';
 
 function formatSize(size) {
     if (size == null) return '—';
@@ -48,9 +49,19 @@ function getMimeTypeCategory(filename) {
 }
 
 export default function FilePropertiesModal({ open, items = [], onClose }) {
+    const isMobile = useIsMobile();
     const [visible, setVisible] = useState(open);
     const [closing, setClosing] = useState(false);
     const [metadata, setMetadata] = useState({});
+    const [dragY, setDragY] = useState(0);
+    const [isDragging, setIsDragging] = useState(false);
+    const [sheetTransitionMs, setSheetTransitionMs] = useState(200);
+    const bodyRef = useRef(null);
+    const modalRef = useRef(null);
+    const swipeAllowedRef = useRef(true);
+    const touchLastYRef = useRef(0);
+    const touchLastTimeRef = useRef(0);
+    const touchVelocityRef = useRef(0);
 
     useEffect(() => {
         if (open) {
@@ -106,6 +117,75 @@ export default function FilePropertiesModal({ open, items = [], onClose }) {
 
     if (!visible || !items.length) return null;
 
+    const closeModal = () => {
+        if (closing) return;
+        onClose?.();
+    };
+
+    const handleTouchStart = (e) => {
+        if (isMobile !== true || !e.touches?.length) return;
+        const touchTarget = e.target;
+        if (bodyRef.current?.contains(touchTarget) && bodyRef.current.scrollTop > 0) {
+            swipeAllowedRef.current = false;
+            return;
+        }
+        swipeAllowedRef.current = true;
+        const startY = e.touches[0].clientY;
+        const target = e.currentTarget;
+        target.dataset.swipeStartY = String(startY);
+        target.dataset.swipeLastY = String(startY);
+        touchLastYRef.current = startY;
+        touchLastTimeRef.current = performance.now();
+        touchVelocityRef.current = 0;
+        setIsDragging(true);
+    };
+
+    const handleTouchMove = (e) => {
+        if (isMobile !== true || !isDragging || !swipeAllowedRef.current || !e.touches?.length) return;
+        const target = e.currentTarget;
+        const startY = Number(target.dataset.swipeStartY || '0');
+        const currentY = e.touches[0].clientY;
+        const now = performance.now();
+        const dt = Math.max(1, now - touchLastTimeRef.current);
+        const dy = currentY - touchLastYRef.current;
+        touchVelocityRef.current = dy / dt;
+        touchLastYRef.current = currentY;
+        touchLastTimeRef.current = now;
+        const delta = Math.max(0, currentY - startY);
+        target.dataset.swipeLastY = String(currentY);
+        setDragY(delta);
+    };
+
+    const handleTouchEnd = (e) => {
+        if (isMobile !== true || !isDragging || !swipeAllowedRef.current) {
+            setIsDragging(false);
+            setDragY(0);
+            return;
+        }
+        const target = e.currentTarget;
+        const startY = Number(target.dataset.swipeStartY || '0');
+        const endY = Number(target.dataset.swipeLastY || String(startY));
+        const delta = Math.max(0, endY - startY);
+        const velocity = Math.max(0, touchVelocityRef.current || 0);
+        const shouldClose = delta > 110 || velocity > 0.9;
+        const duration = Math.max(110, Math.min(280, Math.round(260 - velocity * 140)));
+        setSheetTransitionMs(duration);
+
+        setIsDragging(false);
+
+        if (shouldClose) {
+            const sheetHeight = modalRef.current?.offsetHeight || window.innerHeight;
+            setDragY(sheetHeight);
+            setTimeout(() => {
+                setDragY(0);
+                closeModal();
+            }, duration);
+            return;
+        }
+
+        setDragY(0);
+    };
+
     const first = items[0];
     const multiple = items.length > 1;
     const totalSize = items.reduce((acc, it) => acc + (it.size || 0), 0);
@@ -134,17 +214,33 @@ export default function FilePropertiesModal({ open, items = [], onClose }) {
     };
 
     return (
-        <div className={`${styles.backdrop} ${closing ? styles.backdropClosing : ''}`} onMouseDown={(e) => { if (e.target === e.currentTarget) onClose?.(); }}>
-            <div className={`${styles.modal} ${closing ? styles.modalClosing : ''}`} onClick={(e) => e.stopPropagation()}>
+        <div
+            className={`${styles.backdrop} ${closing ? styles.backdropClosing : ''}`}
+            onMouseDown={(e) => { if (e.target === e.currentTarget) closeModal(); }}
+            onTouchStart={(e) => { if (e.target === e.currentTarget) closeModal(); }}
+        >
+            <div
+                ref={modalRef}
+                className={`${styles.modal} ${closing ? styles.modalClosing : ''} ${isMobile === true ? styles.modalMobile : ''} ${isDragging ? styles.modalDragging : ''}`}
+                style={isMobile === true ? {
+                    transform: `translateY(${dragY}px)`,
+                    transition: isDragging ? 'none' : `transform ${sheetTransitionMs}ms cubic-bezier(0.22, 0.61, 0.36, 1)`
+                } : undefined}
+                onClick={(e) => e.stopPropagation()}
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
+            >
+                {isMobile === true ? <div className={styles.mobileHandle} /> : null}
                 <div className={styles.header}>
                     <div className={styles.titleRow}>
                         {!multiple && getFileIcon(first.name, first.isDirectory)}
                         <h3 className={styles.title}>{multiple ? `${items.length} items selected` : first.name}</h3>
                         {!multiple && first.isFavorited && <Star size={16} className={styles.favoriteStar} />}
                     </div>
-                    <button className={styles.closeBtn} onClick={onClose}><X size={18} /></button>
+                    <button className={styles.closeBtn} onClick={closeModal}><X size={18} /></button>
                 </div>
-                <div className={styles.body}>
+                <div className={styles.body} ref={bodyRef}>
                     <div className={styles.section}>
                         <div className={styles.sectionTitle}>General</div>
                         <div className={styles.kv}>

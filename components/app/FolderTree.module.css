@@ -47,6 +47,7 @@
 
 .folderItem {
     position: relative;
+    -webkit-user-select: none;
     user-select: none;
 }
 

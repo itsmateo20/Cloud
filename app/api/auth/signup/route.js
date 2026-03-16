@@ -21,7 +21,7 @@ export async function POST(req) {
             email: response.user.email,
             googleEmail: response.user?.googleEmail,
             provider: response.user.provider
-        });
+        }, req);
 
         return NextResponse.json({ success: true, code: "signup_success", user: response.user }, { status: 200 });
     } catch (error) {

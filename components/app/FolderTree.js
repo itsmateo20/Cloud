@@ -5,11 +5,12 @@ import { useEffect, useState } from "react";
 import styles from "./FolderTree.module.css";
 import { api } from "@/utils/api";
 import SoftLoading from "../SoftLoading";
-import { HardDrive, Star, FolderClosed, FolderOpen, ChevronRight, ChevronDown, Save } from 'lucide-react';
+import { Star, FolderClosed, FolderOpen, Save, Share2 } from 'lucide-react';
 
 export default function FolderTree({
     socket,
     onFolderSelect,
+    onOpenSharedWithYou,
     selectedPath,
     mobile = false,
 }) {
@@ -17,9 +18,11 @@ export default function FolderTree({
     const [expandedFolders, setExpandedFolders] = useState(new Set());
     const [folderContents, setFolderContents] = useState(new Map());
     const [loading, setLoading] = useState(true);
+    const [showLoadingOverlay, setShowLoadingOverlay] = useState(true);
 
     const [tabVisibility, setTabVisibility] = useState({
         favorites: false,
+        sharedWithYou: false,
     });
 
     useEffect(() => {
@@ -82,6 +85,19 @@ export default function FolderTree({
             socket.off('favorites-updated', handleContentChange);
         };
     }, [socket, selectedPath, onFolderSelect]);
+
+    useEffect(() => {
+        if (loading) {
+            setShowLoadingOverlay(true);
+            return;
+        }
+
+        const timer = setTimeout(() => {
+            setShowLoadingOverlay(false);
+        }, 220);
+
+        return () => clearTimeout(timer);
+    }, [loading]);
 
     useEffect(() => {
         loadFolderContents("");
@@ -218,17 +234,21 @@ export default function FolderTree({
     const checkTabVisibility = async () => {
         try {
             const favoritesData = await api.get("/api/user/favorites");
+            const sharedWithYouData = await api.get("/api/shares/shared-with-you");
             const hasFavorites = favoritesData.success && (
                 (favoritesData.files && favoritesData.files.length > 0) ||
                 (favoritesData.folders && favoritesData.folders.length > 0)
             );
+            const hasSharedWithYou = sharedWithYouData.success && (sharedWithYouData.shares || []).length > 0;
 
             setTabVisibility({
                 favorites: hasFavorites,
+                sharedWithYou: hasSharedWithYou,
             });
         } catch (error) {
             setTabVisibility({
                 favorites: false,
+                sharedWithYou: false,
             });
         }
     };
@@ -290,14 +310,9 @@ export default function FolderTree({
         );
     };
 
-    if (loading) return (
-        <div className={styles.folderTree}>
-            <SoftLoading />
-        </div>
-    );
-
     return (
         <div className={styles.folderTree}>
+            {showLoadingOverlay && <SoftLoading active={loading} />}
             <div className={styles.header}>
                 <div
                     className={`${styles.rootFolder} ${selectedPath === "" ? styles.selected : ""}`}
@@ -316,6 +331,16 @@ export default function FolderTree({
                     >
                         <span className={styles.folderIcon}><Star size={20} fill="currentColor" /></span>
                         <span>Favorites</span>
+                    </div>
+                )}
+
+                {tabVisibility.sharedWithYou && (
+                    <div
+                        className={styles.specialItem}
+                        onClick={() => onOpenSharedWithYou ? onOpenSharedWithYou() : onFolderSelect('')}
+                    >
+                        <span className={styles.folderIcon}><Share2 size={18} /></span>
+                        <span>Shared with you</span>
                     </div>
                 )}
             </div>

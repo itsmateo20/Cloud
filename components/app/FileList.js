@@ -5,6 +5,7 @@ import React, { useRef, useState, useEffect, forwardRef, useImperativeHandle, us
 import { api } from "@/utils/api";
 import { downloadFile, downloadFolder } from "@/utils/downloadUtils";
 import styles from "./FileList.module.css";
+import ShareManager from "./ShareManager";
 import SoftLoading from "@/components/SoftLoading";
 import { ContextMenu } from "./ContextMenu";
 import { ConfirmModal } from "./ConfirmModal";
@@ -305,6 +306,7 @@ const FileList = forwardRef(({
     viewMode = 'list',
     user,
     mobile = false,
+    sharesOnly = false,
 }, ref) => {
     const toast = (() => { try { return useToast(); } catch { return null; } })();
 
@@ -351,6 +353,7 @@ const FileList = forwardRef(({
     const [folders, setFolders] = useState([]);
     const [files, setFiles] = useState([]);
     const [loading, setLoading] = useState(false);
+    const [showLoadingOverlay, setShowLoadingOverlay] = useState(false);
     const [selectedItems, setSelectedItems] = useState(new Set());
     const [lastSelectedItem, setLastSelectedItem] = useState(null);
 
@@ -417,7 +420,418 @@ const FileList = forwardRef(({
 
     const [renaming, setRenaming] = useState({ active: false, items: [], value: "" });
     const [qrModal, setQrModal] = useState({ visible: false, type: '', qrCode: '', items: [], loading: false });
+    const [shareCreateModal, setShareCreateModal] = useState({
+        visible: false,
+        stage: 'mode',
+        items: [],
+        name: '',
+        mode: 'new',
+        targetShareId: '',
+        availableShares: [],
+        loadingShares: false,
+        requireLogin: true,
+        allowedEmails: [],
+        passcode: '',
+        durationValue: 7,
+        durationUnit: 'days',
+        submitting: false
+    });
+    const [shareManager, setShareManager] = useState({
+        visible: false,
+        loading: false,
+        shares: [],
+        selectedShare: null,
+        logs: [],
+        logLimit: 10,
+        customLogLimit: 200,
+        editing: false,
+        editForm: {
+            name: '',
+            requireLogin: true,
+            allowedEmails: [],
+            passcode: '',
+            clearPasscode: false,
+            durationValue: 7,
+            durationUnit: 'days'
+        }
+    });
+    const [shareRowMenuId, setShareRowMenuId] = useState(null);
+    const [shareItemMenuId, setShareItemMenuId] = useState(null);
     const renameInputRef = useRef(null);
+    const shareManagerModalRef = useRef(null);
+    const shareRowMenuButtonRefs = useRef(new Map());
+
+    const parseEmailList = (emails) => {
+        if (!Array.isArray(emails)) return [];
+        return [...new Set(emails
+            .map((v) => String(v || '').trim().toLowerCase())
+            .filter(Boolean))];
+    };
+
+    const getDurationFormFromExpiresAt = (expiresAt) => {
+        if (!expiresAt) {
+            return { durationValue: 1, durationUnit: 'never' };
+        }
+
+        const remainingMs = new Date(expiresAt).getTime() - Date.now();
+        if (!Number.isFinite(remainingMs) || remainingMs <= 0) {
+            return { durationValue: 1, durationUnit: 'days' };
+        }
+
+        const hours = Math.max(1, Math.round(remainingMs / (60 * 60 * 1000)));
+        if (hours % (24 * 7) === 0) {
+            return { durationValue: Math.max(1, Math.round(hours / (24 * 7))), durationUnit: 'weeks' };
+        }
+        if (hours % 24 === 0) {
+            return { durationValue: Math.max(1, Math.round(hours / 24)), durationUnit: 'days' };
+        }
+        return { durationValue: hours, durationUnit: 'hours' };
+    };
+
+    const fetchShareLogs = useCallback(async (shareId, limit = 10) => {
+        const response = await api.get(`/api/shares/${shareId}/logs?limit=${Math.max(1, Number(limit) || 10)}`);
+        if (!response?.success) {
+            return [];
+        }
+        return response.logs || [];
+    }, []);
+
+    const fetchShares = useCallback(async () => {
+        setShareManager(prev => ({ ...prev, loading: true }));
+        const res = await api.get('/api/shares');
+        if (res?.success) {
+            const nextShares = res.shares || [];
+            setShareManager(prev => ({ ...prev, shares: nextShares, loading: false }));
+            return nextShares;
+        } else {
+            setShareManager(prev => ({ ...prev, loading: false }));
+            toast?.addError(res?.message || 'Failed to load shares');
+            return [];
+        }
+    }, [toast]);
+
+    const openShareCreate = async (items) => {
+        const selected = (items && items.length ? items : [...folders, ...files].filter((item) => selectedItems.has(item.path)))
+            .map((item) => ({ name: item.name, path: item.path, type: item.type === 'folder' ? 'folder' : 'file' }));
+
+        if (!selected.length) {
+            toast?.addInfo('Select at least one item to share');
+            return;
+        }
+
+        setShareCreateModal((prev) => ({ ...prev, visible: true, loadingShares: true }));
+        const shareListRes = await api.get('/api/shares');
+        const availableShares = shareListRes?.success ? (shareListRes.shares || []) : [];
+
+        const defaultName = selected.length === 1 ? `${selected[0].name} share` : `${selected.length} items share`;
+        setShareCreateModal({
+            visible: true,
+            stage: 'mode',
+            items: selected,
+            name: defaultName,
+            mode: 'new',
+            targetShareId: availableShares[0]?.id ? String(availableShares[0].id) : '',
+            availableShares,
+            loadingShares: false,
+            requireLogin: true,
+            allowedEmails: [],
+            passcode: '',
+            durationValue: 1,
+            durationUnit: 'never',
+            submitting: false
+        });
+    };
+
+    const openShareManager = async () => {
+        setShareManager(prev => ({ ...prev, visible: true, selectedShare: null, logs: [], editing: false }));
+        setShareRowMenuId(null);
+        setShareItemMenuId(null);
+        const shares = await fetchShares();
+        if (shares.length > 0) {
+            await openShareDetails(shares[0].id);
+        }
+    };
+
+    useEffect(() => {
+        if (!sharesOnly) return;
+        openShareManager();
+    }, [sharesOnly]);
+
+    const openShareDetails = async (shareId) => {
+        setShareManager(prev => ({ ...prev, loading: true, selectedShare: null, editing: false }));
+        const [res, logs] = await Promise.all([
+            api.get(`/api/shares/${shareId}`),
+            fetchShareLogs(shareId, shareManager.logLimit)
+        ]);
+
+        if (!res?.success) {
+            setShareManager(prev => ({ ...prev, loading: false }));
+            toast?.addError(res?.message || 'Failed to load share details');
+            return;
+        }
+
+        const share = res.share;
+        const durationForm = getDurationFormFromExpiresAt(share.expiresAt);
+        setShareManager(prev => ({
+            ...prev,
+            loading: false,
+            selectedShare: share,
+            logs,
+            editing: false,
+            editForm: {
+                name: share.name || '',
+                requireLogin: Boolean(share.requireLogin),
+                allowedEmails: Array.isArray(share.allowedEmails) ? share.allowedEmails : [],
+                passcode: '',
+                clearPasscode: false,
+                durationValue: durationForm.durationValue,
+                durationUnit: durationForm.durationUnit
+            }
+        }));
+    };
+
+    const createShareSubmit = async () => {
+        setShareCreateModal(prev => ({ ...prev, submitting: true }));
+
+        if (shareCreateModal.mode === 'append') {
+            if (!shareCreateModal.targetShareId) {
+                setShareCreateModal(prev => ({ ...prev, submitting: false }));
+                toast?.addError('No share selected to append to');
+                return;
+            }
+
+            const appendRes = await api.post(`/api/shares/${shareCreateModal.targetShareId}/items`, {
+                items: shareCreateModal.items
+            });
+
+            if (!appendRes?.success) {
+                setShareCreateModal(prev => ({ ...prev, submitting: false }));
+                toast?.addError(appendRes?.message || 'Failed to append items to share');
+                return;
+            }
+
+            setShareCreateModal(prev => ({ ...prev, visible: false, submitting: false }));
+
+            const targetId = Number(shareCreateModal.targetShareId);
+            const targetShare = (shareCreateModal.availableShares || []).find((share) => Number(share.id) === targetId);
+            if (sharesOnly || shareManager.visible) {
+                await openShareManager();
+                await openShareDetails(targetId);
+            }
+
+            const appendUrl = targetShare?.token ? `${window.location.origin}/shared/${targetShare.token}` : null;
+            if (appendUrl) {
+                try {
+                    await navigator.clipboard.writeText(appendUrl);
+                    toast?.addSuccess('Items appended. Link copied to clipboard');
+                } catch {
+                    toast?.addSuccess('Items appended to share');
+                }
+            } else {
+                toast?.addSuccess('Items appended to share');
+            }
+            return;
+        }
+
+        const payload = {
+            name: shareCreateModal.name,
+            requireLogin: shareCreateModal.requireLogin,
+            allowedEmails: parseEmailList(shareCreateModal.allowedEmails),
+            passcode: shareCreateModal.passcode,
+            durationValue: shareCreateModal.durationUnit === 'never' ? null : Number(shareCreateModal.durationValue),
+            durationUnit: shareCreateModal.durationUnit,
+            items: shareCreateModal.items
+        };
+
+        const res = await api.post('/api/shares', payload);
+        if (!res?.success) {
+            setShareCreateModal(prev => ({ ...prev, submitting: false }));
+            toast?.addError(res?.message || 'Failed to create share');
+            return;
+        }
+
+        setShareCreateModal(prev => ({ ...prev, visible: false, submitting: false }));
+
+        if (sharesOnly || shareManager.visible) {
+            await openShareManager();
+            await openShareDetails(res.share.id);
+            toast?.addSuccess('Share created');
+            return;
+        }
+
+        const sharedUrl = `${window.location.origin}/shared/${res.share.token}`;
+        try {
+            await navigator.clipboard.writeText(sharedUrl);
+            toast?.addSuccess('Shared successfully. Link copied to clipboard');
+        } catch {
+            toast?.addSuccess('Shared successfully');
+        }
+    };
+
+    const saveShareSettings = async () => {
+        const selected = shareManager.selectedShare;
+        if (!selected) return;
+
+        setShareManager(prev => ({ ...prev, loading: true }));
+        const payload = {
+            name: shareManager.editForm.name,
+            requireLogin: shareManager.editForm.requireLogin,
+            allowedEmails: parseEmailList(shareManager.editForm.allowedEmails),
+            passcode: shareManager.editForm.passcode,
+            clearPasscode: Boolean(shareManager.editForm.clearPasscode),
+            durationValue: shareManager.editForm.durationUnit === 'never' ? null : Number(shareManager.editForm.durationValue),
+            durationUnit: shareManager.editForm.durationUnit
+        };
+
+        const res = await api.patch(`/api/shares/${selected.id}`, payload);
+        if (!res?.success) {
+            setShareManager(prev => ({ ...prev, loading: false }));
+            toast?.addError(res?.message || 'Failed to update share');
+            return;
+        }
+
+        await fetchShares();
+        await openShareDetails(selected.id);
+        setShareManager(prev => ({ ...prev, loading: false, editing: false }));
+        toast?.addSuccess('Share updated');
+    };
+
+    const deleteShare = async (shareId) => {
+        const res = await api.delete(`/api/shares/${shareId}`);
+        if (!res?.success) {
+            toast?.addError(res?.message || 'Failed to cancel share');
+            return;
+        }
+
+        setShareRowMenuId(null);
+        await fetchShares();
+        setShareManager(prev => ({ ...prev, selectedShare: prev.selectedShare?.id === shareId ? null : prev.selectedShare }));
+        toast?.addSuccess('Share canceled');
+    };
+
+    const removeItemFromShare = async (itemId) => {
+        const selected = shareManager.selectedShare;
+        if (!selected) return;
+
+        try {
+            const response = await api.raw('DELETE', `/api/shares/${selected.id}/items`, { itemId });
+            const result = await response.json();
+            if (!result?.success) {
+                toast?.addError(result?.message || 'Failed to remove item from share');
+                return;
+            }
+
+            setShareManager((prev) => ({
+                ...prev,
+                selectedShare: result.share
+            }));
+            await fetchShares();
+            toast?.addSuccess('Removed item from sharing');
+        } catch {
+            toast?.addError('Failed to remove item from share');
+        }
+    };
+
+    const clearShareLogs = async () => {
+        const selected = shareManager.selectedShare;
+        if (!selected) return;
+        const result = await api.delete(`/api/shares/${selected.id}/logs`);
+        if (!result?.success) {
+            toast?.addError(result?.message || 'Failed to clear logs');
+            return;
+        }
+
+        setShareManager((prev) => ({ ...prev, logs: [] }));
+        toast?.addSuccess('Access logs cleared');
+    };
+
+    const appendCurrentSelectionToShare = async () => {
+        const selected = shareManager.selectedShare;
+        if (!selected) return;
+
+        const itemsToAppend = [...folders, ...files]
+            .filter((item) => selectedItems.has(item.path))
+            .map((item) => ({
+                name: item.name,
+                path: item.path,
+                type: item.type === 'folder' ? 'folder' : 'file'
+            }));
+
+        if (!itemsToAppend.length) {
+            toast?.addInfo('Select files/folders in explorer first');
+            return;
+        }
+
+        const response = await api.post(`/api/shares/${selected.id}/items`, { items: itemsToAppend });
+        if (!response?.success) {
+            toast?.addError(response?.message || 'Failed to append selected items');
+            return;
+        }
+
+        setShareManager((prev) => ({
+            ...prev,
+            selectedShare: response.share
+        }));
+        await fetchShares();
+        toast?.addSuccess('Selected items added to this share');
+    };
+
+    const reloadLogs = async (limit) => {
+        const selected = shareManager.selectedShare;
+        if (!selected) return;
+
+        setShareManager((prev) => ({ ...prev, loading: true, logLimit: limit }));
+        const logs = await fetchShareLogs(selected.id, limit);
+        setShareManager((prev) => ({ ...prev, logs, loading: false, logLimit: limit }));
+    };
+
+    const copyShareLink = async (token) => {
+        const url = `${window.location.origin}/shared/${token}`;
+        try {
+            await navigator.clipboard.writeText(url);
+            toast?.addSuccess('Share link copied');
+        } catch {
+            toast?.addError('Failed to copy link');
+        }
+    };
+
+    const jumpToItemLocation = (itemPath) => {
+        const dirPath = itemPath.includes('/') ? itemPath.substring(0, itemPath.lastIndexOf('/')) : '';
+        onNavigateToFile?.(dirPath);
+        setShareManager(prev => ({ ...prev, visible: false }));
+        toast?.addInfo(`Navigated to ${dirPath || 'root'}`);
+    };
+
+    useEffect(() => {
+        if (!shareManager.visible) return;
+        const handleDocPointerDown = (event) => {
+            const target = event.target;
+
+            if (shareManagerModalRef.current?.contains(target)) {
+                const activeRowMenuButton = shareRowMenuId ? shareRowMenuButtonRefs.current.get(shareRowMenuId) : null;
+                if (activeRowMenuButton?.contains(target)) return;
+                return;
+            }
+
+            setShareRowMenuId(null);
+            setShareItemMenuId(null);
+        };
+        document.addEventListener('pointerdown', handleDocPointerDown);
+        return () => document.removeEventListener('pointerdown', handleDocPointerDown);
+    }, [shareManager.visible, shareRowMenuId]);
+
+    useEffect(() => {
+        if (loading) {
+            setShowLoadingOverlay(true);
+            return;
+        }
+
+        const timer = setTimeout(() => {
+            setShowLoadingOverlay(false);
+        }, 220);
+
+        return () => clearTimeout(timer);
+    }, [loading]);
 
     const handleResizeStart = (e, column) => {
         e.preventDefault();
@@ -677,6 +1091,13 @@ const FileList = forwardRef(({
         },
         refresh: refreshContent,
         generateQRCode: (type, items) => generateQRCode(type, items),
+        openShareCreate: (items) => openShareCreate(items),
+        openShareManager: () => openShareManager(),
+        closeShareManager: () => {
+            setShareManager(prev => ({ ...prev, visible: false }));
+            setShareRowMenuId(null);
+            setShareItemMenuId(null);
+        },
         updateItem: (path, patch) => {
             if (!path) return;
             setFiles(prev => prev.map(f => f.path === path ? { ...f, ...patch } : f));
@@ -1187,6 +1608,10 @@ const FileList = forwardRef(({
                 setRenaming({ active: true, items, value: items[0].name });
                 break;
 
+            case 'share':
+                openShareCreate(items);
+                break;
+
             case 'delete':
                 openConfirm({
                     title: `Delete ${items.length} Item${items.length > 1 ? 's' : ''}`,
@@ -1435,13 +1860,13 @@ const FileList = forwardRef(({
         }
     }
 
-    if (loading) {
-        return <SoftLoading />;
-    }
-
     return (
-        <div className={`${styles.fileList} ${mobile ? styles.mobile : ''}`}>
-            {viewMode === 'details' && (
+        <div
+            className={!sharesOnly ? `${styles.fileList} ${mobile ? styles.mobile : ''}` : undefined}
+            style={sharesOnly ? { position: 'relative', width: '100%', height: '100%', overflow: 'hidden', background: 'var(--background)' } : undefined}
+        >
+            {!sharesOnly && showLoadingOverlay && <SoftLoading active={loading} />}
+            {!sharesOnly && viewMode === 'details' && (
                 <div className={styles.header}>
                     <div className={styles.headerTrack} ref={headerInnerRef} style={{ display: 'flex', position: 'relative', width: `${totalColumnWidth}px` }}>
                         <div className={styles.headerCell} style={{ width: `${columnWidths.name}px` }}>
@@ -1480,64 +1905,36 @@ const FileList = forwardRef(({
                 </div>
             )}
 
-            <div ref={scrollContainerRef} className={`${styles.content} ${styles[viewMode]}`} style={viewMode === 'details' ? { overflowX: 'auto' } : undefined}>
-                {isVirtualizableView && topSpacer > 0 && (
-                    <div style={{ height: topSpacer, pointerEvents: 'none' }} />
-                )}
-                {(isVirtualizableView ? virtualizedFolders : sortedFolders).map(folder => {
-                    const isIconView = ['extraLargeIcons', 'largeIcons', 'mediumIcons', 'smallIcons'].includes(viewMode);
-                    const isTilesView = viewMode === 'tiles';
-                    const isGridView = viewMode === 'grid';
-                    const isListOrDetailsView = ['list', 'details'].includes(viewMode);
+            {!sharesOnly && (
+                <div ref={scrollContainerRef} className={`${styles.content} ${styles[viewMode]}`} style={viewMode === 'details' ? { overflowX: 'auto' } : undefined}>
+                    {isVirtualizableView && topSpacer > 0 && (
+                        <div style={{ height: topSpacer, pointerEvents: 'none' }} />
+                    )}
+                    {(isVirtualizableView ? virtualizedFolders : sortedFolders).map(folder => {
+                        const isIconView = ['extraLargeIcons', 'largeIcons', 'mediumIcons', 'smallIcons'].includes(viewMode);
+                        const isTilesView = viewMode === 'tiles';
+                        const isGridView = viewMode === 'grid';
+                        const isListOrDetailsView = ['list', 'details'].includes(viewMode);
 
-                    return (
-                        <div
-                            key={`folder-${folder.path}`}
-                            className={`${styles.item} ${selectedItems.has(folder.path) ? styles.selected : ''}`}
-                            onClick={(e) => handleItemClick(folder, e)}
-                            onDoubleClick={() => handleFolderDoubleClick(folder)}
-                            onContextMenu={(e) => handleItemRightClick(folder, e)}
-                            style={{ cursor: 'pointer', opacity: 1, ...(viewMode === 'details' ? { width: `${totalColumnWidth}px` } : {}) }}
-                        >
-                            {isIconView ? (
-                                <>
-                                    <div className={styles.iconVisualRegion}>
-                                        <div className={styles.itemVisualWrapper}>
-                                            <div className={`${styles.itemIcon} ${styles.folderIcon}`}>
-                                                <FolderClosed size={48} />
+                        return (
+                            <div
+                                key={`folder-${folder.path}`}
+                                className={`${styles.item} ${selectedItems.has(folder.path) ? styles.selected : ''}`}
+                                onClick={(e) => handleItemClick(folder, e)}
+                                onDoubleClick={() => handleFolderDoubleClick(folder)}
+                                onContextMenu={(e) => handleItemRightClick(folder, e)}
+                                style={{ cursor: 'pointer', opacity: 1, ...(viewMode === 'details' ? { width: `${totalColumnWidth}px` } : {}) }}
+                            >
+                                {isIconView ? (
+                                    <>
+                                        <div className={styles.iconVisualRegion}>
+                                            <div className={styles.itemVisualWrapper}>
+                                                <div className={`${styles.itemIcon} ${styles.folderIcon}`}>
+                                                    <FolderClosed size={48} />
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
-                                    <div className={`${styles.iconNameRegion} ${styles.itemName}`}>
-                                        {renaming.active && renaming.items.length > 0 && renaming.items[0].path === folder.path ? (
-                                            <input
-                                                ref={renameInputRef}
-                                                className={styles.renameInput}
-                                                value={renaming.value}
-                                                autoFocus
-                                                onChange={handleRenameInput}
-                                                onBlur={cancelRename}
-                                                onKeyDown={e => {
-                                                    if (e.key === "Enter") submitRename();
-                                                    if (e.key === "Escape") cancelRename();
-                                                }}
-                                            />
-                                        ) : (
-                                            <span
-                                                className={styles.overflowClamp}
-                                                data-tooltip={folder.name}
-                                            >{folder.name}</span>
-                                        )}
-                                        {folder.isFavorited && <span className={styles.favoriteIcon}><Star size={13} fill="currentColor" /></span>}
-                                    </div>
-                                </>
-                            ) : isTilesView ? (
-                                <>
-                                    <div className={styles.thumbWrapper}>
-                                        <div className={styles.fallbackIcon}><FolderClosed size={40} /></div>
-                                    </div>
-                                    <div className={styles.itemContent}>
-                                        <div className={styles.itemName}>
+                                        <div className={`${styles.iconNameRegion} ${styles.itemName}`}>
                                             {renaming.active && renaming.items.length > 0 && renaming.items[0].path === folder.path ? (
                                                 <input
                                                     ref={renameInputRef}
@@ -1559,287 +1956,317 @@ const FileList = forwardRef(({
                                             )}
                                             {folder.isFavorited && <span className={styles.favoriteIcon}><Star size={13} fill="currentColor" /></span>}
                                         </div>
-                                        <div className={styles.itemDetails}>
-                                            File folder
+                                    </>
+                                ) : isTilesView ? (
+                                    <>
+                                        <div className={styles.thumbWrapper}>
+                                            <div className={styles.fallbackIcon}><FolderClosed size={40} /></div>
                                         </div>
-                                    </div>
-                                </>
-                            ) : isGridView ? (
-                                <div className={styles.gridFolder}>
-                                    <div className={styles.itemIcon}><FolderClosed size={16} /></div>
-                                    <div className={styles.itemContent}>
-                                        <div className={styles.itemName}>
-                                            {renaming.active && renaming.items.length > 0 && renaming.items[0].path === folder.path ? (
-                                                <input
-                                                    ref={renameInputRef}
-                                                    className={styles.renameInput}
-                                                    value={renaming.value}
-                                                    autoFocus
-                                                    onChange={handleRenameInput}
-                                                    onBlur={cancelRename}
-                                                    onKeyDown={e => {
-                                                        if (e.key === "Enter") submitRename();
-                                                        if (e.key === "Escape") cancelRename();
-                                                    }}
-                                                />
-                                            ) : (
-                                                <span
-                                                    className={styles.overflowClamp}
-                                                    data-tooltip={folder.name}
-                                                >{folder.name}</span>
-                                            )}
-                                            {folder.isFavorited && <span className={styles.favoriteIcon}><Star size={13} fill="currentColor" /></span>}
-                                        </div>
-                                    </div>
-                                </div>
-                            ) : isListOrDetailsView ? (
-                                <>
-                                    <div className={`${styles.cell} ${styles.nameCell}`} style={{ width: `${columnWidths.name}px` }}>
-                                        <span className={styles.itemIcon}><FolderClosed size={16} /></span>
-                                        {renaming.active && renaming.items.length > 0 && renaming.items[0].path === folder.path ? (
-                                            <input
-                                                ref={renameInputRef}
-                                                className={styles.renameInput}
-                                                value={renaming.value}
-                                                autoFocus
-                                                onChange={handleRenameInput}
-                                                onBlur={cancelRename}
-                                                onKeyDown={e => {
-                                                    if (e.key === "Enter") submitRename();
-                                                    if (e.key === "Escape") cancelRename();
-                                                }}
-                                            />
-                                        ) : (
-                                            <span className={styles.itemName} style={{
-                                                fontWeight: 'bold',
-                                                color: 'inherit'
-                                            }}>
-                                                <span
-                                                    className={styles.overflowClamp}
-                                                    data-tooltip={folder.name}
-                                                >{folder.name}</span>
-                                            </span>
-                                        )}
-                                        {folder.isFavorited && <span className={styles.favoriteIcon}><Star size={13} fill="currentColor" /></span>}
-                                    </div>
-                                    {viewMode === 'details' && (
-                                        <>
-                                            <div className={styles.cell} style={{ width: `${columnWidths.dateModified}px` }}>
-                                                {formatDate(folder.modified || folder.updatedAt || folder.modifiedAt || folder.createdAt)}
+                                        <div className={styles.itemContent}>
+                                            <div className={styles.itemName}>
+                                                {renaming.active && renaming.items.length > 0 && renaming.items[0].path === folder.path ? (
+                                                    <input
+                                                        ref={renameInputRef}
+                                                        className={styles.renameInput}
+                                                        value={renaming.value}
+                                                        autoFocus
+                                                        onChange={handleRenameInput}
+                                                        onBlur={cancelRename}
+                                                        onKeyDown={e => {
+                                                            if (e.key === "Enter") submitRename();
+                                                            if (e.key === "Escape") cancelRename();
+                                                        }}
+                                                    />
+                                                ) : (
+                                                    <span
+                                                        className={styles.overflowClamp}
+                                                        data-tooltip={folder.name}
+                                                    >{folder.name}</span>
+                                                )}
+                                                {folder.isFavorited && <span className={styles.favoriteIcon}><Star size={13} fill="currentColor" /></span>}
                                             </div>
-                                            <div className={styles.cell} style={{ width: `${columnWidths.type}px` }}>
+                                            <div className={styles.itemDetails}>
                                                 File folder
                                             </div>
-                                            <div className={styles.cell} style={{ width: `${columnWidths.size}px` }}>
-                                                —
+                                        </div>
+                                    </>
+                                ) : isGridView ? (
+                                    <div className={styles.gridFolder}>
+                                        <div className={styles.itemIcon}><FolderClosed size={16} /></div>
+                                        <div className={styles.itemContent}>
+                                            <div className={styles.itemName}>
+                                                {renaming.active && renaming.items.length > 0 && renaming.items[0].path === folder.path ? (
+                                                    <input
+                                                        ref={renameInputRef}
+                                                        className={styles.renameInput}
+                                                        value={renaming.value}
+                                                        autoFocus
+                                                        onChange={handleRenameInput}
+                                                        onBlur={cancelRename}
+                                                        onKeyDown={e => {
+                                                            if (e.key === "Enter") submitRename();
+                                                            if (e.key === "Escape") cancelRename();
+                                                        }}
+                                                    />
+                                                ) : (
+                                                    <span
+                                                        className={styles.overflowClamp}
+                                                        data-tooltip={folder.name}
+                                                    >{folder.name}</span>
+                                                )}
+                                                {folder.isFavorited && <span className={styles.favoriteIcon}><Star size={13} fill="currentColor" /></span>}
                                             </div>
-                                        </>
-                                    )}
-                                </>
-                            ) : null}
-                        </div>
-                    );
-                })}
+                                        </div>
+                                    </div>
+                                ) : isListOrDetailsView ? (
+                                    <>
+                                        <div className={`${styles.cell} ${styles.nameCell}`} style={{ width: `${columnWidths.name}px` }}>
+                                            <span className={styles.itemIcon}><FolderClosed size={16} /></span>
+                                            {renaming.active && renaming.items.length > 0 && renaming.items[0].path === folder.path ? (
+                                                <input
+                                                    ref={renameInputRef}
+                                                    className={styles.renameInput}
+                                                    value={renaming.value}
+                                                    autoFocus
+                                                    onChange={handleRenameInput}
+                                                    onBlur={cancelRename}
+                                                    onKeyDown={e => {
+                                                        if (e.key === "Enter") submitRename();
+                                                        if (e.key === "Escape") cancelRename();
+                                                    }}
+                                                />
+                                            ) : (
+                                                <span className={styles.itemName} style={{
+                                                    fontWeight: 'bold',
+                                                    color: 'inherit'
+                                                }}>
+                                                    <span
+                                                        className={styles.overflowClamp}
+                                                        data-tooltip={folder.name}
+                                                    >{folder.name}</span>
+                                                </span>
+                                            )}
+                                            {folder.isFavorited && <span className={styles.favoriteIcon}><Star size={13} fill="currentColor" /></span>}
+                                        </div>
+                                        {viewMode === 'details' && (
+                                            <>
+                                                <div className={styles.cell} style={{ width: `${columnWidths.dateModified}px` }}>
+                                                    {formatDate(folder.modified || folder.updatedAt || folder.modifiedAt || folder.createdAt)}
+                                                </div>
+                                                <div className={styles.cell} style={{ width: `${columnWidths.type}px` }}>
+                                                    File folder
+                                                </div>
+                                                <div className={styles.cell} style={{ width: `${columnWidths.size}px` }}>
+                                                    —
+                                                </div>
+                                            </>
+                                        )}
+                                    </>
+                                ) : null}
+                            </div>
+                        );
+                    })}
 
-                {(isVirtualizableView ? virtualizedFiles : sortedFiles).map(file => {
-                    const isIconView = ['extraLargeIcons', 'largeIcons', 'mediumIcons', 'smallIcons'].includes(viewMode);
-                    const isTilesView = viewMode === 'tiles';
-                    const isGridView = viewMode === 'grid';
-                    const isListOrDetailsView = ['list', 'details'].includes(viewMode);
+                    {(isVirtualizableView ? virtualizedFiles : sortedFiles).map(file => {
+                        const isIconView = ['extraLargeIcons', 'largeIcons', 'mediumIcons', 'smallIcons'].includes(viewMode);
+                        const isTilesView = viewMode === 'tiles';
+                        const isGridView = viewMode === 'grid';
+                        const isListOrDetailsView = ['list', 'details'].includes(viewMode);
 
-                    return (
-                        <div
-                            key={`file-${file.path}`}
-                            className={`${styles.item} ${selectedItems.has(file.path) ? styles.selected : ''}`}
-                            onClick={(e) => handleItemClick(file, e)}
-                            onDoubleClick={() => handleFileDoubleClick(file)}
-                            onContextMenu={(e) => handleItemRightClick(file, e)}
-                            style={viewMode === 'details' ? { width: `${totalColumnWidth}px` } : undefined}
-                        >
-                            {isIconView ? (
-                                <>
-                                    <div className={styles.iconVisualRegion}>
-                                        <div className={styles.itemVisualWrapper}>
+                        return (
+                            <div
+                                key={`file-${file.path}`}
+                                className={`${styles.item} ${selectedItems.has(file.path) ? styles.selected : ''}`}
+                                onClick={(e) => handleItemClick(file, e)}
+                                onDoubleClick={() => handleFileDoubleClick(file)}
+                                onContextMenu={(e) => handleItemRightClick(file, e)}
+                                style={viewMode === 'details' ? { width: `${totalColumnWidth}px` } : undefined}
+                            >
+                                {isIconView ? (
+                                    <>
+                                        <div className={styles.iconVisualRegion}>
+                                            <div className={styles.itemVisualWrapper}>
+                                                {isImage(file.name) ? (
+                                                    <ThumbnailWithLoader queue={thumbnailQueueRef.current} cacheRef={thumbnailCacheRef} src={getPreviewUrl(file, currentPath)} alt={file.name} currentPath={currentPath} />
+                                                ) : isVideo(file.name) ? (
+                                                    <ThumbnailWithLoader queue={thumbnailQueueRef.current} cacheRef={thumbnailCacheRef} src={getVideoThumbnailUrl(file, currentPath)} alt={file.name} currentPath={currentPath} />
+                                                ) : (
+                                                    <div className={`${styles.itemIcon} ${styles.fileIcon}`}>{getFileIcon(file.name, 48)}</div>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <div className={`${styles.iconNameRegion} ${styles.itemName}`}>
+                                            {renaming.active && renaming.items.length > 0 && renaming.items[0].path === file.path ? (
+                                                <input
+                                                    ref={renameInputRef}
+                                                    className={styles.renameInput}
+                                                    value={renaming.value}
+                                                    autoFocus
+                                                    onChange={handleRenameInput}
+                                                    onBlur={cancelRename}
+                                                    onKeyDown={e => {
+                                                        if (e.key === "Enter") submitRename();
+                                                        if (e.key === "Escape") cancelRename();
+                                                    }}
+                                                />
+                                            ) : (
+                                                <span
+                                                    className={styles.overflowClamp}
+                                                    data-tooltip={file.name}
+                                                >{file.name}</span>
+                                            )}
+                                            {file.isFavorited && <span className={styles.favoriteIcon}><Star size={13} fill="currentColor" /></span>}
+                                        </div>
+                                    </>
+                                ) : isTilesView ? (
+                                    <>
+                                        <div className={styles.thumbWrapper}>
                                             {isImage(file.name) ? (
                                                 <ThumbnailWithLoader queue={thumbnailQueueRef.current} cacheRef={thumbnailCacheRef} src={getPreviewUrl(file, currentPath)} alt={file.name} currentPath={currentPath} />
                                             ) : isVideo(file.name) ? (
                                                 <ThumbnailWithLoader queue={thumbnailQueueRef.current} cacheRef={thumbnailCacheRef} src={getVideoThumbnailUrl(file, currentPath)} alt={file.name} currentPath={currentPath} />
                                             ) : (
-                                                <div className={`${styles.itemIcon} ${styles.fileIcon}`}>{getFileIcon(file.name, 48)}</div>
+                                                <div className={styles.fallbackIcon}>{getFileIcon(file.name, 40)}</div>
                                             )}
                                         </div>
-                                    </div>
-                                    <div className={`${styles.iconNameRegion} ${styles.itemName}`}>
-                                        {renaming.active && renaming.items.length > 0 && renaming.items[0].path === file.path ? (
-                                            <input
-                                                ref={renameInputRef}
-                                                className={styles.renameInput}
-                                                value={renaming.value}
-                                                autoFocus
-                                                onChange={handleRenameInput}
-                                                onBlur={cancelRename}
-                                                onKeyDown={e => {
-                                                    if (e.key === "Enter") submitRename();
-                                                    if (e.key === "Escape") cancelRename();
-                                                }}
-                                            />
-                                        ) : (
-                                            <span
-                                                className={styles.overflowClamp}
-                                                data-tooltip={file.name}
-                                            >{file.name}</span>
-                                        )}
-                                        {file.isFavorited && <span className={styles.favoriteIcon}><Star size={13} fill="currentColor" /></span>}
-                                    </div>
-                                </>
-                            ) : isTilesView ? (
-                                <>
-                                    <div className={styles.thumbWrapper}>
-                                        {isImage(file.name) ? (
-                                            <ThumbnailWithLoader queue={thumbnailQueueRef.current} cacheRef={thumbnailCacheRef} src={getPreviewUrl(file, currentPath)} alt={file.name} currentPath={currentPath} />
-                                        ) : isVideo(file.name) ? (
-                                            <ThumbnailWithLoader queue={thumbnailQueueRef.current} cacheRef={thumbnailCacheRef} src={getVideoThumbnailUrl(file, currentPath)} alt={file.name} currentPath={currentPath} />
-                                        ) : (
-                                            <div className={styles.fallbackIcon}>{getFileIcon(file.name, 40)}</div>
-                                        )}
-                                    </div>
-                                    <div className={styles.itemContent}>
-                                        <div className={styles.itemName}>
-                                            {renaming.active && renaming.items.length > 0 && renaming.items[0].path === file.path ? (
-                                                <input
-                                                    ref={renameInputRef}
-                                                    className={styles.renameInput}
-                                                    value={renaming.value}
-                                                    autoFocus
-                                                    onChange={handleRenameInput}
-                                                    onBlur={cancelRename}
-                                                    onKeyDown={e => {
-                                                        if (e.key === "Enter") submitRename();
-                                                        if (e.key === "Escape") cancelRename();
-                                                    }}
-                                                />
-                                            ) : (
-                                                <span
-                                                    className={styles.overflowClamp}
-                                                    data-tooltip={file.name}
-                                                >{file.name}</span>
-                                            )}
-                                            {file.isFavorited && <span className={styles.favoriteIcon}><Star size={13} fill="currentColor" /></span>}
-                                        </div>
-                                        <div className={styles.itemDetails}>
-                                            {getFileType(file.name)}<br />
-                                            {formatFileSize(file.size)}
-                                        </div>
-                                    </div>
-                                </>
-                            ) : isGridView ? (
-                                <div className={styles.gridFile}>
-                                    <div className={styles.gridFileHeader}>
-                                        <div className={styles.gridFileName}>
-                                            {renaming.active && renaming.items.length > 0 && renaming.items[0].path === file.path ? (
-                                                <input
-                                                    ref={renameInputRef}
-                                                    className={styles.renameInput}
-                                                    value={renaming.value}
-                                                    autoFocus
-                                                    onChange={handleRenameInput}
-                                                    onBlur={cancelRename}
-                                                    onKeyDown={e => {
-                                                        if (e.key === "Enter") submitRename();
-                                                        if (e.key === "Escape") cancelRename();
-                                                    }}
-                                                />
-                                            ) : (
-                                                <span
-                                                    className={styles.overflowClamp}
-                                                    data-tooltip={file.name}
-                                                >{file.name}</span>
-                                            )}
-                                            {file.isFavorited && <span className={styles.favoriteIcon}><Star size={13} fill="currentColor" /></span>}
-                                        </div>
-                                        <div className={styles.gridFileSize}>
-                                            {formatFileSize(file.size)}
-                                        </div>
-                                    </div>
-                                    <div className={styles.gridFileContent}>
-                                        {(isImage(file.name) || isVideo(file.name)) ? (
-                                            <div className={styles.itemPreview}>
-                                                {isImage(file.name) ? (
-                                                    <ThumbnailWithLoader queue={thumbnailQueueRef.current} cacheRef={thumbnailCacheRef} src={getPreviewUrl(file, currentPath)} alt={file.name} currentPath={currentPath} />
-                                                ) : (
-                                                    <video
-                                                        src={`/api/files/download?path=${encodeURIComponent(currentPath === '/' ? `/${file.name}` : `${currentPath}/${file.name}`)}`}
-                                                        className={styles.previewVideo}
-                                                        muted
-                                                        playsInline
-                                                        preload="metadata"
-                                                        onLoadedData={(e) => {
-                                                            e.target.currentTime = 0;
+                                        <div className={styles.itemContent}>
+                                            <div className={styles.itemName}>
+                                                {renaming.active && renaming.items.length > 0 && renaming.items[0].path === file.path ? (
+                                                    <input
+                                                        ref={renameInputRef}
+                                                        className={styles.renameInput}
+                                                        value={renaming.value}
+                                                        autoFocus
+                                                        onChange={handleRenameInput}
+                                                        onBlur={cancelRename}
+                                                        onKeyDown={e => {
+                                                            if (e.key === "Enter") submitRename();
+                                                            if (e.key === "Escape") cancelRename();
                                                         }}
                                                     />
+                                                ) : (
+                                                    <span
+                                                        className={styles.overflowClamp}
+                                                        data-tooltip={file.name}
+                                                    >{file.name}</span>
                                                 )}
+                                                {file.isFavorited && <span className={styles.favoriteIcon}><Star size={13} fill="currentColor" /></span>}
                                             </div>
-                                        ) : (
-                                            <div className={styles.itemIcon}>
-                                                {getFileIcon(file.name, 64)}
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            ) : isListOrDetailsView ? (
-                                <>
-                                    <div className={`${styles.cell} ${styles.nameCell}`} style={{ width: `${columnWidths.name}px` }}>
-                                        <span className={styles.itemIcon}>
-                                            {getFileIcon(file.name, 16)}
-                                        </span>
-                                        {renaming.active && renaming.items.length > 0 && renaming.items[0].path === file.path ? (
-                                            <input
-                                                ref={renameInputRef}
-                                                className={styles.renameInput}
-                                                value={renaming.value}
-                                                autoFocus
-                                                onChange={handleRenameInput}
-                                                onBlur={cancelRename}
-                                                onKeyDown={e => {
-                                                    if (e.key === "Enter") submitRename();
-                                                    if (e.key === "Escape") cancelRename();
-                                                }}
-                                            />
-                                        ) : (
-                                            <span className={styles.itemName}>
-                                                <span
-                                                    className={styles.overflowClamp}
-                                                    data-tooltip={file.name}
-                                                >{file.name}</span>
-                                            </span>
-                                        )}
-                                        {file.isFavorited && <span className={styles.favoriteIcon}><Star size={13} fill="currentColor" /></span>}
-                                    </div>
-                                    {viewMode === 'details' && (
-                                        <>
-                                            <div className={styles.cell} style={{ width: `${columnWidths.dateModified}px` }}>
-                                                {formatDate(file.modified || file.modifiedAt || file.createdAt)}
-                                            </div>
-                                            <div className={styles.cell} style={{ width: `${columnWidths.type}px` }}>
-                                                {getFileType(file.name)}
-                                            </div>
-                                            <div className={styles.cell} style={{ width: `${columnWidths.size}px` }}>
+                                            <div className={styles.itemDetails}>
+                                                {getFileType(file.name)}<br />
                                                 {formatFileSize(file.size)}
                                             </div>
-                                        </>
-                                    )}
-                                </>
-                            ) : null}
-                        </div>
-                    );
-                })}
-                {isVirtualizableView && bottomSpacer > 0 && (
-                    <div style={{ height: bottomSpacer, pointerEvents: 'none' }} />
-                )}
+                                        </div>
+                                    </>
+                                ) : isGridView ? (
+                                    <div className={styles.gridFile}>
+                                        <div className={styles.gridFileHeader}>
+                                            <div className={styles.gridFileName}>
+                                                {renaming.active && renaming.items.length > 0 && renaming.items[0].path === file.path ? (
+                                                    <input
+                                                        ref={renameInputRef}
+                                                        className={styles.renameInput}
+                                                        value={renaming.value}
+                                                        autoFocus
+                                                        onChange={handleRenameInput}
+                                                        onBlur={cancelRename}
+                                                        onKeyDown={e => {
+                                                            if (e.key === "Enter") submitRename();
+                                                            if (e.key === "Escape") cancelRename();
+                                                        }}
+                                                    />
+                                                ) : (
+                                                    <span
+                                                        className={styles.overflowClamp}
+                                                        data-tooltip={file.name}
+                                                    >{file.name}</span>
+                                                )}
+                                                {file.isFavorited && <span className={styles.favoriteIcon}><Star size={13} fill="currentColor" /></span>}
+                                            </div>
+                                            <div className={styles.gridFileSize}>
+                                                {formatFileSize(file.size)}
+                                            </div>
+                                        </div>
+                                        <div className={styles.gridFileContent}>
+                                            {(isImage(file.name) || isVideo(file.name)) ? (
+                                                <div className={styles.itemPreview}>
+                                                    {isImage(file.name) ? (
+                                                        <ThumbnailWithLoader queue={thumbnailQueueRef.current} cacheRef={thumbnailCacheRef} src={getPreviewUrl(file, currentPath)} alt={file.name} currentPath={currentPath} />
+                                                    ) : (
+                                                        <video
+                                                            src={`/api/files/download?path=${encodeURIComponent(currentPath === '/' ? `/${file.name}` : `${currentPath}/${file.name}`)}`}
+                                                            className={styles.previewVideo}
+                                                            muted
+                                                            playsInline
+                                                            preload="metadata"
+                                                            onLoadedData={(e) => {
+                                                                e.target.currentTime = 0;
+                                                            }}
+                                                        />
+                                                    )}
+                                                </div>
+                                            ) : (
+                                                <div className={styles.itemIcon}>
+                                                    {getFileIcon(file.name, 64)}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                ) : isListOrDetailsView ? (
+                                    <>
+                                        <div className={`${styles.cell} ${styles.nameCell}`} style={{ width: `${columnWidths.name}px` }}>
+                                            <span className={styles.itemIcon}>
+                                                {getFileIcon(file.name, 16)}
+                                            </span>
+                                            {renaming.active && renaming.items.length > 0 && renaming.items[0].path === file.path ? (
+                                                <input
+                                                    ref={renameInputRef}
+                                                    className={styles.renameInput}
+                                                    value={renaming.value}
+                                                    autoFocus
+                                                    onChange={handleRenameInput}
+                                                    onBlur={cancelRename}
+                                                    onKeyDown={e => {
+                                                        if (e.key === "Enter") submitRename();
+                                                        if (e.key === "Escape") cancelRename();
+                                                    }}
+                                                />
+                                            ) : (
+                                                <span className={styles.itemName}>
+                                                    <span
+                                                        className={styles.overflowClamp}
+                                                        data-tooltip={file.name}
+                                                    >{file.name}</span>
+                                                </span>
+                                            )}
+                                            {file.isFavorited && <span className={styles.favoriteIcon}><Star size={13} fill="currentColor" /></span>}
+                                        </div>
+                                        {viewMode === 'details' && (
+                                            <>
+                                                <div className={styles.cell} style={{ width: `${columnWidths.dateModified}px` }}>
+                                                    {formatDate(file.modified || file.modifiedAt || file.createdAt)}
+                                                </div>
+                                                <div className={styles.cell} style={{ width: `${columnWidths.type}px` }}>
+                                                    {getFileType(file.name)}
+                                                </div>
+                                                <div className={styles.cell} style={{ width: `${columnWidths.size}px` }}>
+                                                    {formatFileSize(file.size)}
+                                                </div>
+                                            </>
+                                        )}
+                                    </>
+                                ) : null}
+                            </div>
+                        );
+                    })}
+                    {isVirtualizableView && bottomSpacer > 0 && (
+                        <div style={{ height: bottomSpacer, pointerEvents: 'none' }} />
+                    )}
 
-            </div>
+                </div>
+            )}
 
-            {loading && (
+            {!sharesOnly && loading && (
                 <div className={styles.loadingOverlay}>
                     <div className={styles.spinner}></div>
                 </div>
@@ -1861,7 +2288,7 @@ const FileList = forwardRef(({
                 cancelLabel={confirmState.cancelLabel}
             />
 
-            {contextMenu.visible && (
+            {!sharesOnly && contextMenu.visible && (
                 <ContextMenu
                     x={contextMenu.x}
                     y={contextMenu.y}
@@ -1873,7 +2300,7 @@ const FileList = forwardRef(({
                 />
             )}
 
-            {fileViewer.isOpen && (
+            {!sharesOnly && fileViewer.isOpen && (
                 <FileViewer
                     isOpen={fileViewer.isOpen}
                     currentFileIndex={fileViewer.currentIndex}
@@ -1884,6 +2311,27 @@ const FileList = forwardRef(({
                     mobile={mobile}
                 />
             )}
+
+            <ShareManager
+                shareCreateModal={shareCreateModal}
+                setShareCreateModal={setShareCreateModal}
+                createShareSubmit={createShareSubmit}
+                shareManager={shareManager}
+                setShareManager={setShareManager}
+                shareManagerModalRef={shareManagerModalRef}
+                sharesOnly={sharesOnly}
+                shareRowMenuId={shareRowMenuId}
+                setShareRowMenuId={setShareRowMenuId}
+                shareRowMenuButtonRefs={shareRowMenuButtonRefs}
+                openShareDetails={openShareDetails}
+                copyShareLink={copyShareLink}
+                deleteShare={deleteShare}
+                saveShareSettings={saveShareSettings}
+                jumpToItemLocation={jumpToItemLocation}
+                removeItemFromShare={removeItemFromShare}
+                clearShareLogs={clearShareLogs}
+                reloadLogs={reloadLogs}
+            />
 
             {qrModal.visible && (
                 <div className={styles.qrModalOverlay}>

@@ -10,6 +10,7 @@ export function ToastProvider({ children, max = 5, duration = 4000 }) {
     const [toasts, setToasts] = useState([]);
     const queueRef = useRef([]);
     const [dmState, setDmState] = useState({ visible: false, expanded: false });
+    const [umState, setUmState] = useState({ visible: false, expanded: false });
 
     const remove = useCallback((id) => {
         setToasts(t => t.filter(to => to.id !== id));
@@ -33,12 +34,22 @@ export function ToastProvider({ children, max = 5, duration = 4000 }) {
     }, [toasts, duration, remove]);
 
     useEffect(() => {
-        const handler = (e) => {
+        const downloadHandler = (e) => {
             if (e?.detail) setDmState(e.detail);
         };
-        window.addEventListener('downloadManagerVisibility', handler);
-        return () => window.removeEventListener('downloadManagerVisibility', handler);
+        const uploadHandler = (e) => {
+            if (e?.detail) setUmState(e.detail);
+        };
+        window.addEventListener('downloadManagerVisibility', downloadHandler);
+        window.addEventListener('uploadManagerVisibility', uploadHandler);
+        return () => {
+            window.removeEventListener('downloadManagerVisibility', downloadHandler);
+            window.removeEventListener('uploadManagerVisibility', uploadHandler);
+        };
     }, []);
+
+    const hasManager = dmState.visible || umState.visible;
+    const hasExpandedManager = dmState.expanded || umState.expanded;
 
     const contextValue = {
         addSuccess: (message, opts) => add({ message, type: 'success', ...opts }),
@@ -50,7 +61,7 @@ export function ToastProvider({ children, max = 5, duration = 4000 }) {
     return (
         <ToastContext.Provider value={contextValue}>
             {children}
-            <div className={`${styles.container} ${dmState.visible ? styles.withDownloadManager : ''} ${dmState.expanded ? styles.dmExpanded : ''}`} role="status" aria-live="polite" aria-atomic="false">
+            <div className={`${styles.container} ${hasManager ? styles.withManager : ''} ${hasExpandedManager ? styles.managerExpanded : ''}`} role="status" aria-live="polite" aria-atomic="false">
                 {toasts.map(t => (
                     <div key={t.id} className={`${styles.toast} ${styles[t.type]}`}>
                         <div className={styles.body}>{t.message}</div>
