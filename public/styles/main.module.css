@@ -473,7 +473,6 @@
     height: auto;
     display: flex;
     flex-direction: column;
-    padding-bottom: 80px;
 }
 
 .mobileExplorerHeader {
@@ -497,6 +496,27 @@
     display: flex;
     align-items: center;
     gap: 4px;
+}
+
+.mobileSelectionHeaderInfo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.mobileSelectionMeta {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.mobileSelectionSize {
+    font-size: 12px;
+    color: var(--alt-text-2);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .explorerTitle {
@@ -599,7 +619,8 @@
 .floatingAddButton {
     position: fixed;
     bottom: 24px;
-    right: 24px;
+    left: 50%;
+    transform: translateX(-50%);
     width: 60px;
     height: 60px;
     background-color: var(--accent);
@@ -624,24 +645,16 @@
 
 .sortMenuOverlay {
     position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
+    inset: 0;
     background-color: transparent;
     z-index: 150;
-    display: flex;
-    align-items: flex-start;
-    justify-content: flex-end;
-    padding-top: calc(var(--top-nav-height) + 60px);
-    padding-right: 16px;
 }
 
 .sortMenu {
+    position: fixed;
     background-color: var(--background);
     border-radius: 8px;
-    min-width: 200px;
-    max-width: 250px;
+    width: min(220px, calc(100vw - 24px));
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.1);
     animation: dropdownFade 0.2s ease-out;
 }

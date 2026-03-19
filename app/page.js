@@ -21,14 +21,14 @@ import SharedWithYou from "@/components/app/SharedWithYou";
 import SoftLoading from "@/components/SoftLoading";
 import Loading from "@/components/Loading";
 
-import { downloadFile, downloadFolder } from "@/utils/downloadUtils";
+import { downloadFile, downloadFolder, downloadMultipleFiles } from "@/utils/downloadUtils";
 import { api } from "@/utils/api";
 import { appendMetadataToFormData } from "@/utils/fileMetadata.client";
 import { uploadFile as uploadLargeFile } from "@/utils/uploadUtils";
 import { useIsMobile } from "@/utils/useIsMobile";
 
 import { Resizable } from "re-resizable";
-import { ArrowLeft, Check, EllipsisVertical, LayoutGrid, List, Plus, X, HardDrive, Star } from "lucide-react";
+import { ArrowLeft, Check, Download, EllipsisVertical, LayoutGrid, List, Plus, Share2, Star, Trash2, X } from "lucide-react";
 import ConfirmModal from '@/components/app/ConfirmModal';
 
 let socket;
@@ -47,6 +47,7 @@ export default function Page() {
   const [storageInfo, setStorageInfo] = useState({ totalSize: 0, totalFiles: 0 });
   const [storageLoading, setStorageLoading] = useState(false);
   const [showSortMenu, setShowSortMenu] = useState(false);
+  const [sortMenuPosition, setSortMenuPosition] = useState({ top: 0, left: 12 });
   const [showSortOptionsMenu, setShowSortOptionsMenu] = useState(false);
   const [sortMenuSwipePosition, setSortMenuSwipePosition] = useState(0);
   const [isSwipingSort, setIsSwipingSort] = useState(false);
@@ -82,6 +83,21 @@ export default function Page() {
   const isMobile = useIsMobile();
 
   const viewMode = isMobile ? mobileViewMode : desktopViewMode;
+  const mobileSelectionActive = Boolean(isMobile && selectedItems && selectedItems.length > 0);
+  const selectedTotalSize = (selectedItems || []).reduce((total, item) => total + (Number(item?.size) || 0), 0);
+  const selectedFavoritedCount = (selectedItems || []).filter((item) => Boolean(item?.isFavorited)).length;
+  const selectedUnfavoritedCount = Math.max(0, (selectedItems?.length || 0) - selectedFavoritedCount);
+  const mobileShouldUnfavorite = selectedItems.length > 0 && selectedUnfavoritedCount === 0;
+  const mobileFavoriteActionLabel = mobileShouldUnfavorite ? 'Unfavourite' : 'Favourite';
+  const mobileInSpecialPage = Boolean(showSettings || showShares || showSharedWithYou);
+  const mobileHidePath = Boolean(mobileInSpecialPage || currentPath === 'favorites');
+  const mobilePageTitle = showSettings
+    ? 'Settings'
+    : showShares
+      ? 'Shared Files'
+      : showSharedWithYou
+        ? 'Shared With You'
+        : (currentPath === '' ? 'Main Storage' : currentPath === 'favorites' ? 'Favourites' : currentPath?.split('/').pop() || 'Files');
 
   useEffect(() => {
     if (loading || !settingsLoaded) {
@@ -253,6 +269,19 @@ export default function Page() {
       debounceMap.forEach(t => clearTimeout(t));
     };
   }, [currentPath, user]);
+
+  useEffect(() => {
+    if (!showSortMenu) return;
+
+    const closeSortMenu = () => setShowSortMenu(false);
+    window.addEventListener('resize', closeSortMenu);
+    window.addEventListener('scroll', closeSortMenu, true);
+
+    return () => {
+      window.removeEventListener('resize', closeSortMenu);
+      window.removeEventListener('scroll', closeSortMenu, true);
+    };
+  }, [showSortMenu]);
 
   useEffect(() => {
     return () => {
@@ -561,9 +590,14 @@ export default function Page() {
   };
 
   const handleSelectAll = () => {
-    if (fileListRef.current) {
-      fileListRef.current.selectAll();
+    const totalSelectable = Number(fileListRef.current?.getSelectableCount?.() || 0);
+    const allSelected = totalSelectable > 0 && selectedItems.length >= totalSelectable;
+    if (allSelected) {
+      fileListRef.current?.clearSelection?.();
+      setSelectedItems([]);
+      return;
     }
+    fileListRef.current?.selectAll?.();
   };
 
   const toggleViewMode = () => {
@@ -580,6 +614,22 @@ export default function Page() {
         }
       });
     }
+  };
+
+  const handleOpenSortMenu = (event) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    const menuWidth = 220;
+    const viewportPadding = 12;
+    const left = Math.max(
+      viewportPadding,
+      Math.min(rect.right - menuWidth, window.innerWidth - menuWidth - viewportPadding)
+    );
+
+    setSortMenuPosition({
+      top: rect.bottom + 8,
+      left
+    });
+    setShowSortMenu(true);
   };
 
   const handleSortByOption = (sortOption) => {
@@ -1060,6 +1110,13 @@ export default function Page() {
       return;
     }
 
+    if (selectedItems.length > 1) {
+      const zipName = `selection-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.zip`;
+      downloadMultipleFiles(selectedItems.map(item => ({ path: item.path, name: item.name })), zipName);
+      toast.addInfo(`Started zip download for ${selectedItems.length} items`);
+      return;
+    }
+
     selectedItems.forEach(item => {
       if (item.type === 'file') downloadFile(item.path, item.name);
       else if (item.type === 'folder') downloadFolder(item.path, item.name);
@@ -1112,7 +1169,7 @@ export default function Page() {
   const handleFavorite = () => {
     if (!selectedItems || selectedItems.length === 0) return;
     if (fileListRef.current) {
-      fileListRef.current.triggerFavorite(selectedItems);
+      fileListRef.current.triggerFavorite(selectedItems, mobileShouldUnfavorite ? 'remove' : 'add');
       toast.addInfo(selectedItems.length === 1 ? 'Toggled favorite' : 'Favorites updated');
     }
   };
@@ -1186,6 +1243,23 @@ export default function Page() {
   const handleSelectionChange = useCallback((items) => {
     setSelectedItems(items);
   }, []);
+
+  const handleCloseMobileSpecialPage = () => {
+    setShowSettings(false);
+    setShowShares(false);
+    setShowSharedWithYou(false);
+    setCurrentPath(undefined);
+  };
+
+  const handleClearMobileSelection = () => {
+    fileListRef.current?.clearSelection?.();
+    setSelectedItems([]);
+  };
+
+  const handleMobileSelectionShare = () => {
+    if (!selectedItems || selectedItems.length === 0) return;
+    fileListRef.current?.openShareCreate?.(selectedItems);
+  };
 
   const handleFilesUpload = (files) => {
     uploadFiles(files);
@@ -1556,25 +1630,57 @@ export default function Page() {
               <div className={`${style.mobileExplorerContainer} ${style.active}`}>
                 <div className={style.mobileExplorerHeader}>
                   <div className={style.headerContent}>
-                    <div className={style.folderNameBack}>
-                      <button className={style.backButton} onClick={handleBackNavigation}><ArrowLeft size={20} /></button>
-                      <h3 className={style.explorerTitle}>
-                        {currentPath === '' ? 'Main Storage' : currentPath === 'favorites' ? 'Favourites' : currentPath.split('/').pop() || 'Files'}
-                      </h3>
-                    </div>
+                    {!mobileSelectionActive ? (
+                      <div className={style.folderNameBack}>
+                        <button className={style.backButton} onClick={mobileInSpecialPage ? handleCloseMobileSpecialPage : handleBackNavigation}>
+                          {mobileInSpecialPage ? <X size={20} /> : <ArrowLeft size={20} />}
+                        </button>
+                        <h3 className={style.explorerTitle}>
+                          {mobilePageTitle}
+                        </h3>
+                      </div>
+                    ) : (
+                      <div className={style.mobileSelectionHeaderInfo}>
+                        <button className={style.backButton} onClick={handleClearMobileSelection}><X size={20} /></button>
+                        <div className={style.mobileSelectionMeta}>
+                          <h3 className={style.explorerTitle}>{selectedItems.length} selected</h3>
+                          <span className={style.mobileSelectionSize}>{formatFileSize(selectedTotalSize)}</span>
+                        </div>
+                      </div>
+                    )}
                     <div className={style.explorerControls}>
-                      <button className={style.viewToggleButton} onClick={toggleViewMode}>
-                        {viewMode === 'list' ? <LayoutGrid /> : <List />}
-                      </button>
-                      <button
-                        className={style.menuButton}
-                        onClick={() => setShowSortMenu(true)}
-                      >
-                        <EllipsisVertical size={18} />
-                      </button>
+                      {!mobileSelectionActive && !mobileInSpecialPage && (
+                        <button className={style.viewToggleButton} onClick={toggleViewMode}>
+                          {viewMode === 'list' ? <LayoutGrid /> : <List />}
+                        </button>
+                      )}
+                      {mobileSelectionActive && (
+                        <>
+                          <button className={style.menuButton} onClick={handleDownload} aria-label="Download selected">
+                            <Download size={18} />
+                          </button>
+                          <button className={style.menuButton} onClick={handleFavorite} aria-label={`${mobileFavoriteActionLabel} selected`} title={mobileFavoriteActionLabel}>
+                            <Star size={18} fill={mobileFavoriteActionLabel === 'Unfavourite' ? 'currentColor' : 'none'} />
+                          </button>
+                          <button className={style.menuButton} onClick={handleDelete} aria-label="Delete selected">
+                            <Trash2 size={18} />
+                          </button>
+                          <button className={style.menuButton} onClick={handleMobileSelectionShare} aria-label="Share selected">
+                            <Share2 size={18} />
+                          </button>
+                        </>
+                      )}
+                      {!mobileInSpecialPage && (
+                        <button
+                          className={style.menuButton}
+                          onClick={handleOpenSortMenu}
+                        >
+                          <EllipsisVertical size={18} />
+                        </button>
+                      )}
                     </div>
                   </div>
-                  <div className={style.breadcrumbs}>
+                  {!mobileSelectionActive && !mobileHidePath && <div className={style.breadcrumbs}>
                     {getBreadcrumbs().map((breadcrumb, index) => {
                       const isLast = index === getBreadcrumbs().length - 1;
                       return (
@@ -1593,9 +1699,9 @@ export default function Page() {
                         </span>
                       );
                     })}
-                  </div>
+                  </div>}
                 </div>
-                <div className={mobileFileListContainer}>
+                <div className={style.mobileFileListContainer}>
                   {showSettings ? (
                     <Settings
                       onClose={() => setShowSettings(false)}
@@ -1647,16 +1753,22 @@ export default function Page() {
                   )}
                 </div>
 
-                <button className={style.floatingAddButton} onClick={() => handleUpload()}>
-                  <Plus size={35} />
-                </button>
+                {!mobileSelectionActive && !mobileInSpecialPage && currentPath !== 'favorites' && (
+                  <button className={style.floatingAddButton} onClick={() => handleUpload()}>
+                    <Plus size={35} />
+                  </button>
+                )}
               </div>
             )}
 
             { }
             {showSortMenu && (
               <div className={style.sortMenuOverlay} onClick={() => setShowSortMenu(false)}>
-                <div className={style.sortMenu} onClick={(e) => e.stopPropagation()}>
+                <div
+                  className={style.sortMenu}
+                  style={{ top: `${sortMenuPosition.top}px`, left: `${sortMenuPosition.left}px` }}
+                  onClick={(e) => e.stopPropagation()}
+                >
                   <div className={style.sortMenuHeader}>
                     <h3>Options</h3>
                     <button onClick={() => setShowSortMenu(false)}>×</button>
@@ -1665,15 +1777,17 @@ export default function Page() {
                     <button onClick={() => {
                       setShowSortMenu(false);
                       handleSelectAll();
-                    }}>Select All</button>
+                    }}>{(Number(fileListRef.current?.getSelectableCount?.() || 0) > 0 && selectedItems.length >= Number(fileListRef.current?.getSelectableCount?.() || 0)) ? 'Unselect All' : 'Select All'}</button>
                     <button onClick={() => {
                       setShowSortMenu(false);
                       setShowSortOptionsMenu(true);
                     }}>Sort By</button>
-                    <button onClick={() => {
-                      setShowSortMenu(false);
-                      handleNewFolder();
-                    }}>Add New Folder</button>
+                    {currentPath !== 'favorites' && !mobileInSpecialPage && (
+                      <button onClick={() => {
+                        setShowSortMenu(false);
+                        handleNewFolder();
+                      }}>Add New Folder</button>
+                    )}
                   </div>
                 </div>
               </div>

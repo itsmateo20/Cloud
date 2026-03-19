@@ -4,10 +4,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { Resizable } from "re-resizable";
 import style from './DownloadManager.module.css';
+import { useIsMobile } from '@/utils/useIsMobile';
 
 const MAX_HISTORY_ITEMS = 200;
 
 export function DownloadManager() {
+    const isMobile = useIsMobile();
     const [isExpanded, setIsExpanded] = useState(false);
     const [downloads, setDownloads] = useState([]);
     const [history, setHistory] = useState([]);
@@ -226,7 +228,17 @@ export function DownloadManager() {
         }
     }, [shouldShowButton, isExpanded]);
 
-    if (!shouldShowButton) return null;
+    useEffect(() => {
+        const handleToggleRequest = () => {
+            if (!shouldShowButton) return;
+            setIsExpanded(prev => !prev);
+        };
+
+        window.addEventListener('downloadManagerToggleRequest', handleToggleRequest);
+        return () => window.removeEventListener('downloadManagerToggleRequest', handleToggleRequest);
+    }, [shouldShowButton]);
+
+    if (isMobile || !shouldShowButton) return null;
 
     return (
         <div className={style.downloadManager}>

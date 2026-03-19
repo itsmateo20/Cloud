@@ -416,49 +416,51 @@ export default function Settings({ onClose, onViewModeChange, onSortByChange, on
   return (
     <>
       <div className={style.settings}>
-        <div className={style.header}>
-          <div className={style.headerTop}>
-            <h1 className={style.title}>Settings</h1>
-            {isMobile && (
-              <button className={style.closeButton} onClick={onClose}>
-                <X size={24} />
-              </button>
+        {!isMobile && (
+          <div className={style.header}>
+            <div className={style.headerTop}>
+              <h1 className={style.title}>Settings</h1>
+              {isMobile && (
+                <button className={style.closeButton} onClick={onClose}>
+                  <X size={24} />
+                </button>
+              )}
+            </div>
+            {hasUnsavedChanges && (
+              <div className={style.unsavedBanner}>
+                <span>You have unsaved changes</span>
+                <div className={style.bannerActions}>
+                  <button className={style.resetButton} onClick={handleResetSettings}>
+                    <RotateCcw size={16} />
+                    Reset
+                  </button>
+                  <button
+                    className={style.saveButton}
+                    onClick={handleSaveAll}
+                    disabled={isSaving}
+                  >
+                    {isSaving ? (
+                      <>
+                        <SoftLoading />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <SaveIcon size={16} />
+                        Save Changes
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
+            {saveMessage && (
+              <div className={`${style.saveMessage} ${style[saveMessage.type]}`}>
+                {saveMessage.text}
+              </div>
             )}
           </div>
-          {hasUnsavedChanges && (
-            <div className={style.unsavedBanner}>
-              <span>You have unsaved changes</span>
-              <div className={style.bannerActions}>
-                <button className={style.resetButton} onClick={handleResetSettings}>
-                  <RotateCcw size={16} />
-                  Reset
-                </button>
-                <button
-                  className={style.saveButton}
-                  onClick={handleSaveAll}
-                  disabled={isSaving}
-                >
-                  {isSaving ? (
-                    <>
-                      <SoftLoading />
-                      Saving...
-                    </>
-                  ) : (
-                    <>
-                      <SaveIcon size={16} />
-                      Save Changes
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
-          )}
-          {saveMessage && (
-            <div className={`${style.saveMessage} ${style[saveMessage.type]}`}>
-              {saveMessage.text}
-            </div>
-          )}
-        </div>
+        )}
 
         <div className={style.content}>
           <div className={style.sidebar}>

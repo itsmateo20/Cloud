@@ -140,13 +140,18 @@ export default function SharedPage() {
                         {share.expiresAt ? ` • Expires ${new Date(share.expiresAt).toLocaleString()}` : ""}
                     </p>
                 </div>
-                <a
-                    href={`/api/shares/access/${share.token}/download-all${passcode ? `?passcode=${encodeURIComponent(passcode)}` : ""}`}
-                    download
-                    className={styles.primaryButton}
-                >
-                    Download all
-                </a>
+                <div className={styles.headerActions}>
+                    <span className={styles.itemsCount}>
+                        {items.length} item{items.length === 1 ? "" : "s"}
+                    </span>
+                    <a
+                        href={`/api/shares/access/${share.token}/download-all${passcode ? `?passcode=${encodeURIComponent(passcode)}` : ""}`}
+                        download
+                        className={styles.primaryButton}
+                    >
+                        Download all
+                    </a>
+                </div>
             </section>
 
             <section className={styles.itemsGrid}>

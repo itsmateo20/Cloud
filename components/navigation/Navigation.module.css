@@ -70,6 +70,7 @@
 }
 
 .searchBox h1 {
+    margin-top: 2px;
     color: var(--text);
     font-size: var(--font-size-sm);
     font-weight: 400;

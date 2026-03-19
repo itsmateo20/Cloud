@@ -406,3 +406,26 @@
         transform: translateY(0);
     }
 }
+
+@media (max-width: 768px) {
+    .floatingButton {
+        display: none;
+    }
+
+    .panelContainer {
+        right: 12px !important;
+        left: 12px;
+        bottom: 96px;
+    }
+
+    .resizableContainer {
+        width: 100% !important;
+        max-width: none !important;
+    }
+
+    .resizableContainer :global(.react-resizable-handle-e),
+    .resizableContainer :global(.react-resizable-handle-w),
+    .resizableContainer :global(.react-resizable-handle-se) {
+        display: none;
+    }
+}

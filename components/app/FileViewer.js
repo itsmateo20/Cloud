@@ -1507,6 +1507,16 @@ export function FileViewer({
 
                                                         <button
                                                             className={style.dropdownItem}
+                                                            onClick={() => {
+                                                                handleAction('share');
+                                                                setShowDropdown(false);
+                                                            }}
+                                                        >
+                                                            Share
+                                                        </button>
+
+                                                        <button
+                                                            className={style.dropdownItem}
                                                             onClick={handleFileInfo}
                                                         >
                                                             File Info
@@ -1607,6 +1617,16 @@ export function FileViewer({
                                                                 <div className={style.dropdownSeparator}></div>
                                                             </>
                                                         )}
+
+                                                        <button
+                                                            className={style.dropdownItem}
+                                                            onClick={() => {
+                                                                handleAction('share');
+                                                                setShowDropdown(false);
+                                                            }}
+                                                        >
+                                                            Share
+                                                        </button>
 
                                                         <button
                                                             className={style.dropdownItem}

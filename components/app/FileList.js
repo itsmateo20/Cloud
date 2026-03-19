@@ -22,7 +22,8 @@ import {
     File,
     Code,
     FileJson,
-    Star
+    Star,
+    MoreVertical
 } from 'lucide-react';
 
 function createConcurrencyQueue(maxConcurrency) {
@@ -156,7 +157,7 @@ const ThumbnailWithLoader = ({ src, alt, cacheRef, queue, currentPath }) => {
     return (
         <div ref={rootRef} style={{ position: 'relative' }}>
             {!loaded && inView && <div className={styles.thumbLoader}><SoftLoading /></div>}
-            {canStart && !error && (
+            {(canStart || loaded) && !error && (
                 <img
                     ref={imgRef}
                     src={effectiveSrc}
@@ -368,6 +369,9 @@ const FileList = forwardRef(({
     const [showLoadingOverlay, setShowLoadingOverlay] = useState(false);
     const [selectedItems, setSelectedItems] = useState(new Set());
     const [lastSelectedItem, setLastSelectedItem] = useState(null);
+    const longPressTimerRef = useRef(null);
+    const longPressTriggeredRef = useRef(false);
+    const touchStartPointRef = useRef({ x: 0, y: 0 });
 
     const [contextMenu, setContextMenu] = useState({
         visible: false,
@@ -1098,7 +1102,15 @@ const FileList = forwardRef(({
     }, [currentPath, loadContents]);
 
     useImperativeHandle(ref, () => ({
-        triggerFavorite: (items) => {
+        triggerFavorite: (items, mode = 'auto') => {
+            if (mode === 'add') {
+                handleContextMenuAction('add-favorite', items);
+                return;
+            }
+            if (mode === 'remove') {
+                handleContextMenuAction('remove-favorite', items);
+                return;
+            }
             handleContextMenuAction('favorite', items);
         },
         refresh: refreshContent,
@@ -1128,6 +1140,16 @@ const FileList = forwardRef(({
         startRename: (item) => {
             if (!item) return;
             setRenaming({ active: true, items: [item], value: item.name });
+        },
+        clearSelection: () => {
+            setSelectedItems(new Set());
+            setLastSelectedItem(null);
+            onSelectionChange?.([]);
+        },
+        getSelectableCount: () => {
+            const filteredFoldersNow = folders.filter(f => f.name !== '.thumbnails' && !f.path.endsWith('/.thumbnails'));
+            const filteredFilesNow = files.filter(f => !f.path.includes('/.thumbnails/') && !f.name.startsWith('.thumbnails'));
+            return filteredFoldersNow.length + filteredFilesNow.length;
         }
     }));
 
@@ -1299,6 +1321,24 @@ const FileList = forwardRef(({
     }, [contextMenu.visible]);
 
     const handleItemClick = (item, event) => {
+        if (mobile && longPressTriggeredRef.current) {
+            longPressTriggeredRef.current = false;
+            event.preventDefault();
+            return;
+        }
+
+        if (mobile && selectedItems.size > 0) {
+            const newSelected = new Set(selectedItems);
+            if (newSelected.has(item.path)) {
+                newSelected.delete(item.path);
+            } else {
+                newSelected.add(item.path);
+            }
+            setSelectedItems(newSelected);
+            setLastSelectedItem(newSelected.size > 0 ? item : null);
+            return;
+        }
+
         if (mobile && item.type === 'folder' && !event.ctrlKey && !event.metaKey && !event.shiftKey) {
             onFolderDoubleClick(item.path);
             return;
@@ -1354,6 +1394,9 @@ const FileList = forwardRef(({
     };
 
     const handleItemRightClick = (item, event) => {
+        if (mobile) {
+            return;
+        }
         event.preventDefault();
         let updatedSelection;
         if (!selectedItems.has(item.path)) {
@@ -1378,6 +1421,61 @@ const FileList = forwardRef(({
             y: event.clientY,
             items: selectedItemsData
         });
+    };
+
+    const handleMobileItemMenuButton = (item, event) => {
+        event.preventDefault();
+        event.stopPropagation();
+
+        const rect = event.currentTarget.getBoundingClientRect();
+        setContextMenu({
+            visible: true,
+            x: Math.max(8, rect.right - 6),
+            y: rect.bottom + 6,
+            items: [item]
+        });
+    };
+
+    const clearLongPressTimer = () => {
+        if (longPressTimerRef.current) {
+            clearTimeout(longPressTimerRef.current);
+            longPressTimerRef.current = null;
+        }
+    };
+
+    const handleItemTouchStart = (item, event) => {
+        if (!mobile) return;
+        const touch = event.touches?.[0];
+        touchStartPointRef.current = {
+            x: touch?.clientX ?? 0,
+            y: touch?.clientY ?? 0
+        };
+        longPressTriggeredRef.current = false;
+        clearLongPressTimer();
+        longPressTimerRef.current = setTimeout(() => {
+            longPressTriggeredRef.current = true;
+            setSelectedItems((prev) => {
+                const next = new Set(prev);
+                next.add(item.path);
+                return next;
+            });
+            setLastSelectedItem(item);
+        }, 420);
+    };
+
+    const handleItemTouchMove = (event) => {
+        if (!mobile || !longPressTimerRef.current) return;
+        const touch = event.touches?.[0];
+        const dx = Math.abs((touch?.clientX ?? 0) - touchStartPointRef.current.x);
+        const dy = Math.abs((touch?.clientY ?? 0) - touchStartPointRef.current.y);
+        if (dx > 10 || dy > 10) {
+            clearLongPressTimer();
+        }
+    };
+
+    const handleItemTouchEnd = () => {
+        if (!mobile) return;
+        clearLongPressTimer();
     };
 
     const isViewableFile = (filename) => {
@@ -1571,7 +1669,15 @@ const FileList = forwardRef(({
                 break;
 
             case 'properties':
-                toast?.addInfo('Open properties panel (placeholder)');
+                if (onProperties) {
+                    onProperties([file]);
+                } else {
+                    toast?.addInfo('Properties function not available');
+                }
+                break;
+
+            case 'share':
+                openShareCreate([file]);
                 break;
         }
     };
@@ -1929,8 +2035,21 @@ const FileList = forwardRef(({
                                 key={`folder-${folder.path}`}
                                 className={`${styles.item} ${selectedItems.has(folder.path) ? styles.selected : ''}`}
                                 onClick={(e) => handleItemClick(folder, e)}
-                                onDoubleClick={() => handleFolderDoubleClick(folder)}
-                                onContextMenu={(e) => handleItemRightClick(folder, e)}
+                                onDoubleClick={() => {
+                                    if (mobile && selectedItems.size > 0) return;
+                                    handleFolderDoubleClick(folder);
+                                }}
+                                onContextMenu={(e) => {
+                                    if (mobile) {
+                                        e.preventDefault();
+                                        return;
+                                    }
+                                    handleItemRightClick(folder, e);
+                                }}
+                                onTouchStart={(e) => handleItemTouchStart(folder, e)}
+                                onTouchMove={handleItemTouchMove}
+                                onTouchEnd={handleItemTouchEnd}
+                                onTouchCancel={handleItemTouchEnd}
                                 style={{ cursor: 'pointer', opacity: 1, ...(viewMode === 'details' ? { width: `${totalColumnWidth}px` } : {}) }}
                             >
                                 {isIconView ? (
@@ -2059,6 +2178,17 @@ const FileList = forwardRef(({
                                         )}
                                     </>
                                 ) : null}
+
+                                {mobile && (
+                                    <button
+                                        type="button"
+                                        className={styles.mobileItemMenuButton}
+                                        onClick={(e) => handleMobileItemMenuButton(folder, e)}
+                                        aria-label={`Open actions for ${folder.name}`}
+                                    >
+                                        <MoreVertical size={16} />
+                                    </button>
+                                )}
                             </div>
                         );
                     })}
@@ -2074,8 +2204,21 @@ const FileList = forwardRef(({
                                 key={`file-${file.path}`}
                                 className={`${styles.item} ${selectedItems.has(file.path) ? styles.selected : ''}`}
                                 onClick={(e) => handleItemClick(file, e)}
-                                onDoubleClick={() => handleFileDoubleClick(file)}
-                                onContextMenu={(e) => handleItemRightClick(file, e)}
+                                onDoubleClick={() => {
+                                    if (mobile && selectedItems.size > 0) return;
+                                    handleFileDoubleClick(file);
+                                }}
+                                onContextMenu={(e) => {
+                                    if (mobile) {
+                                        e.preventDefault();
+                                        return;
+                                    }
+                                    handleItemRightClick(file, e);
+                                }}
+                                onTouchStart={(e) => handleItemTouchStart(file, e)}
+                                onTouchMove={handleItemTouchMove}
+                                onTouchEnd={handleItemTouchEnd}
+                                onTouchCancel={handleItemTouchEnd}
                                 style={viewMode === 'details' ? { width: `${totalColumnWidth}px` } : undefined}
                             >
                                 {isIconView ? (
@@ -2238,6 +2381,17 @@ const FileList = forwardRef(({
                                         )}
                                     </>
                                 ) : null}
+
+                                {mobile && (
+                                    <button
+                                        type="button"
+                                        className={styles.mobileItemMenuButton}
+                                        onClick={(e) => handleMobileItemMenuButton(file, e)}
+                                        aria-label={`Open actions for ${file.name}`}
+                                    >
+                                        <MoreVertical size={16} />
+                                    </button>
+                                )}
                             </div>
                         );
                     })}
@@ -2278,6 +2432,7 @@ const FileList = forwardRef(({
                     selectedItems={contextMenu.items}
                     onAction={handleContextMenuAction}
                     currentPath={currentPath}
+                    mobile={mobile}
                     onClose={() => setContextMenu(prev => ({ ...prev, visible: false }))}
                 />
             )}

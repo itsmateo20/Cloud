@@ -45,36 +45,76 @@ export async function POST(req) {
         const sanitizedZipName = (zipName || 'download').replace(/[^a-zA-Z0-9_-]/g, '_') + '.zip';
 
         const validatedFiles = [];
-        for (const filePath of files) {
-            if (!filePath || typeof filePath !== 'string') continue;
+        const seenPaths = new Set();
+        const normalizedUserFolder = path.resolve(userFolder);
 
-            const requestedPath = path.join(userFolder, filePath);
+        const addFileIfValid = async (relativePath) => {
+            const normalizedRelative = String(relativePath || '').replace(/\\/g, '/').replace(/^\/+/, '');
+            const fullPath = path.resolve(userFolder, normalizedRelative);
 
-            if (!requestedPath.startsWith(userFolder)) {
-
+            if (!fullPath.startsWith(normalizedUserFolder)) {
                 return NextResponse.json({
                     success: false,
                     code: "invalid_path",
-                    message: `Invalid file path: ${filePath}`
+                    message: `Invalid file path: ${relativePath}`
                 }, { status: 400 });
             }
 
+            let stat;
             try {
-                const stat = await fs.stat(requestedPath);
+                stat = await fs.stat(fullPath);
+            } catch {
+                return null;
+            }
 
-                if (stat.isFile()) {
+            if (stat.isFile()) {
+                if (!seenPaths.has(fullPath)) {
+                    seenPaths.add(fullPath);
                     validatedFiles.push({
-                        filePath,
-                        fullPath: requestedPath,
+                        filePath: normalizedRelative,
+                        archivePath: normalizedRelative,
+                        fullPath,
                         size: stat.size,
                         mtime: stat.mtime
                     });
-
-                } else {
-
                 }
-            } catch (error) {
+                return null;
+            }
 
+            if (stat.isDirectory()) {
+                const walk = async (dirPath) => {
+                    const entries = await fs.readdir(dirPath, { withFileTypes: true });
+                    for (const entry of entries) {
+                        const entryFullPath = path.join(dirPath, entry.name);
+                        const entryRelativePath = path.relative(userFolder, entryFullPath).replace(/\\/g, '/');
+                        if (entry.isDirectory()) {
+                            await walk(entryFullPath);
+                        } else if (entry.isFile()) {
+                            if (seenPaths.has(entryFullPath)) continue;
+                            const entryStat = await fs.stat(entryFullPath);
+                            seenPaths.add(entryFullPath);
+                            validatedFiles.push({
+                                filePath: entryRelativePath,
+                                archivePath: entryRelativePath,
+                                fullPath: entryFullPath,
+                                size: entryStat.size,
+                                mtime: entryStat.mtime
+                            });
+                        }
+                    }
+                };
+
+                await walk(fullPath);
+            }
+
+            return null;
+        };
+
+        for (const filePath of files) {
+            if (!filePath || typeof filePath !== 'string') continue;
+            const invalidResponse = await addFileIfValid(filePath);
+            if (invalidResponse) {
+                return invalidResponse;
             }
         }
 
@@ -118,8 +158,7 @@ export async function POST(req) {
                         for (const file of validatedFiles) {
                             if (hasError) break;
 
-                            const fileName = path.basename(file.filePath);
-                            const relativePath = file.filePath.replace(/\\/g, '/');
+                            const relativePath = file.archivePath.replace(/\\/g, '/');
 
                             try {
                                 const stream = createReadStream(file.fullPath);
@@ -128,7 +167,7 @@ export async function POST(req) {
                                 });
 
                                 archive.append(stream, {
-                                    name: fileName,
+                                    name: relativePath,
                                     date: file.mtime
                                 });
 

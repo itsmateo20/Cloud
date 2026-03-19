@@ -3,10 +3,12 @@
 import { useState, useEffect } from 'react';
 import { Resizable } from "re-resizable";
 import style from './UploadManager.module.css';
+import { useIsMobile } from '@/utils/useIsMobile';
 
 const MAX_HISTORY_ITEMS = 200;
 
 export function UploadManager() {
+    const isMobile = useIsMobile();
     const [isExpanded, setIsExpanded] = useState(false);
     const [uploads, setUploads] = useState([]);
     const [history, setHistory] = useState([]);
@@ -156,6 +158,16 @@ export function UploadManager() {
         };
     }, [shouldShowButton, isExpanded]);
 
+    useEffect(() => {
+        const handleToggleRequest = () => {
+            if (!shouldShowButton) return;
+            setIsExpanded(prev => !prev);
+        };
+
+        window.addEventListener('uploadManagerToggleRequest', handleToggleRequest);
+        return () => window.removeEventListener('uploadManagerToggleRequest', handleToggleRequest);
+    }, [shouldShowButton]);
+
     const formatFileSize = (bytes) => {
         if (bytes === 0) return '0 B';
         const k = 1024;
@@ -213,7 +225,7 @@ export function UploadManager() {
 
     const overallProgress = getOverallProgress();
 
-    if (!shouldShowButton) return null;
+    if (isMobile || !shouldShowButton) return null;
 
     const rightOffset = isDownloadManagerVisible ? 92 : 20;
 

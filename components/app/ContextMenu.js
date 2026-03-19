@@ -27,7 +27,8 @@ export function ContextMenu({
     onClose,
     selectedItems,
     onAction,
-    currentPath
+    currentPath,
+    mobile = false
 }) {
     const menuRef = useRef(null);
     const [showFavoriteSubmenu, setShowFavoriteSubmenu] = useState(false);
@@ -108,10 +109,12 @@ export function ContextMenu({
                         Download{isMultipleSelected ? ` (${selectedItems.length})` : ""}
                     </div>
 
-                    <div className={styles.menuItem} onClick={() => handleSubmenuAction("download-qr")}>
-                        <span className={styles.icon}><Smartphone size={16} /></span>
-                        Download file{isMultipleSelected ? `s` : ""} via QR Code {isMultipleSelected ? ` (${selectedItems.length})` : ""}
-                    </div>
+                    {!mobile && (
+                        <div className={styles.menuItem} onClick={() => handleSubmenuAction("download-qr")}>
+                            <span className={styles.icon}><Smartphone size={16} /></span>
+                            Download file{isMultipleSelected ? `s` : ""} via QR Code {isMultipleSelected ? ` (${selectedItems.length})` : ""}
+                        </div>
+                    )}
 
                     <div className={styles.menuItem} onClick={() => handleAction("share")}>
                         <span className={styles.icon}><Share2 size={16} /></span>
@@ -150,28 +153,30 @@ export function ContextMenu({
                         {isFolder ? "Download as ZIP" : "Download"}{isMultipleSelected ? ` (${selectedItems.length})` : ""}
                     </div>
 
-                    <div
-                        className={`${styles.menuItem} ${styles.hasSubmenu}`}
-                        onMouseEnter={() => setShowQrSubmenu(true)}
-                        onMouseLeave={() => setShowQrSubmenu(false)}
-                    >
-                        <span className={styles.icon}><Smartphone size={16} /></span>
-                        QR Code
-                        <span className={styles.arrow}><ChevronRight size={12} /></span>
+                    {!mobile && (
+                        <div
+                            className={`${styles.menuItem} ${styles.hasSubmenu}`}
+                            onMouseEnter={() => setShowQrSubmenu(true)}
+                            onMouseLeave={() => setShowQrSubmenu(false)}
+                        >
+                            <span className={styles.icon}><Smartphone size={16} /></span>
+                            QR Code
+                            <span className={styles.arrow}><ChevronRight size={12} /></span>
 
-                        {showQrSubmenu && (
-                            <div className={styles.submenu}>
-                                <div className={styles.submenuItem} onClick={() => handleSubmenuAction("download-qr")}>
-                                    <span className={styles.icon}><Smartphone size={16} /></span>
-                                    Download file{isMultipleSelected ? `s` : ""} via QR Code {isMultipleSelected ? ` (${selectedItems.length})` : ""}
+                            {showQrSubmenu && (
+                                <div className={styles.submenu}>
+                                    <div className={styles.submenuItem} onClick={() => handleSubmenuAction("download-qr")}>
+                                        <span className={styles.icon}><Smartphone size={16} /></span>
+                                        Download file{isMultipleSelected ? `s` : ""} via QR Code {isMultipleSelected ? ` (${selectedItems.length})` : ""}
+                                    </div>
+                                    <div className={styles.submenuItem} onClick={() => handleSubmenuAction("upload-qr")}>
+                                        <span className={styles.icon}><Upload size={16} /></span>
+                                        Upload files via QR Code
+                                    </div>
                                 </div>
-                                <div className={styles.submenuItem} onClick={() => handleSubmenuAction("upload-qr")}>
-                                    <span className={styles.icon}><Upload size={16} /></span>
-                                    Upload files via QR Code
-                                </div>
-                            </div>
-                        )}
-                    </div>
+                            )}
+                        </div>
+                    )}
 
                     <div className={styles.separator}></div>
 

@@ -612,6 +612,29 @@
     }
 }
 
+@media (max-width: 768px) {
+    .floatingButton {
+        display: none;
+    }
+
+    .panelContainer {
+        right: 12px;
+        left: 12px;
+        bottom: 96px;
+    }
+
+    .resizableContainer {
+        width: 100% !important;
+        max-width: none !important;
+    }
+
+    .resizableContainer :global(.react-resizable-handle-e),
+    .resizableContainer :global(.react-resizable-handle-w),
+    .resizableContainer :global(.react-resizable-handle-se) {
+        display: none;
+    }
+}
+
 .resizableContainer :global(.react-resizable-handle) {
     opacity: 0.6;
     transition: opacity 0.2s ease;

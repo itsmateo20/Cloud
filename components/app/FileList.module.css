@@ -16,7 +16,7 @@
 }
 
 .fileList.mobile {
-    height: 100%;
+    height: fit-content;
     min-height: 0;
     flex: 1;
 }
@@ -90,6 +90,7 @@
 .item {
     cursor: pointer;
     transition: background-color 0.15s ease;
+    position: relative;
 }
 
 .item:hover {
@@ -98,6 +99,33 @@
 
 .item.selected {
     background-color: var(--explorer-selected);
+}
+
+.mobileItemMenuButton {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 28px;
+    height: 28px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--surface) 92%, transparent);
+    color: var(--text);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 6;
+}
+
+.mobileItemMenuButton:hover {
+    background: var(--hover-background);
+}
+
+@media (min-width: 769px) {
+    .mobileItemMenuButton {
+        display: none;
+    }
 }
 
 .cell {
@@ -171,6 +199,38 @@
 
     .cell {
         padding: 2px 4px;
+    }
+
+    .list .nameCell,
+    .details .nameCell {
+        min-width: 0;
+        padding-right: 40px;
+    }
+
+    .list .itemName,
+    .details .itemName,
+    .tiles .itemName,
+    .grid .gridFileName,
+    .grid .itemName,
+    .iconNameRegion.itemName {
+        min-width: 0;
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .itemName>span:first-child,
+    .gridFileName>span:first-child {
+        display: inline-block;
+        max-width: calc(100% - 20px);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        vertical-align: bottom;
+    }
+
+    .favoriteIcon {
+        flex-shrink: 0;
     }
 }
 
