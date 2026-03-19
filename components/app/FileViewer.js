@@ -1063,14 +1063,20 @@ export function FileViewer({
         const printWindow = window.open('', '_blank');
         if (!printWindow) return;
         const imageUrl = getDownloadUrl(currentFile);
+        const safeTitle = String(currentFile.name || 'Print').replace(/[<>]/g, '');
         printWindow.document.write(`
+            <!doctype html>
             <html>
-                <head><title>Print ${currentFile.name}</title></head>
+                <head>
+                    <meta charset="utf-8" />
+                    <title>Print ${safeTitle}</title>
+                </head>
                 <body style="margin: 0; text-align: center;">
                     <img src="${imageUrl}" style="max-width: 100%; height: auto;" onload="window.print(); window.close();" />
                 </body>
             </html>
         `);
+        printWindow.document.close();
     };
 
     const handleAction = (action) => {

@@ -34,10 +34,22 @@ export async function POST(req) {
             if (stats.isDirectory()) {
                 await fs.rmdir(fullPath, { recursive: true });
 
+                await prisma.file.deleteMany({
+                    where: {
+                        ownerId: id,
+                        OR: [
+                            { path: itemPath },
+                            { path: { startsWith: `${itemPath}/` } }
+                        ]
+                    }
+                });
                 await prisma.folder.deleteMany({
                     where: {
                         ownerId: id,
-                        path: itemPath
+                        OR: [
+                            { path: itemPath },
+                            { path: { startsWith: `${itemPath}/` } }
+                        ]
                     }
                 });
             } else {

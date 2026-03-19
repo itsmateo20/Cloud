@@ -1957,10 +1957,7 @@ const FileList = forwardRef(({
                                                     }}
                                                 />
                                             ) : (
-                                                <span
-                                                    className={styles.overflowClamp}
-                                                    data-tooltip={folder.name}
-                                                >{folder.name}</span>
+                                                <span>{folder.name}</span>
                                             )}
                                             {folder.isFavorited && <span className={styles.favoriteIcon}><Star size={13} fill="currentColor" /></span>}
                                         </div>
@@ -1986,10 +1983,7 @@ const FileList = forwardRef(({
                                                         }}
                                                     />
                                                 ) : (
-                                                    <span
-                                                        className={styles.overflowClamp}
-                                                        data-tooltip={folder.name}
-                                                    >{folder.name}</span>
+                                                    <span>{folder.name}</span>
                                                 )}
                                                 {folder.isFavorited && <span className={styles.favoriteIcon}><Star size={13} fill="currentColor" /></span>}
                                             </div>
@@ -2017,10 +2011,7 @@ const FileList = forwardRef(({
                                                         }}
                                                     />
                                                 ) : (
-                                                    <span
-                                                        className={styles.overflowClamp}
-                                                        data-tooltip={folder.name}
-                                                    >{folder.name}</span>
+                                                    <span>{folder.name}</span>
                                                 )}
                                                 {folder.isFavorited && <span className={styles.favoriteIcon}><Star size={13} fill="currentColor" /></span>}
                                             </div>
@@ -2048,10 +2039,7 @@ const FileList = forwardRef(({
                                                     fontWeight: 'bold',
                                                     color: 'inherit'
                                                 }}>
-                                                    <span
-                                                        className={styles.overflowClamp}
-                                                        data-tooltip={folder.name}
-                                                    >{folder.name}</span>
+                                                    {folder.name}
                                                 </span>
                                             )}
                                             {folder.isFavorited && <span className={styles.favoriteIcon}><Star size={13} fill="currentColor" /></span>}
@@ -2118,10 +2106,7 @@ const FileList = forwardRef(({
                                                     }}
                                                 />
                                             ) : (
-                                                <span
-                                                    className={styles.overflowClamp}
-                                                    data-tooltip={file.name}
-                                                >{file.name}</span>
+                                                <span>{file.name}</span>
                                             )}
                                             {file.isFavorited && <span className={styles.favoriteIcon}><Star size={13} fill="currentColor" /></span>}
                                         </div>
@@ -2153,10 +2138,7 @@ const FileList = forwardRef(({
                                                         }}
                                                     />
                                                 ) : (
-                                                    <span
-                                                        className={styles.overflowClamp}
-                                                        data-tooltip={file.name}
-                                                    >{file.name}</span>
+                                                    <span>{file.name}</span>
                                                 )}
                                                 {file.isFavorited && <span className={styles.favoriteIcon}><Star size={13} fill="currentColor" /></span>}
                                             </div>
@@ -2184,10 +2166,7 @@ const FileList = forwardRef(({
                                                         }}
                                                     />
                                                 ) : (
-                                                    <span
-                                                        className={styles.overflowClamp}
-                                                        data-tooltip={file.name}
-                                                    >{file.name}</span>
+                                                    <span>{file.name}</span>
                                                 )}
                                                 {file.isFavorited && <span className={styles.favoriteIcon}><Star size={13} fill="currentColor" /></span>}
                                             </div>
@@ -2240,12 +2219,7 @@ const FileList = forwardRef(({
                                                     }}
                                                 />
                                             ) : (
-                                                <span className={styles.itemName}>
-                                                    <span
-                                                        className={styles.overflowClamp}
-                                                        data-tooltip={file.name}
-                                                    >{file.name}</span>
-                                                </span>
+                                                <span className={styles.itemName}>{file.name}</span>
                                             )}
                                             {file.isFavorited && <span className={styles.favoriteIcon}><Star size={13} fill="currentColor" /></span>}
                                         </div>

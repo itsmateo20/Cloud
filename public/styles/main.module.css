@@ -111,16 +111,9 @@
 .fileListContainer {
     flex: 1;
     height: 100%;
-    min-height: 0;
-    max-height: 100%;
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    padding-bottom: 80px;
-}
-
-.fileListContainerFullPanel {
-    padding-bottom: 0;
 }
 
 .desktopContainer {
@@ -128,6 +121,7 @@
     display: flex;
     flex-direction: column;
     width: 100%;
+    height: calc(100vmin - var(--top-nav-height));
     min-height: 0;
     overflow: hidden;
 }

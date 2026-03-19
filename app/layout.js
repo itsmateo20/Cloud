@@ -7,6 +7,7 @@ import { AuthProvider } from "@/context/AuthProvider";
 import { ToastProvider } from "@/components/app/ToastProvider";
 import { getSiteUrl } from "@/lib/getSiteUrl";
 import { DownloadManager } from "@/components/app/DownloadManager";
+import { UploadManager } from "@/components/app/UploadManager";
 
 export async function generateMetadata() {
   const siteUrl = await getSiteUrl();
@@ -97,6 +98,7 @@ export default function RootLayout({ children }) {
           <AuthProvider>
             {children}
             <DownloadManager />
+            <UploadManager />
           </AuthProvider>
         </ToastProvider>
       </body>

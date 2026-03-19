@@ -18,7 +18,6 @@ import FileList from "@/components/app/FileList";
 import Controls from "@/components/app/Controls";
 import Settings from "@/components/app/Settings";
 import SharedWithYou from "@/components/app/SharedWithYou";
-import { UploadManager } from "@/components/app/UploadManager";
 import SoftLoading from "@/components/SoftLoading";
 import Loading from "@/components/Loading";
 
@@ -1304,8 +1303,6 @@ export default function Page() {
         </div>
       )}
 
-      <UploadManager />
-
       <Layout styleStyle={style.main} loading={loading} user={user} sideNav={true} currentPath={currentPath} onOpenSettings={() => {
         setSettingsInitialSection('profile');
         setShowSettings(true);
@@ -1390,7 +1387,7 @@ export default function Page() {
                   />
                 </div>
               </Resizable>
-              <div className={`${style.fileListContainer} ${showSharedWithYou ? style.fileListContainerFullPanel : ''}`}>
+              <div className={style.fileListContainer}>
                 {showSettings ? (
                   <Settings
                     onClose={() => setShowSettings(false)}
@@ -1598,7 +1595,7 @@ export default function Page() {
                     })}
                   </div>
                 </div>
-                <div className={`${style.mobileFileListContainer} ${showSharedWithYou ? style.fileListContainerFullPanel : ''}`}>
+                <div className={mobileFileListContainer}>
                   {showSettings ? (
                     <Settings
                       onClose={() => setShowSettings(false)}
@@ -1650,7 +1647,7 @@ export default function Page() {
                   )}
                 </div>
 
-                <button className={style.floatingAddButton} onClick={handleNewFolder}>
+                <button className={style.floatingAddButton} onClick={() => handleUpload()}>
                   <Plus size={35} />
                 </button>
               </div>
