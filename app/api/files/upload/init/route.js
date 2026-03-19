@@ -12,7 +12,7 @@ import { ensureUserUploadPath, ensureTempBasePath, getTempDirForToken } from "@/
 export async function POST(req) {
     try {
         const session = await getSession();
-        if (!session) {
+        if (!session?.success || !session?.user?.id) {
             return NextResponse.json({
                 success: false,
                 code: 'unauthorized',

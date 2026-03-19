@@ -10,6 +10,16 @@ export function UploadManager() {
     const [isExpanded, setIsExpanded] = useState(false);
     const [uploads, setUploads] = useState([]);
     const [history, setHistory] = useState([]);
+    const [isDownloadManagerVisible, setIsDownloadManagerVisible] = useState(false);
+
+    useEffect(() => {
+        const handleDownloadManagerVisibility = (event) => {
+            setIsDownloadManagerVisible(Boolean(event?.detail?.visible));
+        };
+
+        window.addEventListener('downloadManagerVisibility', handleDownloadManagerVisibility);
+        return () => window.removeEventListener('downloadManagerVisibility', handleDownloadManagerVisibility);
+    }, []);
 
     useEffect(() => {
         const interval = setInterval(() => {
@@ -205,8 +215,10 @@ export function UploadManager() {
 
     if (!shouldShowButton) return null;
 
+    const rightOffset = isDownloadManagerVisible ? 92 : 20;
+
     return (
-        <div className={style.uploadManager}>
+        <div className={style.uploadManager} style={{ right: `${rightOffset}px` }}>
             <button
                 className={`${style.floatingButton} ${isExpanded ? style.expanded : ''} ${hasActiveUploads ? style.hasActiveUploads : ''}`}
                 onClick={() => setIsExpanded(prev => !prev)}
@@ -253,7 +265,7 @@ export function UploadManager() {
             </button>
 
             {isExpanded && (
-                <div className={style.panelContainer}>
+                <div className={style.panelContainer} style={{ right: `${rightOffset}px` }}>
                     <Resizable
                         height={0}
                         minWidth={300}

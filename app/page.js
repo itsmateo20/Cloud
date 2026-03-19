@@ -60,6 +60,7 @@ export default function Page() {
   const [newFolderName, setNewFolderName] = useState('');
   const [confirmState, setConfirmState] = useState({ open: false, title: '', message: '', action: '' });
   const [showSettings, setShowSettings] = useState(false);
+  const [settingsInitialSection, setSettingsInitialSection] = useState('profile');
   const [showShares, setShowShares] = useState(false);
   const [showSharedWithYou, setShowSharedWithYou] = useState(false);
   const [settingsLoaded, setSettingsLoaded] = useState(false);
@@ -310,14 +311,15 @@ export default function Page() {
 
   const FavoriteFileItem = ({ file, onFavoriteClick }) => {
     const [imageLoading, setImageLoading] = useState(false);
+    const [thumbError, setThumbError] = useState(false);
     const thumbnail = getFileThumbnail(file);
     const ext = file.name.split('.').pop()?.toLowerCase();
-    const isVideo = ['mp4', 'avi', 'mov', 'webm', 'mkv', 'wmv'].includes(ext);
     const isGif = ext === 'gif';
 
     useEffect(() => {
       if (thumbnail) {
         setImageLoading(true);
+        setThumbError(false);
       }
     }, [thumbnail]);
 
@@ -332,34 +334,16 @@ export default function Page() {
               <SoftLoading active={imageLoading} />
             </div>
           )}
-          {thumbnail ? (
-            isVideo ? (
-              <video
-                src={thumbnail}
-                className={style.favouriteThumbnail}
-                muted
-                playsInline
-                preload="metadata"
-                onLoadedData={(e) => {
-                  e.target.currentTime = 0;
-                  setImageLoading(false);
-                }}
-                onError={(e) => {
-                  e.target.style.display = 'none';
-                  e.target.nextSibling.style.display = 'flex';
-                  setImageLoading(false);
-                }}
-              />
-            ) : isGif ? (
+          {thumbnail && !thumbError ? (
+            isGif ? (
               <img
                 src={thumbnail}
                 alt={file.name}
                 className={`${style.favouriteThumbnail} ${style.animatedThumbnail}`}
                 onLoad={() => setImageLoading(false)}
-                onError={(e) => {
-                  e.target.style.display = 'none';
-                  e.target.nextSibling.style.display = 'flex';
+                onError={() => {
                   setImageLoading(false);
+                  setThumbError(true);
                 }}
               />
             ) : (
@@ -368,17 +352,16 @@ export default function Page() {
                 alt={file.name}
                 className={style.favouriteThumbnail}
                 onLoad={() => setImageLoading(false)}
-                onError={(e) => {
-                  e.target.style.display = 'none';
-                  e.target.nextSibling.style.display = 'flex';
+                onError={() => {
                   setImageLoading(false);
+                  setThumbError(true);
                 }}
               />
             )
           ) : null}
           <div
             className={style.favouriteIcon}
-            style={{ display: thumbnail ? 'none' : 'flex' }}
+            style={{ display: thumbnail && !thumbError ? 'none' : 'flex' }}
           >
             {getFileIcon(file.name)}
           </div>
@@ -441,13 +424,23 @@ export default function Page() {
 
   const getFileThumbnail = (file) => {
     if (!file || !file.name) return null;
+    const normalizedPath = String(file.path || '')
+      .replace(/\\/g, '/')
+      .replace(/^\/+/, '')
+      .replace(/^uploads\/\d+\//, '');
+    if (!normalizedPath) return null;
 
     const ext = file.name.split('.').pop()?.toLowerCase();
     const isImage = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'].includes(ext);
     const isVideo = ['mp4', 'avi', 'mov', 'webm', 'mkv', 'wmv'].includes(ext);
 
-    if (isImage || isVideo) {
-      const thumbnailUrl = `/api/files/thumbnail?path=${encodeURIComponent(file.path)}`;
+    if (isImage) {
+      const thumbnailUrl = `/api/files/thumbnail?path=${encodeURIComponent(normalizedPath)}&size=small`;
+      return thumbnailUrl;
+    }
+
+    if (isVideo) {
+      const thumbnailUrl = `/api/files/video-thumbnail?path=${encodeURIComponent(normalizedPath)}&size=small`;
       return thumbnailUrl;
     }
 
@@ -707,6 +700,72 @@ export default function Page() {
     input.click();
   };
 
+  const readDirectoryEntries = async (directoryReader) => {
+    const entries = [];
+    while (true) {
+      const batch = await new Promise((resolve, reject) => {
+        directoryReader.readEntries(resolve, reject);
+      });
+      if (!batch || batch.length === 0) break;
+      entries.push(...batch);
+    }
+    return entries;
+  };
+
+  const extractFilesFromEntry = async (entry, prefix = '') => {
+    if (!entry) return [];
+
+    if (entry.isFile) {
+      const file = await new Promise((resolve, reject) => {
+        entry.file(resolve, reject);
+      });
+      const relativePath = `${prefix}${file.name}`;
+      try {
+        Object.defineProperty(file, '__relativePath', {
+          value: relativePath,
+          configurable: true,
+          writable: true
+        });
+      } catch {
+        file.__relativePath = relativePath;
+      }
+      return [file];
+    }
+
+    if (entry.isDirectory) {
+      const reader = entry.createReader();
+      const children = await readDirectoryEntries(reader);
+      const nested = await Promise.all(
+        children.map((child) => extractFilesFromEntry(child, `${prefix}${entry.name}/`))
+      );
+      return nested.flat();
+    }
+
+    return [];
+  };
+
+  const extractDroppedFiles = async (dataTransfer) => {
+    if (!dataTransfer) return [];
+
+    const items = Array.from(dataTransfer.items || []);
+    const entries = items
+      .map((item) => {
+        try {
+          return item.webkitGetAsEntry ? item.webkitGetAsEntry() : null;
+        } catch {
+          return null;
+        }
+      })
+      .filter(Boolean);
+
+    if (entries.length > 0) {
+      const nested = await Promise.all(entries.map((entry) => extractFilesFromEntry(entry)));
+      return nested.flat();
+    }
+
+    return Array.from(dataTransfer.files || []);
+  };
+
   const uploadFiles = async (files) => {
     if (!files || files.length === 0) return;
 
@@ -742,9 +801,10 @@ export default function Page() {
       const foldersToCreate = new Set();
 
       for (const file of files) {
-        if (file.webkitRelativePath) {
+        const relativePath = file.webkitRelativePath || file.__relativePath || file.relativePath || '';
+        if (relativePath) {
 
-          const pathParts = file.webkitRelativePath.split('/');
+          const pathParts = String(relativePath).replace(/\\/g, '/').split('/');
           const fileName = pathParts.pop();
           const folderPath = pathParts.join('/');
 
@@ -770,7 +830,7 @@ export default function Page() {
             }
             folderStructure.get('').push({
               file,
-              fileName: file.name
+              fileName: fileName || file.name
             });
           }
         } else {
@@ -972,7 +1032,7 @@ export default function Page() {
     }
   };
 
-  const handleGlobalDrop = (e) => {
+  const handleGlobalDrop = async (e) => {
     e.preventDefault();
     e.stopPropagation();
 
@@ -986,7 +1046,7 @@ export default function Page() {
     }
 
     try {
-      const files = Array.from(e.dataTransfer.files);
+      const files = await extractDroppedFiles(e.dataTransfer);
       if (files.length > 0) {
         uploadFiles(files);
       }
@@ -1100,8 +1160,10 @@ export default function Page() {
 
   const checkFolderExists = async (path) => {
     try {
-      const response = await api.get(`/api/files/list?path=${encodeURIComponent(path || '')}`);
-      return response.success;
+      const response = await api.get(`/api/files?path=${encodeURIComponent(path || '')}`);
+      if (response?.success === false) return false;
+      if (Array.isArray(response?.folders) || Array.isArray(response?.files)) return true;
+      return Boolean(response?.success);
     } catch {
       return false;
     }
@@ -1245,6 +1307,7 @@ export default function Page() {
       <UploadManager />
 
       <Layout styleStyle={style.main} loading={loading} user={user} sideNav={true} currentPath={currentPath} onOpenSettings={() => {
+        setSettingsInitialSection('profile');
         setShowSettings(true);
         setShowShares(false);
         setShowSharedWithYou(false);
@@ -1334,6 +1397,7 @@ export default function Page() {
                     onThemeChange={handleThemeChange}
                     onViewModeChange={setDesktopViewMode}
                     onSortByChange={setSortBy}
+                    initialSection={settingsInitialSection}
                     isMobile={false}
                   />
                 ) : showSharedWithYou ? (
@@ -1541,6 +1605,7 @@ export default function Page() {
                       onThemeChange={handleThemeChange}
                       onViewModeChange={null}
                       onSortByChange={setSortBy}
+                      initialSection={settingsInitialSection}
                       isMobile={isMobile}
                     />
                   ) : showSharedWithYou ? (

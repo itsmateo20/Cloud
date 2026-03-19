@@ -80,11 +80,10 @@
 
     overflow-y: auto;
     overflow-x: hidden;
-    height: 100%;
+    overscroll-behavior: contain;
 }
 
 .mobile .content {
-    height: 100%;
     flex: 1;
     min-height: 0;
 }
@@ -1091,7 +1090,7 @@
 .grid {
     overflow-y: auto;
     overflow-x: hidden;
-    height: 100%;
+    min-height: 0;
 }
 
 .qrModalOverlay {

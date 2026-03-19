@@ -34,7 +34,7 @@ import style from "./Settings.module.css";
 import SoftLoading from "../SoftLoading";
 import gravatar from "gravatar";
 
-export default function Settings({ onClose, onViewModeChange, onSortByChange, onThemeChange, isMobile = false }) {
+export default function Settings({ onClose, onViewModeChange, onSortByChange, onThemeChange, isMobile = false, initialSection = "profile" }) {
   const { user, signout } = useAuth();
 
   const [theme, setTheme] = useState("device");
@@ -48,7 +48,13 @@ export default function Settings({ onClose, onViewModeChange, onSortByChange, on
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState(null);
 
-  const [activeSection, setActiveSection] = useState("appearance");
+  const [activeSection, setActiveSection] = useState(initialSection || "profile");
+
+  useEffect(() => {
+    if (initialSection) {
+      setActiveSection(initialSection);
+    }
+  }, [initialSection]);
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteEmail, setDeleteEmail] = useState("");

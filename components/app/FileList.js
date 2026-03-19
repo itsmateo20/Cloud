@@ -77,15 +77,20 @@ const ThumbnailWithLoader = ({ src, alt, cacheRef, queue, currentPath }) => {
     const [inView, setInView] = useState(false);
     const [canStart, setCanStart] = useState(false);
     const [error, setError] = useState(false);
+    const [retryCount, setRetryCount] = useState(0);
     const rootRef = useRef(null);
     const imgRef = useRef(null);
     const observerRef = useRef(null);
+    const effectiveSrc = retryCount > 0 && src
+        ? `${src}${src.includes('?') ? '&' : '?'}retry=${retryCount}`
+        : src;
 
     useEffect(() => {
         setLoaded(cacheRef?.current?.has(cacheKey));
         setError(false);
         setCanStart(false);
         setInView(false);
+        setRetryCount(0);
     }, [cacheKey, cacheRef]);
 
     useEffect(() => {
@@ -136,6 +141,11 @@ const ThumbnailWithLoader = ({ src, alt, cacheRef, queue, currentPath }) => {
     };
 
     const handleError = () => {
+        if (retryCount < 1) {
+            setRetryCount(prev => prev + 1);
+            setCanStart(true);
+            return;
+        }
         setError(true);
         setLoaded(true);
         if (imgRef.current) {
@@ -149,7 +159,7 @@ const ThumbnailWithLoader = ({ src, alt, cacheRef, queue, currentPath }) => {
             {canStart && !error && (
                 <img
                     ref={imgRef}
-                    src={src}
+                    src={effectiveSrc}
                     alt={alt}
                     className={styles.thumbnailImage}
                     loading="lazy"
@@ -334,7 +344,8 @@ const FileList = forwardRef(({
 
     getPreviewUrl = useCallback((file, path) => {
         if (isImage(file.name)) {
-            const fullPath = path === '/' ? `/${file.name}` : `${path}/${file.name}`;
+            const normalizedPath = String(file?.path || '').replace(/\\/g, '/').replace(/^\/+/, '').replace(/^uploads\/\d+\//, '');
+            const fullPath = normalizedPath || (path === '/' ? `/${file.name}` : `${path || ''}/${file.name}`);
             const mod = file.modified || file.modifiedAt || file.updatedAt || file.createdAt || '';
             const v = mod ? new Date(mod).getTime() : '';
             return `/api/files/thumbnail?path=${encodeURIComponent(fullPath)}${v ? `&v=${v}` : ''}&size=medium`;
@@ -343,7 +354,8 @@ const FileList = forwardRef(({
     }, []);
     getVideoThumbnailUrl = useCallback((file, path) => {
         if (isVideo(file.name)) {
-            const fullPath = path === '/' ? `/${file.name}` : `${path}/${file.name}`;
+            const normalizedPath = String(file?.path || '').replace(/\\/g, '/').replace(/^\/+/, '').replace(/^uploads\/\d+\//, '');
+            const fullPath = normalizedPath || (path === '/' ? `/${file.name}` : `${path || ''}/${file.name}`);
             const mod = file.modified || file.modifiedAt || file.updatedAt || file.createdAt || '';
             const v = mod ? new Date(mod).getTime() : '';
             return `/api/files/video-thumbnail?path=${encodeURIComponent(fullPath)}${v ? `&v=${v}` : ''}&size=medium`;
@@ -1585,13 +1597,9 @@ const FileList = forwardRef(({
                 break;
 
             case 'download': {
-                openConfirm({
-                    title: 'Download Files',
-                    message: 'Download directly to this device?\n\nChoose Confirm to download locally. Choose Cancel to generate a QR code for mobile download.',
-                    confirmLabel: 'Download Here',
-                    cancelLabel: 'QR Code',
-                    context: items,
-                    action: 'context-download-mode'
+                items.forEach(item => {
+                    if (item.type === 'file') downloadFile(item.path, item.name);
+                    else if (item.type === 'folder') downloadFolder(item.path, item.name);
                 });
                 break;
             }
@@ -1906,7 +1914,7 @@ const FileList = forwardRef(({
             )}
 
             {!sharesOnly && (
-                <div ref={scrollContainerRef} className={`${styles.content} ${styles[viewMode]}`} style={viewMode === 'details' ? { overflowX: 'auto' } : undefined}>
+                <div ref={scrollContainerRef} className={`${styles.content} ${styles[viewMode]}`} style={viewMode === 'details' ? { overflowX: 'auto', overflowY: 'auto', minHeight: 0 } : undefined}>
                     {isVirtualizableView && topSpacer > 0 && (
                         <div style={{ height: topSpacer, pointerEvents: 'none' }} />
                     )}

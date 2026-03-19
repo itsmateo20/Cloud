@@ -8,7 +8,7 @@ import { getUserUploadPath } from '@/lib/paths';
 
 export async function GET(req) {
     const session = await getSession();
-    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!session?.success || !session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     const { searchParams } = new URL(req.url);
     const filePath = searchParams.get('path');
     const sizeParam = (searchParams.get('size') || 'medium').toLowerCase();

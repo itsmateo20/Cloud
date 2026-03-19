@@ -8,9 +8,11 @@ import prisma from "@/lib/db";
 import { verifyFolderOwnership } from "@/lib/folderAuth";
 import { getUserUploadPath, getUserFileUrl } from "@/lib/paths";
 
+const isUniqueConstraintError = (error) => error?.code === "P2002" || String(error?.message || "").includes("Unique constraint failed");
+
 export async function GET(req) {
     const session = await getSession();
-    if (!session) return NextResponse.json({ success: false, code: "unauthorized" }, { status: 401 });
+    if (!session?.success || !session?.user?.id) return NextResponse.json({ success: false, code: "unauthorized" }, { status: 401 });
 
     const { id: userId, email } = session.user;
     const folderVerification = await verifyFolderOwnership(userId);
@@ -177,8 +179,20 @@ export async function GET(req) {
         }
 
         await Promise.all([
-            newFolders.length > 0 ? prisma.folder.createMany({ data: newFolders }) : Promise.resolve(),
-            newFiles.length > 0 ? prisma.file.createMany({ data: newFiles }) : Promise.resolve(),
+            ...(newFolders.length > 0
+                ? [
+                    prisma.folder.createMany({ data: newFolders }).catch((error) => {
+                        if (!isUniqueConstraintError(error)) throw error;
+                    })
+                ]
+                : []),
+            ...(newFiles.length > 0
+                ? [
+                    prisma.file.createMany({ data: newFiles }).catch((error) => {
+                        if (!isUniqueConstraintError(error)) throw error;
+                    })
+                ]
+                : []),
             ...updateFolders.map(update => prisma.folder.update(update)),
             ...updateFiles.map(update => prisma.file.update(update))
         ]);

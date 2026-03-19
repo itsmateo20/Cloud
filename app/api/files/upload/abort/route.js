@@ -8,7 +8,7 @@ import fs from "fs/promises";
 export async function POST(req) {
     try {
         const session = await getSession();
-        if (!session) return NextResponse.json({ success: false, code: 'unauthorized', message: 'Authentication required' }, { status: 401 });
+        if (!session?.success || !session?.user?.id) return NextResponse.json({ success: false, code: 'unauthorized', message: 'Authentication required' }, { status: 401 });
 
         const body = await req.json();
         const { uploadToken } = body;

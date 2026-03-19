@@ -10,7 +10,7 @@ import { getUserUploadPath, ensureUserUploadPath } from "@/lib/paths";
 
 export async function POST(req) {
     const session = await getSession();
-    if (!session) return NextResponse.json({ success: false, code: "unauthorized" }, { status: 401 });
+    if (!session?.success || !session?.user?.id) return NextResponse.json({ success: false, code: "unauthorized" }, { status: 401 });
 
     const { id } = session.user;
     const folderVerification = await verifyFolderOwnership(id);
@@ -67,7 +67,8 @@ export async function POST(req) {
             const file = files[i];
             if (!file || typeof file === 'string') continue;
 
-            const fileName = file.name;
+            const fileName = path.basename(String(file.name || '').replace(/\\/g, '/'));
+            if (!fileName) continue;
             const filePath = path.join(targetFolder, fileName);
             if (!filePath.startsWith(userFolder)) return NextResponse.json({ success: false, code: "explorer_invalid_path" }, { status: 400 });
 

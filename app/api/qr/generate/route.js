@@ -3,14 +3,14 @@
 import { NextResponse } from "next/server";
 import QRCode from 'qrcode';
 import crypto from 'crypto';
-import prisma from '@/lib/db';
 import { getSiteUrl } from '@/lib/getSiteUrl';
 import { getSession } from '@/lib/session';
+import { createQrToken } from '@/lib/qrTokens';
 
 export async function POST(request) {
     try {
         const session = await getSession();
-        if (!session) {
+        if (!session?.success || !session?.user?.id) {
             return NextResponse.json({
                 success: false,
                 message: 'Authentication required'
@@ -36,33 +36,29 @@ export async function POST(request) {
                 }, { status: 400 });
             }
 
-            await prisma.qrToken.create({
-                data: {
-                    token,
-                    type: 'download',
-                    data: JSON.stringify({
-                        userId,
-                        items: items.map(item => ({
-                            path: item.path,
-                            name: item.name,
-                            type: item.type
-                        })),
-                        currentPath
-                    }),
-                    expiresAt
-                }
+            await createQrToken({
+                token,
+                type: 'download',
+                data: JSON.stringify({
+                    userId,
+                    items: items.map(item => ({
+                        path: item.path,
+                        name: item.name,
+                        type: item.type
+                    })),
+                    currentPath
+                }),
+                expiresAt
             });
         } else {
-            await prisma.qrToken.create({
-                data: {
-                    token,
-                    type: 'upload',
-                    data: JSON.stringify({
-                        userId,
-                        targetPath: currentPath
-                    }),
-                    expiresAt
-                }
+            await createQrToken({
+                token,
+                type: 'upload',
+                data: JSON.stringify({
+                    userId,
+                    targetPath: currentPath
+                }),
+                expiresAt
             });
         }
         let siteUrl;

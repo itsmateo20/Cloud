@@ -50,6 +50,18 @@ export function ToastProvider({ children, max = 5, duration = 4000 }) {
 
     const hasManager = dmState.visible || umState.visible;
     const hasExpandedManager = dmState.expanded || umState.expanded;
+    const uploadRight = dmState.visible ? 92 : 20;
+    const downloadRight = 20;
+
+    let toastRight = 16;
+    if (hasManager) {
+        if (dmState.visible && umState.visible) toastRight = 164;
+        else toastRight = 92;
+    }
+    if (hasExpandedManager) {
+        if (dmState.expanded) toastRight = Math.max(toastRight, downloadRight + 320);
+        if (umState.expanded) toastRight = Math.max(toastRight, uploadRight + 320);
+    }
 
     const contextValue = {
         addSuccess: (message, opts) => add({ message, type: 'success', ...opts }),
@@ -61,7 +73,7 @@ export function ToastProvider({ children, max = 5, duration = 4000 }) {
     return (
         <ToastContext.Provider value={contextValue}>
             {children}
-            <div className={`${styles.container} ${hasManager ? styles.withManager : ''} ${hasExpandedManager ? styles.managerExpanded : ''}`} role="status" aria-live="polite" aria-atomic="false">
+            <div className={`${styles.container} ${hasManager ? styles.withManager : ''} ${hasExpandedManager ? styles.managerExpanded : ''}`} style={{ right: `${toastRight}px` }} role="status" aria-live="polite" aria-atomic="false">
                 {toasts.map(t => (
                     <div key={t.id} className={`${styles.toast} ${styles[t.type]}`}>
                         <div className={styles.body}>{t.message}</div>

@@ -10,7 +10,7 @@ import { getUserUploadPath } from "@/lib/paths";
 
 export async function GET(req) {
     const session = await getSession();
-    if (!session) {
+    if (!session?.success || !session?.user?.id) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 

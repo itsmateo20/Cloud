@@ -7,17 +7,15 @@
     gap: 10px;
     z-index: 5000;
     max-width: min(420px, 90vw);
+    transition: right .28s cubic-bezier(.4, 0, .2, 1);
 }
 
 .withManager {
 
-    right: 92px;
-    transition: right .28s cubic-bezier(.4, 0, .2, 1);
 }
 
 .managerExpanded {
 
-    right: 340px;
 
 }
 

@@ -3,9 +3,9 @@
 import { NextResponse } from 'next/server';
 import { readFile } from 'fs/promises';
 import { join } from 'path';
-import prisma from '@/lib/db';
 import archiver from 'archiver';
 import { getUserUploadPath } from '@/lib/paths';
+import { deleteQrTokenById, findQrTokenByToken } from '@/lib/qrTokens';
 
 export async function POST(request) {
     try {
@@ -18,9 +18,7 @@ export async function POST(request) {
             }, { status: 400 });
         }
 
-        const qrToken = await prisma.qrToken.findUnique({
-            where: { token }
-        });
+        const qrToken = await findQrTokenByToken(token);
 
         if (!qrToken) {
             return NextResponse.json({
@@ -30,7 +28,7 @@ export async function POST(request) {
         }
 
         if (new Date() > qrToken.expiresAt) {
-            await prisma.qrToken.delete({ where: { id: qrToken.id } });
+            await deleteQrTokenById(qrToken.id);
             return NextResponse.json({
                 success: false,
                 message: 'Token expired'
