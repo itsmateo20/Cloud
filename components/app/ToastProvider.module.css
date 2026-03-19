@@ -10,14 +10,9 @@
     transition: right .28s cubic-bezier(.4, 0, .2, 1);
 }
 
-.withManager {
+.withManager {}
 
-}
-
-.managerExpanded {
-
-
-}
+.managerExpanded {}
 
 @media (max-width: 820px) {
     .managerExpanded {
