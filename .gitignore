@@ -3,7 +3,6 @@
 /out/
 .env*
 /prisma/database.*
-/prisma/migrations/*
 /prisma/generated/*
 /uploads
 *.pdn
