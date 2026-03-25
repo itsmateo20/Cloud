@@ -15,7 +15,7 @@ export async function POST(req) {
 
         if (!response.success) return NextResponse.json({ success: false, code: response.code, error: response.error }, { status: 500 });
 
-        await createSession({ id: response.user.id, email: response.user.email, googleEmail: response.user?.googleEmail, provider: response.user.provider }, req);
+        await createSession({ id: response.user.id, email: response.user.email, googleEmail: response.user?.googleEmail, provider: response.user.provider, admin: response.user.admin }, req);
         return NextResponse.json({ success: true, code: "login_success", user: response.user }, { status: 200 });
     } catch (error) {
         return NextResponse.json({ success: false, code: "login_failed", error }, { status: 500 });

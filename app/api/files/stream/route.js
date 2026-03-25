@@ -78,7 +78,7 @@ async function streamFile(req, filePath, fileName = null) {
             '.mp4': 'video/mp4',
             '.webm': 'video/webm',
             '.ogg': 'video/ogg',
-            '.avi': 'video/x-msvideo',
+            '.avi': 'video/avi',
             '.mov': 'video/quicktime',
             '.wmv': 'video/x-ms-wmv',
             '.mkv': 'video/x-matroska',

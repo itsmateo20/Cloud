@@ -18,6 +18,7 @@ import FileList from "@/components/app/FileList";
 import Controls from "@/components/app/Controls";
 import Settings from "@/components/app/Settings";
 import SharedWithYou from "@/components/app/SharedWithYou";
+import AdminUsersPanel from "@/components/app/AdminUsersPanel";
 import SoftLoading from "@/components/SoftLoading";
 import Loading from "@/components/Loading";
 
@@ -63,6 +64,7 @@ export default function Page() {
   const [settingsInitialSection, setSettingsInitialSection] = useState('profile');
   const [showShares, setShowShares] = useState(false);
   const [showSharedWithYou, setShowSharedWithYou] = useState(false);
+  const [showAdminUsers, setShowAdminUsers] = useState(false);
   const [settingsLoaded, setSettingsLoaded] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -89,7 +91,7 @@ export default function Page() {
   const selectedUnfavoritedCount = Math.max(0, (selectedItems?.length || 0) - selectedFavoritedCount);
   const mobileShouldUnfavorite = selectedItems.length > 0 && selectedUnfavoritedCount === 0;
   const mobileFavoriteActionLabel = mobileShouldUnfavorite ? 'Unfavourite' : 'Favourite';
-  const mobileInSpecialPage = Boolean(showSettings || showShares || showSharedWithYou);
+  const mobileInSpecialPage = Boolean(showSettings || showShares || showSharedWithYou || showAdminUsers);
   const mobileHidePath = Boolean(mobileInSpecialPage || currentPath === 'favorites');
   const mobilePageTitle = showSettings
     ? 'Settings'
@@ -97,7 +99,9 @@ export default function Page() {
       ? 'Shared Files'
       : showSharedWithYou
         ? 'Shared With You'
-        : (currentPath === '' ? 'Main Storage' : currentPath === 'favorites' ? 'Favourites' : currentPath?.split('/').pop() || 'Files');
+        : showAdminUsers
+          ? 'View Users'
+          : (currentPath === '' ? 'Main Storage' : currentPath === 'favorites' ? 'Favourites' : currentPath?.split('/').pop() || 'Files');
 
   useEffect(() => {
     if (loading || !settingsLoaded) {
@@ -509,6 +513,7 @@ export default function Page() {
     setShowSettings(false);
     setShowShares(false);
     setShowSharedWithYou(false);
+    setShowAdminUsers(false);
     fileListRef.current?.closeShareManager?.();
   };
 
@@ -516,6 +521,7 @@ export default function Page() {
     setShowSettings(false);
     setShowShares(true);
     setShowSharedWithYou(false);
+    setShowAdminUsers(false);
     setCurrentPath('');
   }, []);
 
@@ -523,6 +529,16 @@ export default function Page() {
     setShowSettings(false);
     setShowShares(false);
     setShowSharedWithYou(true);
+    setShowAdminUsers(false);
+    setCurrentPath('');
+    fileListRef.current?.closeShareManager?.();
+  }, []);
+
+  const handleOpenAdminUsers = useCallback(() => {
+    setShowSettings(false);
+    setShowShares(false);
+    setShowSharedWithYou(false);
+    setShowAdminUsers(true);
     setCurrentPath('');
     fileListRef.current?.closeShareManager?.();
   }, []);
@@ -1248,6 +1264,7 @@ export default function Page() {
     setShowSettings(false);
     setShowShares(false);
     setShowSharedWithYou(false);
+    setShowAdminUsers(false);
     setCurrentPath(undefined);
   };
 
@@ -1382,8 +1399,9 @@ export default function Page() {
         setShowSettings(true);
         setShowShares(false);
         setShowSharedWithYou(false);
+        setShowAdminUsers(false);
         setCurrentPath('');
-      }} onOpenShares={handleOpenShares}>
+      }} onOpenShares={handleOpenShares} onOpenAdminUsers={handleOpenAdminUsers}>
         <ConfirmModal
           open={confirmState.open}
           title={confirmState.title}
@@ -1418,7 +1436,7 @@ export default function Page() {
               onViewChange={handleViewChange}
               onRefresh={handleRefresh}
               onShare={(items) => fileListRef.current?.openShareCreate?.(items)}
-              disabled={controlsDisabled || showSettings || showShares || showSharedWithYou || propertiesState.open}
+              disabled={controlsDisabled || showSettings || showShares || showSharedWithYou || showAdminUsers || propertiesState.open}
             />
             <div className={style.diskContainerRow}>
               <Resizable
@@ -1486,6 +1504,7 @@ export default function Page() {
                       setCurrentPath(path);
                       setShowShares(false);
                       setShowSharedWithYou(false);
+                      setShowAdminUsers(false);
                     }}
                     onProperties={handleProperties}
                     sortBy={sortBy}
@@ -1493,6 +1512,10 @@ export default function Page() {
                     user={user}
                     mobile={isMobile}
                     sharesOnly={true}
+                  />
+                ) : showAdminUsers ? (
+                  <AdminUsersPanel
+                    onClose={() => setShowAdminUsers(false)}
                   />
                 ) : (
                   <FileList
@@ -1584,6 +1607,7 @@ export default function Page() {
                     setShowSettings(false);
                     setShowShares(false);
                     setShowSharedWithYou(false);
+                    setShowAdminUsers(false);
                   }}
                 >
                   <div className={style.storageIcon}>
@@ -1609,6 +1633,7 @@ export default function Page() {
                       setShowSettings(false);
                       setShowShares(false);
                       setShowSharedWithYou(false);
+                      setShowAdminUsers(false);
                     }}
                   >
                     <div className={style.storageIcon}>
@@ -1726,6 +1751,7 @@ export default function Page() {
                         setCurrentPath(path);
                         setShowShares(false);
                         setShowSharedWithYou(false);
+                        setShowAdminUsers(false);
                       }}
                       onProperties={handleProperties}
                       sortBy={sortBy}
@@ -1734,6 +1760,8 @@ export default function Page() {
                       mobile={isMobile}
                       sharesOnly={true}
                     />
+                  ) : showAdminUsers ? (
+                    <AdminUsersPanel onClose={() => setShowAdminUsers(false)} />
                   ) : (
                     <FileList
                       key="mobile-explorer"

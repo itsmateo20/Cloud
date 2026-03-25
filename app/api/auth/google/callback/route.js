@@ -60,7 +60,8 @@ export async function GET(req) {
                         id: loginResponse.user.id,
                         email: loginResponse.user?.email,
                         googleEmail: googleUser.email,
-                        provider: loginResponse.user.provider
+                        provider: loginResponse.user.provider,
+                        admin: loginResponse.user.admin
                     }, req);
 
                     return new NextResponse(JSON.stringify({ success: true, code: "authentication_success" }), { status: 301, headers: { Location: "/" } });
@@ -74,7 +75,8 @@ export async function GET(req) {
             id: response.user.id,
             email: response.user?.email,
             googleEmail: googleUser.email,
-            provider: response.user.provider
+            provider: response.user.provider,
+            admin: response.user.admin
         }, req);
 
         const finalCookieStore = await cookies();

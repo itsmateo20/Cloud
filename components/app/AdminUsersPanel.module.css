@@ -1,0 +1,162 @@
+/* components/app/AdminUsersPanel.module.css */
+
+.panel {
+    width: 100%;
+    height: 100%;
+    background: var(--background);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.header h2 {
+    margin: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 22px;
+}
+
+.headerActions {
+    display: flex;
+    gap: 8px;
+}
+
+.grid {
+    flex: 1;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: 280px 1fr;
+}
+
+.userList {
+    border-right: 1px solid var(--border-color);
+    overflow: auto;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.userRow {
+    border: 1px solid var(--border-color);
+    background: var(--surface);
+    color: var(--text);
+    border-radius: 8px;
+    padding: 10px 12px;
+    text-align: left;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.activeUser {
+    border-color: var(--accent-color);
+    background: color-mix(in srgb, var(--accent-color) 12%, transparent);
+}
+
+.editor {
+    overflow: auto;
+    padding: 16px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.meta {
+    margin: 0;
+    color: var(--alt-text-2);
+    font-size: 13px;
+}
+
+.card {
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background: var(--surface);
+}
+
+.fields {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 10px;
+}
+
+.card label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 13px;
+}
+
+.card select,
+.card input {
+    background: var(--background);
+    color: var(--text);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 8px 10px;
+}
+
+.primaryButton,
+.secondaryButton {
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+}
+
+.primaryButton {
+    background: var(--button-primary);
+    color: white;
+    border-color: transparent;
+    width: fit-content;
+}
+
+.secondaryButton {
+    background: var(--surface);
+    color: var(--text);
+}
+
+.error {
+    color: #ef4444;
+    margin: 8px 20px 0;
+}
+
+.message {
+    color: var(--text);
+    margin: 8px 20px 0;
+}
+
+@media (max-width: 900px) {
+    .grid {
+        grid-template-columns: 1fr;
+    }
+
+    .userList {
+        border-right: none;
+        border-bottom: 1px solid var(--border-color);
+        max-height: 34vh;
+    }
+
+    .header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+}

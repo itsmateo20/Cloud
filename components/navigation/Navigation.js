@@ -12,7 +12,7 @@ import { useIsMobile } from "@/utils/useIsMobile";
 import UserProfileDropdown from "./UserProfileDropdown";
 import { AlignJustify, Search } from "lucide-react";
 
-export function Navigation({ user, sideNav = false, currentPath, onOpenSettings, onOpenShares }) {
+export function Navigation({ user, sideNav = false, currentPath, onOpenSettings, onOpenShares, onOpenAdminUsers }) {
     const isMobile = useIsMobile();
     const deviceResolved = typeof isMobile === "boolean";
     const pathname = usePathname();
@@ -349,7 +349,7 @@ export function Navigation({ user, sideNav = false, currentPath, onOpenSettings,
                     </Link>
                     <h1 className={style.title}>Cloud</h1>
                 </div>
-                {user && deviceResolved ? <UserProfileDropdown user={user} mobile={isMobile} onOpenSettings={onOpenSettings} onOpenShares={onOpenShares} /> : null}
+                {user && deviceResolved ? <UserProfileDropdown user={user} mobile={isMobile} onOpenSettings={onOpenSettings} onOpenShares={onOpenShares} onOpenAdminUsers={onOpenAdminUsers} /> : null}
             </nav>
         </>
     );

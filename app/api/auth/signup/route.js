@@ -20,7 +20,8 @@ export async function POST(req) {
             id: response.user.id,
             email: response.user.email,
             googleEmail: response.user?.googleEmail,
-            provider: response.user.provider
+            provider: response.user.provider,
+            admin: response.user.admin
         }, req);
 
         return NextResponse.json({ success: true, code: "signup_success", user: response.user }, { status: 200 });

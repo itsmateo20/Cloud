@@ -13,6 +13,7 @@ model User {
   googleEmail String?  @unique
   password    String
   provider    String   @default("credentials")
+  admin       Boolean  @default(false)
   folderToken String?  @unique
   createdAt   DateTime @default(now())
   updatedAt   DateTime @default(now()) @updatedAt

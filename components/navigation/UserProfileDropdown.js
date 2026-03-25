@@ -13,9 +13,9 @@ import Image from "next/image";
 
 import nav from "./UserProfileDropdown.module.css";
 
-import { Cog, LogOut, Settings, User, Share2 } from "lucide-react";
+import { Cog, LogOut, Settings, User, Share2, Users } from "lucide-react";
 
-export default function UserProfileDropdown({ user, mobile, onOpenSettings, onOpenShares }) {
+export default function UserProfileDropdown({ user, mobile, onOpenSettings, onOpenShares, onOpenAdminUsers }) {
     const { signout } = useAuth();
     const userProfileRef = useRef(null);
     const userDropdownRef = useRef(null);
@@ -90,6 +90,12 @@ export default function UserProfileDropdown({ user, mobile, onOpenSettings, onOp
                     <Share2 size={25} strokeWidth={2} />
                     <h1>Shared Files</h1>
                 </div>
+                {user?.admin && (
+                    <div className={`${nav.userProfileMobileListItem} ${nav.userProfileMobileSettings}`} onClick={onOpenAdminUsers}>
+                        <Users size={25} strokeWidth={2} />
+                        <h1>View Users</h1>
+                    </div>
+                )}
                 <div className={`${nav.userProfileMobileListItem} ${nav.userProfileMobileLogout}`} onClick={() => signout()}>
                     <LogOut size={23} strokeWidth={2} />
                     <h1>Logout</h1>
@@ -137,6 +143,7 @@ export default function UserProfileDropdown({ user, mobile, onOpenSettings, onOp
                     <li onClick={onOpenSettings}><span>Settings</span><Cog size={22} strokeWidth={3} /></li>
                     <li onClick={() => window.open(`https://en.gravatar.com/emails/`, '_blank')}><span>Edit Gravatar</span><User size={22} strokeWidth={3} /></li>
                     <li onClick={onOpenShares}><span>Shared Files</span><Share2 size={22} strokeWidth={3} /></li>
+                    {user?.admin && <li onClick={onOpenAdminUsers}><span>View Users</span><Users size={22} strokeWidth={3} /></li>}
                 </ul>
                 <ul>
                     <li onClick={() => signout()}><span>Logout</span><LogOut size={22} strokeWidth={3} /></li>

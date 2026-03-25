@@ -402,6 +402,30 @@ export function FileViewer({
         params.set('size', size);
         return `/api/files/thumbnail?${params.toString()}`;
     };
+    const getVideoMimeType = (filename) => {
+        const ext = (filename || '').split('.').pop()?.toLowerCase();
+        switch (ext) {
+            case 'mp4':
+            case 'm4v':
+                return 'video/mp4';
+            case 'webm':
+                return 'video/webm';
+            case 'ogg':
+                return 'video/ogg';
+            case 'mov':
+                return 'video/quicktime';
+            case 'avi':
+                return 'video/avi';
+            case 'wmv':
+                return 'video/x-ms-wmv';
+            case 'flv':
+                return 'video/x-flv';
+            case 'mkv':
+                return 'video/x-matroska';
+            default:
+                return 'video/mp4';
+        }
+    };
 
     const releaseMediaResources = useCallback(() => {
         if (videoRef.current) {
@@ -1227,6 +1251,8 @@ export function FileViewer({
                                 }}
                                 onClick={handleVideoClick}
                             >
+                                <source src={getStreamUrl(currentFile)} type={getVideoMimeType(currentFile?.name)} />
+                                <source src={getStreamUrl(currentFile)} type="video/x-msvideo" />
                                 Your browser does not support the video tag.
                             </video>
                         </div>
