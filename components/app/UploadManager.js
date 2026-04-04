@@ -7,6 +7,16 @@ import { useIsMobile } from '@/utils/useIsMobile';
 
 const MAX_HISTORY_ITEMS = 200;
 
+const getAverageSpeed = (uploadedBytes, startTime, now = Date.now()) => {
+    const elapsedSeconds = Math.max((now - startTime) / 1000, 0.001);
+    return uploadedBytes / elapsedSeconds;
+};
+
+const getRemainingTime = (fileSize, uploadedBytes, speed) => {
+    if (!speed || speed <= 0) return null;
+    return Math.max(0, fileSize - uploadedBytes) / speed;
+};
+
 export function UploadManager() {
     const isMobile = useIsMobile();
     const [isExpanded, setIsExpanded] = useState(false);
@@ -59,6 +69,36 @@ export function UploadManager() {
     }, []);
 
     useEffect(() => {
+        const interval = setInterval(() => {
+            setUploads(prev => {
+                if (prev.length === 0) {
+                    return prev;
+                }
+
+                return prev.map(upload => {
+                    if (upload.status !== 'uploading') {
+                        return upload;
+                    }
+
+                    const now = Date.now();
+                    const uploadedBytes = upload.uploadedBytes || 0;
+                    const fileSize = upload.fileSize || 0;
+                    const speed = getAverageSpeed(uploadedBytes, upload.startTime, now);
+                    const timeRemaining = getRemainingTime(fileSize, uploadedBytes, speed);
+
+                    return {
+                        ...upload,
+                        speed,
+                        timeRemaining
+                    };
+                });
+            });
+        }, 1000);
+
+        return () => clearInterval(interval);
+    }, []);
+
+    useEffect(() => {
         const handleUploadStart = (event) => {
             const { id, fileName, fileSize, type } = event.detail;
             setUploads(prev => {
@@ -83,17 +123,18 @@ export function UploadManager() {
         };
 
         const handleUploadProgress = (event) => {
-            const { id, loaded, total, speed } = event.detail;
+            const { id, loaded, total } = event.detail;
 
             setUploads(prev => prev.map(upload => {
                 if (upload.id === id) {
                     const progress = total > 0 ? (loaded / total) * 100 : 0;
-                    const timeRemaining = speed > 0 ? (total - loaded) / speed : null;
+                    const speed = getAverageSpeed(loaded, upload.startTime);
+                    const timeRemaining = getRemainingTime(total, loaded, speed);
 
                     return {
                         ...upload,
                         progress,
-                        speed: speed || upload.speed,
+                        speed,
                         timeRemaining,
                         uploadedBytes: loaded,
                         lastUpdate: Date.now()

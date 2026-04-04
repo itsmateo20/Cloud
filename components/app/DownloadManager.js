@@ -8,6 +8,16 @@ import { useIsMobile } from '@/utils/useIsMobile';
 
 const MAX_HISTORY_ITEMS = 200;
 
+const getAverageSpeed = (downloadedBytes, startTime, now = Date.now()) => {
+    const elapsedSeconds = Math.max((now - startTime) / 1000, 0.001);
+    return downloadedBytes / elapsedSeconds;
+};
+
+const getRemainingTime = (fileSize, downloadedBytes, speed) => {
+    if (!speed || speed <= 0) return null;
+    return Math.max(0, fileSize - downloadedBytes) / speed;
+};
+
 export function DownloadManager() {
     const isMobile = useIsMobile();
     const [isExpanded, setIsExpanded] = useState(false);
@@ -50,6 +60,36 @@ export function DownloadManager() {
     }, []);
 
     useEffect(() => {
+        const interval = setInterval(() => {
+            setDownloads(prev => {
+                if (prev.length === 0) {
+                    return prev;
+                }
+
+                return prev.map(download => {
+                    if (download.status !== 'downloading') {
+                        return download;
+                    }
+
+                    const now = Date.now();
+                    const downloadedBytes = download.downloadedBytes || 0;
+                    const fileSize = download.fileSize || 0;
+                    const speed = getAverageSpeed(downloadedBytes, download.startTime, now);
+                    const timeRemaining = getRemainingTime(fileSize, downloadedBytes, speed);
+
+                    return {
+                        ...download,
+                        speed,
+                        timeRemaining
+                    };
+                });
+            });
+        }, 1000);
+
+        return () => clearInterval(interval);
+    }, []);
+
+    useEffect(() => {
         const handleDownloadStart = (event) => {
             const { id, fileName, fileSize, type } = event.detail;
             setDownloads(prev => {
@@ -76,15 +116,17 @@ export function DownloadManager() {
         };
 
         const handleDownloadProgress = (event) => {
-            const { id, loaded, total, speed } = event.detail;
+            const { id, loaded, total } = event.detail;
 
             setDownloads(prev => prev.map(download => {
                 if (download.id === id) {
                     const progress = total > 0 ? (loaded / total) * 100 : 0;
-                    const timeRemaining = speed > 0 ? (total - loaded) / speed : null;
+                    const speed = getAverageSpeed(loaded, download.startTime);
+                    const timeRemaining = getRemainingTime(total, loaded, speed);
 
                     return {
                         ...download,
+                        fileSize: total > 0 ? total : download.fileSize,
                         progress,
                         speed,
                         timeRemaining,

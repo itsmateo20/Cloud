@@ -777,6 +777,40 @@ export default function Page() {
     return entries;
   };
 
+  const extractFilesFromHandle = async (handle, prefix = '') => {
+    if (!handle) return [];
+
+    if (handle.kind === 'file') {
+      const file = await handle.getFile();
+      const relativePath = `${prefix}${file.name}`;
+
+      try {
+        Object.defineProperty(file, '__relativePath', {
+          value: relativePath,
+          configurable: true,
+          writable: true
+        });
+      } catch {
+        file.__relativePath = relativePath;
+      }
+
+      return [file];
+    }
+
+    if (handle.kind === 'directory') {
+      const nextPrefix = `${prefix}${handle.name}/`;
+      const nested = [];
+
+      for await (const [, child] of handle.entries()) {
+        nested.push(...await extractFilesFromHandle(child, nextPrefix));
+      }
+
+      return nested;
+    }
+
+    return [];
+  };
+
   const extractFilesFromEntry = async (entry, prefix = '') => {
     if (!entry) return [];
 
@@ -812,23 +846,38 @@ export default function Page() {
   const extractDroppedFiles = async (dataTransfer) => {
     if (!dataTransfer) return [];
 
+    const extractedFiles = [];
     const items = Array.from(dataTransfer.items || []);
-    const entries = items
-      .map((item) => {
-        try {
-          return item.webkitGetAsEntry ? item.webkitGetAsEntry() : null;
-        } catch {
-          return null;
+    for (const item of items) {
+      try {
+        if (typeof item.getAsFileSystemHandle === 'function') {
+          const handle = await item.getAsFileSystemHandle();
+          if (handle) {
+            extractedFiles.push(...await extractFilesFromHandle(handle));
+            continue;
+          }
         }
-      })
-      .filter(Boolean);
 
-    if (entries.length > 0) {
-      const nested = await Promise.all(entries.map((entry) => extractFilesFromEntry(entry)));
-      return nested.flat();
+        if (typeof item.webkitGetAsEntry === 'function') {
+          const entry = item.webkitGetAsEntry();
+          if (entry) {
+            extractedFiles.push(...await extractFilesFromEntry(entry));
+          }
+        }
+      } catch {
+      }
     }
 
-    return Array.from(dataTransfer.files || []);
+    if (extractedFiles.length > 0) {
+      return extractedFiles;
+    }
+
+    const directFiles = Array.from(dataTransfer.files || []);
+    if (directFiles.length > 0) {
+      return directFiles;
+    }
+
+    return [];
   };
 
   const uploadFiles = async (files) => {
@@ -1067,9 +1116,15 @@ export default function Page() {
     e.preventDefault();
     e.stopPropagation();
 
-    const hasFiles = e.dataTransfer && Array.from(e.dataTransfer.types).includes('Files');
+    const dragTypes = Array.from(e.dataTransfer?.types || []);
+    const hasFiles = dragTypes.some((type) => type === 'Files' || type === 'application/x-moz-file' || type === 'text/uri-list')
+      || Array.from(e.dataTransfer?.items || []).some((item) => item?.kind === 'file');
 
     if (!hasFiles) return;
+
+    if (e.dataTransfer) {
+      e.dataTransfer.dropEffect = 'copy';
+    }
 
     if (currentPath === 'favorites') {
       setIsDragInvalid(true);
@@ -1083,13 +1138,23 @@ export default function Page() {
   const handleGlobalDragEnter = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    dragCounterRef.current++;
+
+    const dragTypes = Array.from(e.dataTransfer?.types || []);
+    const hasFiles = dragTypes.some((type) => type === 'Files' || type === 'application/x-moz-file' || type === 'text/uri-list')
+      || Array.from(e.dataTransfer?.items || []).some((item) => item?.kind === 'file');
+
+    if (hasFiles) {
+      dragCounterRef.current++;
+    }
   };
 
   const handleGlobalDragLeave = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    dragCounterRef.current--;
+
+    if (dragCounterRef.current > 0) {
+      dragCounterRef.current--;
+    }
 
     if (dragCounterRef.current === 0) {
       setIsGlobalDragOver(false);

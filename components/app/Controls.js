@@ -69,6 +69,36 @@ const Controls = ({
     const moreDropdownRef = useRef(null);
     const uploadDropdownRef = useRef(null);
     const downloadDropdownRef = useRef(null);
+
+    const collectFilesFromDirectoryHandle = async (directoryHandle, prefix = '') => {
+        if (!directoryHandle) return [];
+
+        const nextPrefix = `${prefix}${directoryHandle.name}/`;
+        const files = [];
+
+        for await (const [, handle] of directoryHandle.entries()) {
+            if (handle.kind === 'file') {
+                const file = await handle.getFile();
+                const relativePath = `${nextPrefix}${file.name}`;
+
+                try {
+                    Object.defineProperty(file, '__relativePath', {
+                        value: relativePath,
+                        configurable: true,
+                        writable: true
+                    });
+                } catch {
+                    file.__relativePath = relativePath;
+                }
+
+                files.push(file);
+            } else if (handle.kind === 'directory') {
+                files.push(...await collectFilesFromDirectoryHandle(handle, nextPrefix));
+            }
+        }
+
+        return files;
+    };
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (newDropdownRef.current && !newDropdownRef.current.contains(event.target)) setShowNewDropdown(false);
@@ -180,10 +210,25 @@ const Controls = ({
                             </button>
                             <button
                                 className={styles.dropdownItem}
-                                onClick={() => {
+                                onClick={async () => {
+                                    setShowUploadDropdown(false);
+
+                                    try {
+                                        if (typeof window !== 'undefined' && typeof window.showDirectoryPicker === 'function') {
+                                            const directoryHandle = await window.showDirectoryPicker({ mode: 'read' });
+                                            const files = await collectFilesFromDirectoryHandle(directoryHandle);
+                                            if (files.length > 0) {
+                                                onUpload(files);
+                                            }
+                                            return;
+                                        }
+                                    } catch {
+                                    }
+
                                     const input = document.createElement('input');
                                     input.type = 'file';
                                     input.webkitdirectory = true;
+                                    input.directory = true;
                                     input.multiple = true;
                                     input.onchange = (e) => {
                                         if (e.target.files && e.target.files.length > 0) {
@@ -191,7 +236,6 @@ const Controls = ({
                                         }
                                     };
                                     input.click();
-                                    setShowUploadDropdown(false);
                                 }}
                             >
                                 <span className={styles.dropdownIcon}><FolderPlus size={16} /></span>
