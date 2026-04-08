@@ -308,6 +308,7 @@ const FileList = forwardRef(({
     socket,
     currentPath,
     onFolderDoubleClick,
+    onRootLoadError,
     onContentChange,
     onSelectionChange,
     onFilesUpload,
@@ -1071,6 +1072,26 @@ const FileList = forwardRef(({
 
             const cacheParam = process.env.NODE_ENV === 'development' ? `&_t=${Date.now()}` : '';
             const data = await api.get(`/api/files?path=${encodeURIComponent(currentPath)}${cacheParam}`);
+
+            if (!data?.success) {
+                if (currentPath === '' && data?.code !== 'unauthorized') {
+                    onRootLoadError?.({
+                        code: data?.code || 'storage_root_unavailable',
+                        message: data?.message || data?.error || 'The upload folder configured in your .env file could not be loaded.'
+                    });
+                }
+
+                setFolders([]);
+                setFiles([]);
+                setSelectedItems(new Set());
+                setLastSelectedItem(null);
+                return;
+            }
+
+            if (currentPath === '') {
+                onRootLoadError?.(null);
+            }
+
             setFolders(data.folders || []);
             setFiles((data.files || []).map(f => ({
                 ...f,
@@ -1082,10 +1103,17 @@ const FileList = forwardRef(({
             console.error('Error loading file contents:', error);
             setFolders([]);
             setFiles([]);
+
+            if (currentPath === '') {
+                onRootLoadError?.({
+                    code: error?.code || 'storage_root_unavailable',
+                    message: error?.message || 'The upload folder configured in your .env file could not be loaded.'
+                });
+            }
         } finally {
             setLoading(false);
         }
-    }, [currentPath]);
+    }, [currentPath, onRootLoadError]);
 
     const refreshContent = useCallback(() => {
         if (currentPath === "favorites") {

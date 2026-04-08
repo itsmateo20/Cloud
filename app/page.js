@@ -19,6 +19,7 @@ import Controls from "@/components/app/Controls";
 import Settings from "@/components/app/Settings";
 import SharedWithYou from "@/components/app/SharedWithYou";
 import AdminUsersPanel from "@/components/app/AdminUsersPanel";
+import StorageRootErrorScreen from "@/components/app/StorageRootErrorScreen";
 import SoftLoading from "@/components/SoftLoading";
 import Loading from "@/components/Loading";
 
@@ -82,6 +83,8 @@ export default function Page() {
   const [propertiesState, setPropertiesState] = useState({ open: false, items: [] });
   const [showPageLoading, setShowPageLoading] = useState(true);
   const [fadeOutPageLoading, setFadeOutPageLoading] = useState(false);
+  const [storageRootChecked, setStorageRootChecked] = useState(false);
+  const [storageRootError, setStorageRootError] = useState(null);
 
   const isMobile = useIsMobile();
 
@@ -104,8 +107,20 @@ export default function Page() {
           ? 'View Users'
           : (currentPath === '' ? 'Main Storage' : currentPath === 'favorites' ? 'Favourites' : currentPath?.split('/').pop() || 'Files');
 
+  const handleStorageRootError = useCallback((error) => {
+    if (!error) {
+      setStorageRootError(null);
+      return;
+    }
+
+    setStorageRootError({
+      code: error.code || 'storage_root_unavailable',
+      message: error.message || 'The upload folder configured in your .env file could not be loaded.'
+    });
+  }, []);
+
   useEffect(() => {
-    if (loading || !settingsLoaded) {
+    if (loading || !settingsLoaded || !storageRootChecked) {
       setShowPageLoading(true);
       setFadeOutPageLoading(false);
       return;
@@ -117,7 +132,41 @@ export default function Page() {
     }, 420);
 
     return () => clearTimeout(timer);
-  }, [loading, settingsLoaded]);
+  }, [loading, settingsLoaded, storageRootChecked]);
+
+  useEffect(() => {
+    const checkStorageRoot = async () => {
+      if (loading || !settingsLoaded || !user?.id) {
+        setStorageRootChecked(false);
+        setStorageRootError(null);
+        return;
+      }
+
+      setStorageRootChecked(false);
+
+      try {
+        const response = await api.get('/api/storage/check');
+
+        if (!response?.success && response?.code !== 'unauthorized') {
+          setStorageRootError({
+            code: response?.code || 'storage_root_unavailable',
+            message: response?.message || response?.error || 'The upload folder configured in your .env file could not be loaded.'
+          });
+        } else {
+          setStorageRootError(null);
+        }
+      } catch (error) {
+        setStorageRootError({
+          code: error?.code || 'storage_root_unavailable',
+          message: error?.message || 'The upload folder configured in your .env file could not be loaded.'
+        });
+      } finally {
+        setStorageRootChecked(true);
+      }
+    };
+
+    checkStorageRoot();
+  }, [loading, settingsLoaded, user?.id]);
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -1406,6 +1455,15 @@ export default function Page() {
 
   if (!user) return null;
 
+  if (storageRootError) {
+    return (
+      <StorageRootErrorScreen
+        error={storageRootError}
+        onRetry={() => window.location.reload()}
+      />
+    );
+  }
+
   if (showPageLoading) {
     return <Loading fadeOut={fadeOutPageLoading} />;
   }
@@ -1564,6 +1622,7 @@ export default function Page() {
                     socket={socket}
                     currentPath={currentPath}
                     onFolderDoubleClick={handleFolderDoubleClick}
+                    onRootLoadError={handleStorageRootError}
                     onSelectionChange={handleSelectionChange}
                     onFilesUpload={handleFilesUpload}
                     onNavigateToFile={(path) => {
@@ -1590,6 +1649,7 @@ export default function Page() {
                     socket={socket}
                     currentPath={currentPath}
                     onFolderDoubleClick={handleFolderDoubleClick}
+                    onRootLoadError={handleStorageRootError}
                     onSelectionChange={handleSelectionChange}
                     onFilesUpload={handleFilesUpload}
                     onNavigateToFile={setCurrentPath}
@@ -1811,6 +1871,7 @@ export default function Page() {
                       socket={socket}
                       currentPath={currentPath}
                       onFolderDoubleClick={handleFolderDoubleClick}
+                      onRootLoadError={handleStorageRootError}
                       onSelectionChange={handleSelectionChange}
                       onFilesUpload={handleFilesUpload}
                       onNavigateToFile={(path) => {
@@ -1835,6 +1896,7 @@ export default function Page() {
                       socket={socket}
                       currentPath={currentPath}
                       onFolderDoubleClick={handleFolderDoubleClick}
+                      onRootLoadError={handleStorageRootError}
                       onSelectionChange={handleSelectionChange}
                       onFilesUpload={handleFilesUpload}
                       onNavigateToFile={setCurrentPath}
