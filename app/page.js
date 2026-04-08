@@ -25,6 +25,7 @@ import Loading from "@/components/Loading";
 import { downloadFile, downloadFolder, downloadMultipleFiles } from "@/utils/downloadUtils";
 import { api } from "@/utils/api";
 import { appendMetadataToFormData } from "@/utils/fileMetadata.client";
+import { normalizeRelativeUploadPath } from "@/utils/uploadPath";
 import { uploadFile as uploadLargeFile } from "@/utils/uploadUtils";
 import { useIsMobile } from "@/utils/useIsMobile";
 
@@ -782,7 +783,7 @@ export default function Page() {
 
     if (handle.kind === 'file') {
       const file = await handle.getFile();
-      const relativePath = `${prefix}${file.name}`;
+      const relativePath = normalizeRelativeUploadPath(`${prefix}${file.name}`);
 
       try {
         Object.defineProperty(file, '__relativePath', {
@@ -818,7 +819,7 @@ export default function Page() {
       const file = await new Promise((resolve, reject) => {
         entry.file(resolve, reject);
       });
-      const relativePath = `${prefix}${file.name}`;
+      const relativePath = normalizeRelativeUploadPath(`${prefix}${file.name}`);
       try {
         Object.defineProperty(file, '__relativePath', {
           value: relativePath,
@@ -915,7 +916,7 @@ export default function Page() {
       const foldersToCreate = new Set();
 
       for (const file of files) {
-        const relativePath = file.webkitRelativePath || file.__relativePath || file.relativePath || '';
+        const relativePath = normalizeRelativeUploadPath(file.webkitRelativePath || file.__relativePath || file.relativePath || '');
         if (relativePath) {
 
           const pathParts = String(relativePath).replace(/\\/g, '/').split('/');

@@ -9,12 +9,13 @@ import { NextResponse } from "next/server";
 import fs from "fs/promises";
 import { createReadStream } from "fs";
 import path from "path";
+import { normalizeRelativeUploadPath } from "@/utils/uploadPath";
 
 export async function GET(req) {
     try {
         const url = new URL(req.url);
         const fileId = url.searchParams.get('fileId');
-        const filePath = url.searchParams.get('path');
+        const filePath = normalizeRelativeUploadPath(url.searchParams.get('path') || '');
 
         const session = await getSession();
         if (!session) {

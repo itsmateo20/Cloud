@@ -4,6 +4,7 @@ import fs from 'fs/promises';
 import { verifyFolderOwnership, initializeUserFolder } from '@/lib/folderAuth';
 import { getSession } from '@/lib/session';
 import { getUserUploadPath, ensureUserUploadPath } from '@/lib/paths';
+import { normalizeRelativeUploadPath } from '@/utils/uploadPath';
 
 function validateName(name) {
     if (!name || typeof name !== 'string') return 'missing_name';
@@ -43,7 +44,8 @@ export async function POST(req) {
         }
 
         const userBase = getUserUploadPath(userId);
-        const targetDir = path.join(userBase, currentPath);
+        const normalizedCurrentPath = normalizeRelativeUploadPath(String(currentPath || ''));
+        const targetDir = path.join(userBase, normalizedCurrentPath);
 
         if (!targetDir.startsWith(userBase)) {
             return NextResponse.json({ success: false, code: 'path_traversal', message: 'Invalid path' }, { status: 400 });
@@ -60,7 +62,7 @@ export async function POST(req) {
         try {
             await fs.access(targetPath);
             return NextResponse.json({ success: false, code: 'exists', message: 'Item already exists' }, { status: 409 });
-        } catch {  }
+        } catch { }
 
         if (safeType === 'folder') {
             await fs.mkdir(targetPath, { recursive: false });
@@ -79,7 +81,7 @@ export async function POST(req) {
             code: 'created',
             item: {
                 name: finalName,
-                path: path.join(currentPath || '', finalName).replace(/\\/g, '/'),
+                path: path.join(normalizedCurrentPath || '', finalName).replace(/\\/g, '/'),
                 size: stat.isDirectory() ? 0 : stat.size,
                 isDirectory: stat.isDirectory(),
                 modified: stat.mtime

@@ -6,6 +6,7 @@ import path from "path";
 import { getSession } from "@/lib/session";
 import { verifyFolderOwnership } from "@/lib/folderAuth";
 import { preserveFileMetadata } from "@/utils/fileMetadata.server";
+import { normalizeRelativeUploadPath } from "@/utils/uploadPath";
 import { getUserUploadPath, ensureUserUploadPath } from "@/lib/paths";
 
 export async function POST(req) {
@@ -22,7 +23,7 @@ export async function POST(req) {
 
     try {
         const formData = await req.formData();
-        const targetPath = formData.get("path") || "";
+        const targetPath = normalizeRelativeUploadPath(String(formData.get("path") || ""));
         const files = formData.getAll("files");
         const metadataString = formData.get("metadata");
 
@@ -51,8 +52,7 @@ export async function POST(req) {
 
         try {
             await fs.mkdir(targetFolder, { recursive: true });
-
-            await fs.access(targetFolder, fs.constants.R_OK | fs.constants.W_OK);
+            await fs.access(targetFolder);
         } catch (error) {
             return NextResponse.json({
                 success: false,

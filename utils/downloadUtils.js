@@ -136,47 +136,108 @@ export class DownloadManager {
                 URL.revokeObjectURL(downloadUrl);
 
             } else {
-                const link = document.createElement('a');
-                link.href = url;
-                link.download = fileName;
-                link.style.display = 'none';
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
+                const metadataResponse = await api.get(`/api/files/metadata?path=${encodeURIComponent(filePath)}`, {
+                    signal: abortController.signal
+                }).catch(() => null);
 
-                startProgressTimeout();
-                const progressResponse = await api.raw('GET', url, null, { signal: abortController.signal });
+                const fileSize = metadataResponse?.success ? Number(metadataResponse.size || 0) : 0;
+                const lastModified = metadataResponse?.success && metadataResponse.lastModified ? new Date(metadataResponse.lastModified) : null;
 
-                if (!progressResponse.ok) {
-                    clearTimeout(progressTimeout);
-                    throw new Error(`Download failed: ${progressResponse.status} ${progressResponse.statusText}`);
+                if (fileSize > 0) {
+                    hasReceivedProgress = true;
+                    window.dispatchEvent(new CustomEvent('downloadProgress', {
+                        detail: {
+                            id: downloadId,
+                            loaded: 0,
+                            total: fileSize,
+                            speed: 0,
+                            type: 'file'
+                        }
+                    }));
+                } else {
+                    startProgressTimeout();
                 }
 
-                const contentLength = progressResponse.headers.get('content-length');
-                const total = contentLength ? parseInt(contentLength, 10) : 0;
+                const response = await api.raw('GET', url, null, { signal: abortController.signal });
+
+                if (!response.ok) {
+                    clearTimeout(progressTimeout);
+                    throw new Error(`Download failed: ${response.status} ${response.statusText}`);
+                }
+
+                const responseTotal = fileSize || parseInt(response.headers.get('content-length') || '0');
+                const reader = response.body?.getReader();
+                if (!reader) {
+                    clearTimeout(progressTimeout);
+                    throw new Error('Download stream is not available');
+                }
+
+                if (!fileSize && responseTotal > 0) {
+                    hasReceivedProgress = true;
+                    window.dispatchEvent(new CustomEvent('downloadProgress', {
+                        detail: {
+                            id: downloadId,
+                            loaded: 0,
+                            total: responseTotal,
+                            speed: 0,
+                            type: 'file'
+                        }
+                    }));
+                }
+
+                const chunks = [];
+                let downloaded = 0;
+                const downloadStartTime = Date.now();
+                let lastTime = Date.now();
+                let lastLoaded = 0;
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    chunks.push(value);
+                    downloaded += value.length;
+                    hasReceivedProgress = true;
+
+                    const now = Date.now();
+                    const timeDiff = (now - lastTime) / 1000;
+
+                    if (timeDiff >= 0.5) {
+                        const bytesDiff = downloaded - lastLoaded;
+                        const speed = timeDiff > 0 ? bytesDiff / timeDiff : 0;
+
+                        window.dispatchEvent(new CustomEvent('downloadProgress', {
+                            detail: {
+                                id: downloadId,
+                                loaded: downloaded,
+                                total: responseTotal || downloaded,
+                                speed,
+                                type: 'file'
+                            }
+                        }));
+
+                        lastTime = now;
+                        lastLoaded = downloaded;
+                    }
+
+                    if (abortController.signal.aborted) {
+                        reader.cancel();
+                        throw new Error('Download cancelled');
+                    }
+                }
+
                 window.dispatchEvent(new CustomEvent('downloadProgress', {
                     detail: {
                         id: downloadId,
-                        loaded: 0,
-                        total,
-                        speed: 0,
+                        loaded: downloaded,
+                        total: responseTotal || downloaded,
+                        speed: downloaded / Math.max((Date.now() - downloadStartTime) / 1000, 0.001),
                         type: 'file'
                     }
                 }));
 
-                setTimeout(() => {
-                    if (!isCompleted) {
-                        window.dispatchEvent(new CustomEvent('downloadProgress', {
-                            detail: {
-                                id: downloadId,
-                                loaded: total,
-                                total,
-                                speed: 0,
-                                type: 'file'
-                            }
-                        }));
-                    }
-                }, 1000);
+                const blob = new Blob(chunks, { type: response.headers.get('content-type') || 'application/octet-stream' });
+                this.downloadBlob(blob, fileName, lastModified);
             }
 
             clearTimeout(progressTimeout);
@@ -234,8 +295,8 @@ export class DownloadManager {
                 throw new Error(`Failed to get file metadata: ${metadata.message || 'Unknown error'}`);
             }
 
-            const fileSize = metadata.data?.size || 0;
-            const lastModified = preserveDate ? new Date(metadata.data?.lastModified) : new Date();
+            const fileSize = metadata.size || 0;
+            const lastModified = preserveDate ? new Date(metadata.lastModified) : new Date();
 
             window.dispatchEvent(new CustomEvent('downloadProgress', {
                 detail: {

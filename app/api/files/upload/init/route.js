@@ -8,6 +8,7 @@ import fs from "fs/promises";
 import path from "path";
 import crypto from "crypto";
 import { ensureUserUploadPath, ensureTempBasePath, getTempDirForToken } from "@/lib/paths";
+import { normalizeRelativeUploadPath } from "@/utils/uploadPath";
 
 export async function POST(req) {
     try {
@@ -80,7 +81,8 @@ export async function POST(req) {
         }
 
         const userFolder = pathResult.path;
-        const targetDir = currentPath ? path.join(userFolder, currentPath) : userFolder;
+        const normalizedCurrentPath = normalizeRelativeUploadPath(String(currentPath || ''));
+        const targetDir = normalizedCurrentPath ? path.join(userFolder, normalizedCurrentPath) : userFolder;
         const finalPath = path.join(targetDir, fileName);
 
         try {
@@ -131,6 +133,7 @@ export async function POST(req) {
             chunkCount: expectedChunkCount,
             chunkSize: safeChunkSize,
             currentPath,
+            normalizedCurrentPath,
             lastModified,
             tempDir,
             finalPath,
