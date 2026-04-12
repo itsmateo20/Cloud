@@ -10,6 +10,7 @@ import { CodeEditor } from './CodeEditor';
 import { downloadFile } from '@/utils/downloadUtils';
 import { api } from '@/utils/api';
 import { useIsMobile } from '@/utils/useIsMobile';
+import { getMimeType } from '@/lib/mimeTypes';
 import Prism from 'prismjs';
 import 'prismjs/themes/prism-tomorrow.css';
 import 'prismjs/components/prism-markup';
@@ -868,6 +869,12 @@ export function FileViewer({
         if (['mp4', 'webm', 'ogg', 'avi', 'mov', 'wmv', 'flv', 'mkv'].includes(ext)) {
             return 'video';
         }
+        if (['mp3', 'wav', 'flac', 'aac', 'acc', 'm4a', 'm4b', 'oga', 'opus', 'wma', 'aif', 'aiff'].includes(ext)) {
+            return 'audio';
+        }
+        if (['nef', 'cr2', 'arw', 'dng', 'raf', 'rw2', 'orf', 'srw', 'pef', 'x3f', '3fr', 'erf', 'sr2', 'kdc', 'mef', 'mos', 'bay', 'rwl', 'raw'].includes(ext)) {
+            return 'raw';
+        }
         if (['txt', 'md', 'json', 'xml', 'csv', 'log'].includes(ext)) {
             return 'text';
         }
@@ -1382,6 +1389,22 @@ export function FileViewer({
                     </>
                 );
 
+            case 'audio':
+                return (
+                    <div className={style.contentContainer}>
+                        <audio
+                            controls
+                            preload="metadata"
+                            className={style.audio}
+                            onError={handleFileError}
+                            onLoadedMetadata={handleFileLoad}
+                        >
+                            <source src={getStreamUrl(currentFile)} type={getMimeType(currentFile?.name)} />
+                            Your browser does not support the audio element.
+                        </audio>
+                    </div>
+                );
+
             case 'text':
             case 'code':
                 if (isHtmlFile(currentFile?.name) && isHtmlPreview) {
@@ -1462,6 +1485,17 @@ export function FileViewer({
                             onLoad={handleFileLoad}
                             onError={handleFileError}
                         />
+                    </div>
+                );
+
+            case 'raw':
+                return (
+                    <div className={style.error}>
+                        <FileText size={48} />
+                        <p>Raw camera files cannot be previewed in the browser.</p>
+                        <button onClick={handleDownload} className={style.downloadButton}>
+                            Download to view
+                        </button>
                     </div>
                 );
 

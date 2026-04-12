@@ -6,6 +6,7 @@ import { useParams } from "next/navigation";
 import { api } from "@/utils/api";
 import { Download, Eye, X } from "lucide-react";
 import SoftLoading from "@/components/SoftLoading";
+import { getMimeType } from "@/lib/mimeTypes";
 import loadingStyles from "@/public/styles/loading.module.css";
 import styles from "./page.module.css";
 
@@ -13,12 +14,17 @@ function getFileType(name) {
     const ext = String(name || "").split(".").pop()?.toLowerCase();
     if (["jpg", "jpeg", "png", "gif", "bmp", "svg", "webp"].includes(ext)) return "image";
     if (["mp4", "webm", "ogg", "avi", "mov", "wmv", "flv", "mkv"].includes(ext)) return "video";
+    if (["mp3", "wav", "flac", "aac", "acc", "m4a", "m4b", "oga", "opus", "wma", "aif", "aiff"].includes(ext)) return "audio";
+    if (["nef", "cr2", "arw", "dng", "raf", "rw2", "orf", "srw", "pef", "x3f", "3fr", "erf", "sr2", "kdc", "mef", "mos", "bay", "rwl", "raw"].includes(ext)) return "raw";
+    if (["txt", "md", "json", "xml", "csv", "log"].includes(ext)) return "text";
+    if (["js", "jsx", "ts", "tsx", "css", "scss", "sass", "html", "htm", "py", "java", "c", "cpp", "h", "cs", "php", "rb", "go", "rs", "swift", "sql", "sh", "bash", "ps1", "yml", "yaml", "toml", "ini", "cfg"].includes(ext)) return "code";
+    if (String(name || "").toLowerCase().endsWith(".pdf")) return "pdf";
     return "file";
 }
 
 function isTextFile(name) {
     const ext = String(name || "").split(".").pop()?.toLowerCase();
-    return ["txt", "md", "json", "xml", "csv", "log", "js", "jsx", "ts", "tsx", "css", "scss", "html", "yml", "yaml"].includes(ext);
+    return ["txt", "md", "json", "xml", "csv", "log", "js", "jsx", "ts", "tsx", "css", "scss", "sass", "html", "htm", "yml", "yaml", "py", "java", "c", "cpp", "h", "cs", "php", "rb", "go", "rs", "swift", "sql", "sh", "bash", "ps1", "toml", "ini", "cfg"].includes(ext);
 }
 
 function isPdfFile(name) {
@@ -205,6 +211,12 @@ export default function SharedPage() {
                             {getFileType(viewerItem.name) === "video" && (
                                 <video src={getStreamUrl(viewerItem)} controls className={styles.viewerVideo} />
                             )}
+                            {getFileType(viewerItem.name) === "audio" && (
+                                <audio controls preload="metadata" className={styles.viewerAudio}>
+                                    <source src={getStreamUrl(viewerItem)} type={getMimeType(viewerItem.name)} />
+                                    Your browser does not support the audio element.
+                                </audio>
+                            )}
                             {isPdfFile(viewerItem.name) && (
                                 <iframe src={getStreamUrl(viewerItem)} title={viewerItem.name} className={styles.viewerFrame} />
                             )}
@@ -215,7 +227,7 @@ export default function SharedPage() {
                                     <pre className={styles.viewerText}>{viewerText}</pre>
                                 )
                             )}
-                            {!isPdfFile(viewerItem.name) && !isTextFile(viewerItem.name) && getFileType(viewerItem.name) === "file" && (
+                            {!isPdfFile(viewerItem.name) && !isTextFile(viewerItem.name) && ["file", "raw"].includes(getFileType(viewerItem.name)) && (
                                 <div className={styles.viewerUnsupported}>Preview unavailable for this file type. Use Download.</div>
                             )}
                         </div>

@@ -5,6 +5,7 @@ import { createReadStream } from "fs";
 import { getSession } from "@/lib/session";
 import { canAccessShare, ensureShareTables, getShareByToken } from "@/lib/shares";
 import { getUserUploadPath } from "@/lib/paths";
+import { getMimeType } from "@/lib/mimeTypes";
 
 function decodePasscodeFromQuery(url) {
     const encoded = url.searchParams.get("pc") || "";
@@ -83,6 +84,50 @@ export async function GET(req, { params }) {
             return NextResponse.json({ success: false, code: "share_file_expected", message: "Expected file" }, { status: 400 });
         }
 
+        const fileSize = stat.size;
+        const contentType = getMimeType(path.basename(targetPath));
+        const rangeHeader = req.headers.get("range");
+
+        if (rangeHeader) {
+            const parts = rangeHeader.replace(/bytes=/, "").split("-");
+            const start = parseInt(parts[0], 10);
+            const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+
+            if (Number.isNaN(start) || Number.isNaN(end) || start < 0 || end >= fileSize || start > end) {
+                return new Response("Range Not Satisfiable", {
+                    status: 416,
+                    headers: {
+                        "Content-Range": `bytes */${fileSize}`
+                    }
+                });
+            }
+
+            const chunkSize = (end - start) + 1;
+            const stream = createReadStream(targetPath, { start, end });
+            const readableStream = new ReadableStream({
+                start(controller) {
+                    stream.on("data", (chunk) => controller.enqueue(new Uint8Array(chunk)));
+                    stream.on("end", () => controller.close());
+                    stream.on("error", (error) => controller.error(error));
+                },
+                cancel() {
+                    stream.destroy();
+                }
+            });
+
+            return new Response(readableStream, {
+                status: 206,
+                headers: {
+                    "Content-Type": contentType,
+                    "Content-Length": String(chunkSize),
+                    "Content-Range": `bytes ${start}-${end}/${fileSize}`,
+                    "Accept-Ranges": "bytes",
+                    "Content-Disposition": `inline; filename="${encodeURIComponent(path.basename(targetPath))}"`,
+                    "Cache-Control": "private, max-age=60"
+                }
+            });
+        }
+
         const stream = createReadStream(targetPath);
         const readableStream = new ReadableStream({
             start(controller) {
@@ -98,9 +143,10 @@ export async function GET(req, { params }) {
         return new Response(readableStream, {
             status: 200,
             headers: {
-                "Content-Type": getMime(path.extname(targetPath).toLowerCase()),
-                "Content-Length": String(stat.size),
+                "Content-Type": contentType,
+                "Content-Length": String(fileSize),
                 "Content-Disposition": `inline; filename="${encodeURIComponent(path.basename(targetPath))}"`,
+                "Accept-Ranges": "bytes",
                 "Cache-Control": "private, max-age=60"
             }
         });

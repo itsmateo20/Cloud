@@ -7,6 +7,7 @@ import { NextResponse } from "next/server";
 import fs from "fs/promises";
 import path from "path";
 import { getUserUploadPath } from "@/lib/paths";
+import { getMimeType } from "@/lib/mimeTypes";
 
 export async function GET(req) {
     try {
@@ -79,75 +80,8 @@ export async function GET(req) {
             }
 
             const fileBuffer = await fs.readFile(requestedPath);
-
-            const ext = path.extname(filePath).toLowerCase();
-            let contentType = 'application/octet-stream';
-
-            switch (ext) {
-                case '.jpg':
-                case '.jpeg':
-                    contentType = 'image/jpeg';
-                    break;
-                case '.png':
-                    contentType = 'image/png';
-                    break;
-                case '.gif':
-                    contentType = 'image/gif';
-                    break;
-                case '.svg':
-                    contentType = 'image/svg+xml';
-                    break;
-                case '.webp':
-                    contentType = 'image/webp';
-                    break;
-                case '.bmp':
-                    contentType = 'image/bmp';
-                    break;
-                case '.pdf':
-                    contentType = 'application/pdf';
-                    break;
-                case '.mp4':
-                    contentType = 'video/mp4';
-                    break;
-                case '.webm':
-                    contentType = 'video/webm';
-                    break;
-                case '.ogg':
-                    contentType = 'video/ogg';
-                    break;
-                case '.mov':
-                    contentType = 'video/quicktime';
-                    break;
-                case '.avi':
-                    contentType = 'video/x-msvideo';
-                    break;
-                case '.mp3':
-                    contentType = 'audio/mpeg';
-                    break;
-                case '.wav':
-                    contentType = 'audio/wav';
-                    break;
-                case '.txt':
-                    contentType = 'text/plain';
-                    break;
-                case '.html':
-                    contentType = 'text/html';
-                    break;
-                case '.css':
-                    contentType = 'text/css';
-                    break;
-                case '.js':
-                    contentType = 'application/javascript';
-                    break;
-                case '.json':
-                    contentType = 'application/json';
-                    break;
-                default:
-
-                    if (fileRecord?.type) {
-                        contentType = fileRecord.type;
-                    }
-            }
+            const mimeType = getMimeType(filePath);
+            const contentType = mimeType === 'application/octet-stream' && fileRecord?.type ? fileRecord.type : mimeType;
 
             return new Response(fileBuffer, {
                 headers: {

@@ -256,6 +256,10 @@
     background: #000;
 }
 
+.viewerAudio {
+    width: min(100%, 760px);
+}
+
 .viewerFrame {
     min-height: 62vh;
     background: #fff;

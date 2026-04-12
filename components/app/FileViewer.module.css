@@ -372,6 +372,11 @@
     object-fit: contain;
 }
 
+.audio {
+    width: min(92vw, 760px);
+    max-width: calc(100vw - 40px);
+}
+
 .textContainer {
     position: relative;
     width: 100%;

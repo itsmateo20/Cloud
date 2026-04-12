@@ -22,6 +22,7 @@ import {
     File,
     Code,
     FileJson,
+    Camera,
     Star,
     MoreVertical
 } from 'lucide-react';
@@ -222,8 +223,35 @@ const getFileIcon = (filename, size = 16) => {
         case 'wav':
         case 'flac':
         case 'm4a':
+        case 'm4b':
         case 'aac':
+        case 'acc':
+        case 'oga':
+        case 'opus':
+        case 'wma':
+        case 'aif':
+        case 'aiff':
             return <Music size={size} />;
+        case 'nef':
+        case 'cr2':
+        case 'arw':
+        case 'dng':
+        case 'raf':
+        case 'rw2':
+        case 'orf':
+        case 'srw':
+        case 'pef':
+        case 'x3f':
+        case '3fr':
+        case 'erf':
+        case 'sr2':
+        case 'kdc':
+        case 'mef':
+        case 'mos':
+        case 'bay':
+        case 'rwl':
+        case 'raw':
+            return <Camera size={size} />;
         case 'mp4':
         case 'avi':
         case 'mkv':
@@ -277,7 +305,8 @@ const getFileType = (filename) => {
     const types = {
         'jpg': 'Image', 'jpeg': 'Image', 'png': 'Image', 'gif': 'Image', 'bmp': 'Image', 'svg': 'Image', 'webp': 'Image',
         'mp4': 'Video', 'webm': 'Video', 'ogg': 'Video', 'avi': 'Video', 'mov': 'Video', 'wmv': 'Video', 'flv': 'Video', 'mkv': 'Video',
-        'mp3': 'Audio', 'wav': 'Audio', 'flac': 'Audio', 'm4a': 'Audio', 'aac': 'Audio',
+        'mp3': 'Audio', 'wav': 'Audio', 'flac': 'Audio', 'm4a': 'Audio', 'm4b': 'Audio', 'aac': 'Audio', 'acc': 'Audio', 'oga': 'Audio', 'opus': 'Audio', 'wma': 'Audio', 'aif': 'Audio', 'aiff': 'Audio',
+        'nef': 'Raw Image', 'cr2': 'Raw Image', 'arw': 'Raw Image', 'dng': 'Raw Image', 'raf': 'Raw Image', 'rw2': 'Raw Image', 'orf': 'Raw Image', 'srw': 'Raw Image', 'pef': 'Raw Image', 'x3f': 'Raw Image', '3fr': 'Raw Image', 'erf': 'Raw Image', 'sr2': 'Raw Image', 'kdc': 'Raw Image', 'mef': 'Raw Image', 'mos': 'Raw Image', 'bay': 'Raw Image', 'rwl': 'Raw Image', 'raw': 'Raw Image',
         'pdf': 'PDF Document', 'doc': 'Word Document', 'docx': 'Word Document', 'xls': 'Excel Spreadsheet', 'xlsx': 'Excel Spreadsheet',
         'ppt': 'PowerPoint', 'pptx': 'PowerPoint', 'txt': 'Text Document', 'rtf': 'Rich Text Document',
         'js': 'JavaScript', 'jsx': 'React JSX', 'ts': 'TypeScript', 'tsx': 'TypeScript JSX', 'html': 'HTML Document',
@@ -1511,6 +1540,8 @@ const FileList = forwardRef(({
         const viewableExtensions = [
             'jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg', 'webp',
             'mp4', 'webm', 'ogg', 'avi', 'mov', 'wmv', 'flv', 'mkv',
+            'mp3', 'wav', 'flac', 'm4a', 'm4b', 'aac', 'acc', 'oga', 'opus', 'wma', 'aif', 'aiff',
+            'nef', 'cr2', 'arw', 'dng', 'raf', 'rw2', 'orf', 'srw', 'pef', 'x3f', '3fr', 'erf', 'sr2', 'kdc', 'mef', 'mos', 'bay', 'rwl', 'raw',
             'txt', 'md', 'json', 'xml', 'csv', 'log',
             'js', 'jsx', 'ts', 'tsx', 'html', 'htm', 'css', 'scss', 'sass',
             'py', 'java', 'c', 'cpp', 'h', 'cs', 'php', 'rb', 'go', 'rs',

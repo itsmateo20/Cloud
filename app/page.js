@@ -498,7 +498,36 @@ export default function Page() {
       case 'mp3':
       case 'wav':
       case 'flac':
+      case 'm4a':
+      case 'm4b':
+      case 'aac':
+      case 'acc':
+      case 'oga':
+      case 'opus':
+      case 'wma':
+      case 'aif':
+      case 'aiff':
         return '🎵';
+      case 'nef':
+      case 'cr2':
+      case 'arw':
+      case 'dng':
+      case 'raf':
+      case 'rw2':
+      case 'orf':
+      case 'srw':
+      case 'pef':
+      case 'x3f':
+      case '3fr':
+      case 'erf':
+      case 'sr2':
+      case 'kdc':
+      case 'mef':
+      case 'mos':
+      case 'bay':
+      case 'rwl':
+      case 'raw':
+        return '📷';
       default:
         return '📎';
     }

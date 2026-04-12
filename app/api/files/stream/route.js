@@ -8,6 +8,7 @@ import fs from "fs/promises";
 import { createReadStream } from "fs";
 import path from "path";
 import { getUserUploadPath } from "@/lib/paths";
+import { getMimeType } from "@/lib/mimeTypes";
 
 export async function GET(req) {
     try {
@@ -73,34 +74,13 @@ async function streamFile(req, filePath, fileName = null) {
         const range = req.headers.get('range');
         const fileSize = stat.size;
         const displayName = fileName || path.basename(filePath);
-        const ext = path.extname(filePath).toLowerCase();
-        const mimeTypes = {
-            '.mp4': 'video/mp4',
-            '.webm': 'video/webm',
-            '.ogg': 'video/ogg',
-            '.avi': 'video/avi',
-            '.mov': 'video/quicktime',
-            '.wmv': 'video/x-ms-wmv',
-            '.mkv': 'video/x-matroska',
-            '.m4v': 'video/mp4',
-            '.flv': 'video/x-flv',
-            '.mp3': 'audio/mpeg',
-            '.wav': 'audio/wav',
-            '.flac': 'audio/flac',
-            '.aac': 'audio/aac',
-            '.jpg': 'image/jpeg',
-            '.jpeg': 'image/jpeg',
-            '.png': 'image/png',
-            '.gif': 'image/gif',
-            '.webp': 'image/webp',
-            '.svg': 'image/svg+xml',
-            '.bmp': 'image/bmp',
-            '.pdf': 'application/pdf'
-        }; const contentType = mimeTypes[ext] || 'application/octet-stream';
+        const contentType = getMimeType(displayName);
         const isVideo = contentType.startsWith('video/');
+        const isAudio = contentType.startsWith('audio/');
         const isSmallVideo = isVideo && fileSize < 50 * 1024 * 1024;
+        const canUseRange = range && (isAudio || (isVideo && !isSmallVideo));
 
-        if (range && !isSmallVideo) {
+        if (canUseRange) {
             const parts = range.replace(/bytes=/, "").split("-");
             const start = parseInt(parts[0], 10);
             const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;

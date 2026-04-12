@@ -8,6 +8,7 @@ import archiver from "archiver";
 import { getSession } from "@/lib/session";
 import { canAccessShare, ensureShareTables, getShareByToken, logShareAccess } from "@/lib/shares";
 import { getUserUploadPath } from "@/lib/paths";
+import { getMimeType } from "@/lib/mimeTypes";
 
 function decodePasscodeFromQuery(url) {
     const encoded = url.searchParams.get("pc") || "";
@@ -23,25 +24,6 @@ function decodePasscodeFromQuery(url) {
     }
 
     return url.searchParams.get("passcode") || "";
-}
-
-function getMime(ext) {
-    const mimeTypes = {
-        ".jpg": "image/jpeg",
-        ".jpeg": "image/jpeg",
-        ".png": "image/png",
-        ".gif": "image/gif",
-        ".webp": "image/webp",
-        ".svg": "image/svg+xml",
-        ".bmp": "image/bmp",
-        ".mp4": "video/mp4",
-        ".webm": "video/webm",
-        ".ogg": "video/ogg",
-        ".pdf": "application/pdf",
-        ".txt": "text/plain",
-        ".json": "application/json"
-    };
-    return mimeTypes[ext] || "application/octet-stream";
 }
 
 async function getAllFilesInDirectory(dirPath, basePath = "") {
@@ -230,7 +212,7 @@ export async function GET(req, { params }) {
         return new Response(readableStream, {
             status: 200,
             headers: {
-                "Content-Type": getMime(path.extname(targetPath).toLowerCase()),
+                "Content-Type": getMimeType(path.basename(targetPath)),
                 "Content-Length": String(stat.size),
                 "Content-Disposition": `attachment; filename="${encodeURIComponent(path.basename(targetPath))}"`,
                 "Cache-Control": "no-cache"

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useCallback, useRef, useState } from 'react';
 import styles from './FilePropertiesModal.module.css';
-import { X, Copy, Star, FileText, Image, Video, Music, Archive } from 'lucide-react';
+import { X, Copy, Star, FileText, Image, Video, Music, Archive, Camera } from 'lucide-react';
 import { useIsMobile } from '@/utils/useIsMobile';
 
 function formatSize(size) {
@@ -19,8 +19,9 @@ function getFileIcon(filename, isDirectory) {
     if (!ext) return <FileText size={16} />;
 
     if (['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg'].includes(ext)) return <Image size={16} />;
+    if (['nef', 'cr2', 'arw', 'dng', 'raf', 'rw2', 'orf', 'srw', 'pef', 'x3f', '3fr', 'erf', 'sr2', 'kdc', 'mef', 'mos', 'bay', 'rwl', 'raw'].includes(ext)) return <Camera size={16} />;
     if (['mp4', 'avi', 'mov', 'webm', 'mkv', 'wmv', 'flv'].includes(ext)) return <Video size={16} />;
-    if (['mp3', 'wav', 'ogg', 'flac', 'm4a', 'aac'].includes(ext)) return <Music size={16} />;
+    if (['mp3', 'wav', 'ogg', 'flac', 'm4a', 'm4b', 'aac', 'acc', 'oga', 'opus', 'wma', 'aif', 'aiff'].includes(ext)) return <Music size={16} />;
     if (['zip', 'rar', '7z', 'tar', 'gz', 'bz2'].includes(ext)) return <Archive size={16} />;
     return <FileText size={16} />;
 }
@@ -32,8 +33,9 @@ function getMimeTypeCategory(filename) {
 
     const categories = {
         image: ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg', 'ico', 'tiff'],
+        raw: ['nef', 'cr2', 'arw', 'dng', 'raf', 'rw2', 'orf', 'srw', 'pef', 'x3f', '3fr', 'erf', 'sr2', 'kdc', 'mef', 'mos', 'bay', 'rwl', 'raw'],
         video: ['mp4', 'avi', 'mov', 'webm', 'mkv', 'wmv', 'flv', 'm4v', '3gp'],
-        audio: ['mp3', 'wav', 'ogg', 'flac', 'm4a', 'aac', 'wma'],
+        audio: ['mp3', 'wav', 'ogg', 'flac', 'm4a', 'm4b', 'aac', 'acc', 'oga', 'opus', 'wma', 'aif', 'aiff'],
         document: ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'rtf'],
         code: ['js', 'jsx', 'ts', 'tsx', 'html', 'css', 'json', 'xml', 'py', 'java', 'c', 'cpp'],
         archive: ['zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'xz'],
@@ -42,6 +44,9 @@ function getMimeTypeCategory(filename) {
 
     for (const [category, extensions] of Object.entries(categories)) {
         if (extensions.includes(ext)) {
+            if (category === 'raw') {
+                return 'Raw Image';
+            }
             return category.charAt(0).toUpperCase() + category.slice(1);
         }
     }
