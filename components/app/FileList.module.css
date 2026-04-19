@@ -278,6 +278,16 @@
     pointer-events: none;
 }
 
+.marqueeSelection {
+    position: fixed;
+    z-index: 9990;
+    pointer-events: none;
+    border: 1px solid var(--accent-color);
+    background: color-mix(in srgb, var(--accent-color) 18%, transparent);
+    box-sizing: border-box;
+    border-radius: 4px;
+}
+
 .grid .content {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));

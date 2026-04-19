@@ -34,6 +34,55 @@ import { Resizable } from "re-resizable";
 import { ArrowLeft, Check, Download, EllipsisVertical, LayoutGrid, List, Plus, Share2, Star, Trash2, X } from "lucide-react";
 import ConfirmModal from '@/components/app/ConfirmModal';
 
+const normalizeUploadSelection = (files) => {
+  if (!files) return [];
+
+  if (Array.isArray(files)) {
+    return files.filter(Boolean);
+  }
+
+  if (typeof File !== 'undefined' && files instanceof File) {
+    return [files];
+  }
+
+  if (typeof FileList !== 'undefined' && files instanceof FileList) {
+    return Array.from(files).filter(Boolean);
+  }
+
+  if (typeof files === 'object' && typeof files.length === 'number' && typeof files !== 'string') {
+    return Array.from(files).filter(Boolean);
+  }
+
+  return [files].filter(Boolean);
+};
+
+const getUploadFileKey = (file) => {
+  const relativePath = normalizeRelativeUploadPath(file?.webkitRelativePath || file?.__relativePath || file?.relativePath || '');
+  if (relativePath) return relativePath;
+
+  return [
+    file?.name || '',
+    file?.size ?? '',
+    file?.lastModified ?? '',
+    file?.type || ''
+  ].join('::');
+};
+
+const dedupeUploadSelection = (files) => {
+  const normalizedFiles = normalizeUploadSelection(files);
+  const seen = new Set();
+  const uniqueFiles = [];
+
+  for (const file of normalizedFiles) {
+    const key = getUploadFileKey(file);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    uniqueFiles.push(file);
+  }
+
+  return uniqueFiles;
+};
+
 let socket;
 
 export default function Page() {
@@ -828,9 +877,11 @@ export default function Page() {
   };
 
   const handleUpload = (files = null) => {
-    if (files && files.length > 0) {
+    const uploadSelection = normalizeUploadSelection(files);
 
-      uploadFiles(files);
+    if (uploadSelection.length > 0) {
+
+      uploadFiles(uploadSelection);
       return;
     }
 
@@ -838,7 +889,7 @@ export default function Page() {
     input.type = 'file';
     input.multiple = true;
     input.onchange = (e) => {
-      const fileList = Array.from(e.target.files);
+      const fileList = normalizeUploadSelection(e.target.files);
       if (fileList.length > 0) uploadFiles(fileList);
     };
     input.click();
@@ -925,45 +976,44 @@ export default function Page() {
   const extractDroppedFiles = async (dataTransfer) => {
     if (!dataTransfer) return [];
 
-    const extractedFiles = [];
+    const directFiles = Array.from(dataTransfer.files || []);
+
     const items = Array.from(dataTransfer.items || []);
-    for (const item of items) {
+    const itemFileGroups = await Promise.all(items.map(async (item) => {
       try {
         if (typeof item.getAsFileSystemHandle === 'function') {
           const handle = await item.getAsFileSystemHandle();
           if (handle) {
-            extractedFiles.push(...await extractFilesFromHandle(handle));
-            continue;
+            return await extractFilesFromHandle(handle);
           }
         }
 
         if (typeof item.webkitGetAsEntry === 'function') {
           const entry = item.webkitGetAsEntry();
           if (entry) {
-            extractedFiles.push(...await extractFilesFromEntry(entry));
+            return await extractFilesFromEntry(entry);
           }
         }
       } catch {
       }
+
+      return [];
+    }));
+
+    const itemFiles = dedupeUploadSelection(itemFileGroups.flat());
+    if (itemFiles.length > 0) {
+      return itemFiles;
     }
 
-    if (extractedFiles.length > 0) {
-      return extractedFiles;
-    }
-
-    const directFiles = Array.from(dataTransfer.files || []);
-    if (directFiles.length > 0) {
-      return directFiles;
-    }
-
-    return [];
+    return dedupeUploadSelection(directFiles);
   };
 
   const uploadFiles = async (files) => {
-    if (!files || files.length === 0) return;
+    const uploadSelection = normalizeUploadSelection(files);
+    if (uploadSelection.length === 0) return;
 
-    const totalFilesCount = files.length;
-    const totalBytes = files.reduce((sum, file) => sum + (file.size || 0), 0);
+    const totalFilesCount = uploadSelection.length;
+    const totalBytes = uploadSelection.reduce((sum, file) => sum + (file.size || 0), 0);
     let uploadedBytesCommitted = 0;
     const uploadId = crypto.randomUUID();
     let lastProgressAt = Date.now();
@@ -981,7 +1031,7 @@ export default function Page() {
     window.dispatchEvent(new CustomEvent('uploadStart', {
       detail: {
         id: uploadId,
-        fileName: totalFilesCount === 1 ? files[0].name : `${totalFilesCount} files`,
+        fileName: totalFilesCount === 1 ? uploadSelection[0].name : `${totalFilesCount} files`,
         fileSize: totalBytes,
         type: totalFilesCount > 1 ? 'multi' : 'file'
       }
@@ -993,7 +1043,7 @@ export default function Page() {
       const folderStructure = new Map();
       const foldersToCreate = new Set();
 
-      for (const file of files) {
+      for (const file of uploadSelection) {
         const relativePath = normalizeRelativeUploadPath(file.webkitRelativePath || file.__relativePath || file.relativePath || '');
         if (relativePath) {
 
@@ -1077,13 +1127,13 @@ export default function Page() {
 
       let totalUploaded = 0;
       let totalSize = 0;
-      files.forEach(file => totalSize += file.size);
+      uploadSelection.forEach(file => totalSize += file.size);
 
       const sizeText = totalSize > 1024 * 1024
         ? `${(totalSize / (1024 * 1024)).toFixed(1)}MB`
         : `${(totalSize / 1024).toFixed(1)}KB`;
 
-      toast.addInfo(`Uploading ${files.length} file${files.length > 1 ? 's' : ''} (${sizeText})...`);
+      toast.addInfo(`Uploading ${uploadSelection.length} file${uploadSelection.length > 1 ? 's' : ''} (${sizeText})...`);
 
       for (const [folderPath, fileGroup] of folderStructure) {
         const targetPath = folderPath
@@ -1154,11 +1204,11 @@ export default function Page() {
                 default:
                   errorMsg = result.message || 'Unknown upload error';
               }
-              toast.addError(`${errorMsg} (folder: ${folderPath || 'root'})`);
+              toast.addError(`${errorMsg} (folder: ${folderPath || 'current folder'})`);
             }
           } catch (error) {
             console.error('Upload error:', error);
-            toast.addError(`Network error uploading to folder: ${folderPath || 'root'}`);
+            toast.addError(`Network error uploading to folder: ${folderPath || 'current folder'}`);
           }
         }
       }

@@ -437,6 +437,20 @@ const FileList = forwardRef(({
         column: null
     });
 
+    const [marqueeSelection, setMarqueeSelection] = useState(null);
+    const marqueeSelectionRef = useRef({
+        active: false,
+        dragging: false,
+        startX: 0,
+        startY: 0,
+        currentX: 0,
+        currentY: 0,
+        additive: false,
+        baseSelection: new Set()
+    });
+    const marqueeCleanupRef = useRef(null);
+    const marqueeClickBlockRef = useRef(false);
+
     useEffect(() => {
         try {
             const raw = typeof window !== 'undefined' ? localStorage.getItem(COLUMN_STORAGE_KEY) : null;
@@ -1378,6 +1392,13 @@ const FileList = forwardRef(({
     }, [contextMenu.visible]);
 
     const handleItemClick = (item, event) => {
+        if (marqueeClickBlockRef.current) {
+            marqueeClickBlockRef.current = false;
+            event.preventDefault();
+            event.stopPropagation();
+            return;
+        }
+
         if (mobile && longPressTriggeredRef.current) {
             longPressTriggeredRef.current = false;
             event.preventDefault();
@@ -1534,6 +1555,173 @@ const FileList = forwardRef(({
         if (!mobile) return;
         clearLongPressTimer();
     };
+
+    const clearMarqueeSelection = useCallback(() => {
+        marqueeCleanupRef.current?.();
+        marqueeCleanupRef.current = null;
+        marqueeSelectionRef.current = {
+            active: false,
+            dragging: false,
+            startX: 0,
+            startY: 0,
+            currentX: 0,
+            currentY: 0,
+            additive: false,
+            baseSelection: new Set()
+        };
+        setMarqueeSelection(null);
+    }, []);
+
+    useEffect(() => {
+        return () => {
+            marqueeCleanupRef.current?.();
+        };
+    }, []);
+
+    const getMarqueeTargetItems = useCallback((selectionRect) => {
+        const container = scrollContainerRef.current;
+        if (!container || !selectionRect) return [];
+
+        const elements = Array.from(container.querySelectorAll('[data-upload-selectable="true"]'));
+        const matchedPaths = [];
+
+        for (const element of elements) {
+            const elementRect = element.getBoundingClientRect();
+            const overlaps = !(
+                elementRect.right < selectionRect.left ||
+                elementRect.left > selectionRect.right ||
+                elementRect.bottom < selectionRect.top ||
+                elementRect.top > selectionRect.bottom
+            );
+
+            if (overlaps && element.dataset.uploadPath) {
+                matchedPaths.push(element.dataset.uploadPath);
+            }
+        }
+
+        return matchedPaths;
+    }, []);
+
+    const startMarqueeSelection = useCallback((event) => {
+        if (mobile || event.button !== 0) return;
+        if (event.defaultPrevented) return;
+
+        const container = scrollContainerRef.current;
+        if (!container) return;
+
+        const target = event.target;
+        if (target?.closest?.('button, input, textarea, select, a, [role="button"]')) return;
+
+        event.preventDefault();
+        event.stopPropagation();
+
+        const additive = Boolean(event.ctrlKey || event.metaKey);
+        const baseSelection = additive ? new Set(selectedItems) : new Set();
+
+        marqueeSelectionRef.current = {
+            active: true,
+            dragging: false,
+            startX: event.clientX,
+            startY: event.clientY,
+            currentX: event.clientX,
+            currentY: event.clientY,
+            additive,
+            baseSelection
+        };
+
+        setMarqueeSelection({
+            left: event.clientX,
+            top: event.clientY,
+            width: 0,
+            height: 0
+        });
+
+        const updateSelection = (moveEvent) => {
+            const selection = marqueeSelectionRef.current;
+            if (!selection.active) return;
+
+            const dx = moveEvent.clientX - selection.startX;
+            const dy = moveEvent.clientY - selection.startY;
+            const distance = Math.hypot(dx, dy);
+
+            if (!selection.dragging && distance < 4) {
+                return;
+            }
+
+            selection.dragging = true;
+            selection.currentX = moveEvent.clientX;
+            selection.currentY = moveEvent.clientY;
+
+            const left = Math.min(selection.startX, selection.currentX);
+            const top = Math.min(selection.startY, selection.currentY);
+            const right = Math.max(selection.startX, selection.currentX);
+            const bottom = Math.max(selection.startY, selection.currentY);
+            const selectionRect = { left, top, right, bottom };
+
+            setMarqueeSelection({
+                left,
+                top,
+                width: right - left,
+                height: bottom - top
+            });
+
+            const selectedPaths = getMarqueeTargetItems(selectionRect);
+            const nextSelected = new Set(selection.additive ? selection.baseSelection : []);
+            selectedPaths.forEach((path) => nextSelected.add(path));
+
+            setSelectedItems(nextSelected);
+
+            const selectedItem = [...folders, ...files].find((item) => nextSelected.has(item.path)) || null;
+            setLastSelectedItem(selectedItem);
+        };
+
+        const finishSelection = () => {
+            const selection = marqueeSelectionRef.current;
+            if (!selection.active) return;
+
+            const wasDragging = selection.dragging;
+            const finalSelection = selection.additive ? new Set(selection.baseSelection) : new Set();
+
+            if (!wasDragging) {
+                if (!selection.additive) {
+                    setSelectedItems(new Set());
+                    setLastSelectedItem(null);
+                } else {
+                    setSelectedItems(finalSelection);
+                }
+                clearMarqueeSelection();
+                return;
+            }
+
+            const left = Math.min(selection.startX, selection.currentX);
+            const top = Math.min(selection.startY, selection.currentY);
+            const right = Math.max(selection.startX, selection.currentX);
+            const bottom = Math.max(selection.startY, selection.currentY);
+            const selectedPaths = getMarqueeTargetItems({ left, top, right, bottom });
+
+            selectedPaths.forEach((path) => finalSelection.add(path));
+            setSelectedItems(finalSelection);
+
+            const selectedItem = [...folders, ...files].find((item) => finalSelection.has(item.path)) || null;
+            setLastSelectedItem(selectedItem);
+            marqueeClickBlockRef.current = true;
+            window.setTimeout(() => {
+                marqueeClickBlockRef.current = false;
+            }, 0);
+            clearMarqueeSelection();
+        };
+
+        document.addEventListener('mousemove', updateSelection);
+        document.addEventListener('mouseup', finishSelection, { once: true });
+
+        marqueeCleanupRef.current = () => {
+            document.removeEventListener('mousemove', updateSelection);
+            document.removeEventListener('mouseup', finishSelection);
+            marqueeSelectionRef.current.active = false;
+            marqueeSelectionRef.current.dragging = false;
+            setMarqueeSelection(null);
+        };
+    }, [clearMarqueeSelection, files, folders, getMarqueeTargetItems, mobile, selectedItems]);
 
     const isViewableFile = (filename) => {
         const ext = filename.split('.').pop()?.toLowerCase();
@@ -2039,6 +2227,17 @@ const FileList = forwardRef(({
             style={sharesOnly ? { position: 'relative', width: '100%', height: '100%', overflow: 'hidden', background: 'var(--background)' } : undefined}
         >
             {!sharesOnly && showLoadingOverlay && <SoftLoading active={loading} />}
+            {!mobile && marqueeSelection && (
+                <div
+                    className={styles.marqueeSelection}
+                    style={{
+                        left: `${marqueeSelection.left}px`,
+                        top: `${marqueeSelection.top}px`,
+                        width: `${marqueeSelection.width}px`,
+                        height: `${marqueeSelection.height}px`
+                    }}
+                />
+            )}
             {!sharesOnly && viewMode === 'details' && (
                 <div className={styles.header}>
                     <div className={styles.headerTrack} ref={headerInnerRef} style={{ display: 'flex', position: 'relative', width: `${totalColumnWidth}px` }}>
@@ -2079,7 +2278,12 @@ const FileList = forwardRef(({
             )}
 
             {!sharesOnly && (
-                <div ref={scrollContainerRef} className={`${styles.content} ${styles[viewMode]}`} style={viewMode === 'details' ? { overflowX: 'auto', overflowY: 'auto', minHeight: 0 } : undefined}>
+                <div
+                    ref={scrollContainerRef}
+                    className={`${styles.content} ${styles[viewMode]}`}
+                    style={viewMode === 'details' ? { overflowX: 'auto', overflowY: 'auto', minHeight: 0 } : undefined}
+                    onMouseDown={!mobile ? startMarqueeSelection : undefined}
+                >
                     {isVirtualizableView && topSpacer > 0 && (
                         <div style={{ height: topSpacer, pointerEvents: 'none' }} />
                     )}
@@ -2093,6 +2297,8 @@ const FileList = forwardRef(({
                             <div
                                 key={`folder-${folder.path}`}
                                 className={`${styles.item} ${selectedItems.has(folder.path) ? styles.selected : ''}`}
+                                data-upload-selectable="true"
+                                data-upload-path={folder.path}
                                 onClick={(e) => handleItemClick(folder, e)}
                                 onDoubleClick={() => {
                                     if (mobile && selectedItems.size > 0) return;
@@ -2262,6 +2468,8 @@ const FileList = forwardRef(({
                             <div
                                 key={`file-${file.path}`}
                                 className={`${styles.item} ${selectedItems.has(file.path) ? styles.selected : ''}`}
+                                data-upload-selectable="true"
+                                data-upload-path={file.path}
                                 onClick={(e) => handleItemClick(file, e)}
                                 onDoubleClick={() => {
                                     if (mobile && selectedItems.size > 0) return;
