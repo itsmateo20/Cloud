@@ -66,7 +66,12 @@ export async function POST(req) {
             finalName += '.txt';
         }
 
-        const targetPath = path.resolve(targetDir, finalName);
+        const candidateTargetPath = path.resolve(targetDir, finalName);
+        const relativeToTargetDir = path.relative(targetDir, candidateTargetPath);
+        if (relativeToTargetDir.startsWith('..') || path.isAbsolute(relativeToTargetDir)) {
+            return NextResponse.json({ success: false, code: 'path_traversal', message: 'Invalid path' }, { status: 400 });
+        }
+        const targetPath = candidateTargetPath;
         try {
             await fs.access(targetPath);
             return NextResponse.json({ success: false, code: 'exists', message: 'Item already exists' }, { status: 409 });
