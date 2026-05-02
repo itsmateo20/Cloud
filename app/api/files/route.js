@@ -3,6 +3,7 @@
 import { NextResponse } from "next/server";
 import fs from "fs/promises";
 import path from "path";
+import sanitizeFilename from "sanitize-filename";
 import { getSession } from "@/lib/session";
 import prisma from "@/lib/db";
 import { verifyFolderOwnership } from "@/lib/folderAuth";
@@ -309,13 +310,18 @@ export async function POST(req) {
                 return NextResponse.json({ success: false, code: nameValidation, message: "Invalid name" }, { status: 400 });
             }
 
+            const safeName = sanitizeFilename(name.trim());
+            if (!safeName || safeName !== name.trim()) {
+                return NextResponse.json({ success: false, code: "illegal_chars", message: "Invalid name" }, { status: 400 });
+            }
+
             const folderTargetResult = resolveUserUploadPath(userId, targetPath || "");
             if (!folderTargetResult.isInside) {
                 return NextResponse.json({ success: false, code: "explorer_invalid_path" }, { status: 400 });
             }
 
             const userFolder = path.resolve(getUserUploadPath(userId));
-            const folderPath = path.resolve(folderTargetResult.resolvedPath, name);
+            const folderPath = path.resolve(folderTargetResult.resolvedPath, safeName);
             const isInsideUserFolder = folderPath === userFolder || folderPath.startsWith(userFolder + path.sep);
             if (!isInsideUserFolder) {
                 return NextResponse.json({ success: false, code: "explorer_invalid_path" }, { status: 400 });
@@ -337,7 +343,7 @@ export async function POST(req) {
 
             const folder = await prisma.folder.create({
                 data: {
-                    name: name,
+                    name: safeName,
                     path: relativePath,
                     ownerId: userId,
                     parentId: parentFolder?.id || null
@@ -345,7 +351,7 @@ export async function POST(req) {
             });
             try {
                 const room = `user:${userId}`;
-                const payload = { userId, action: "create", newPath: relativePath, name };
+                const payload = { userId, action: "create", newPath: relativePath, name: safeName };
                 global.io?.to(room).emit("folder-structure-updated", payload);
             } catch { }
 
