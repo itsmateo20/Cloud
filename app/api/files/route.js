@@ -371,6 +371,11 @@ export async function POST(req) {
 
             const userFolder = getUserUploadPath(userId);
             const filePath = path.resolve(fileTargetResult.resolvedPath, name);
+            const normalizedBase = path.resolve(fileTargetResult.resolvedPath);
+            const relativeToBase = path.relative(normalizedBase, filePath);
+            if (!relativeToBase || relativeToBase.startsWith("..") || path.isAbsolute(relativeToBase)) {
+                return NextResponse.json({ success: false, code: "explorer_invalid_path" }, { status: 400 });
+            }
             try {
                 await fs.access(filePath);
                 return NextResponse.json({ success: false, code: "file_exists", message: "File already exists" }, { status: 400 });
