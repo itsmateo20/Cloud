@@ -45,7 +45,7 @@ export async function GET(req, { params }) {
         await ensureShareTables();
         const share = await getShareByToken(token);
         const session = await getSession();
-        const access = canAccessShare(share, session, passcode);
+        const access = await canAccessShare(share, session, passcode);
         if (!access.ok) {
             return NextResponse.json({ success: false, code: access.code, message: access.message }, { status: access.status });
         }

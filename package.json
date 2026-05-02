@@ -33,7 +33,7 @@
         "@prisma/adapter-libsql": "^7.5.0",
         "@prisma/client": "^7.5.0",
         "archiver": "^7.0.1",
-        "bcryptjs": "^2.4.3",
+        "bcrypt": "^6.0.0",
         "chalk": "4.1.2",
         "dotenv": "^17.3.1",
         "googleapis": "^144.0.0",

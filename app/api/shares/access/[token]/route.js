@@ -29,7 +29,7 @@ export async function GET(req, { params }) {
         await ensureShareTables();
         const share = await getShareByToken(token);
         const session = await getSession();
-        const access = canAccessShare(share, session, passcode);
+        const access = await canAccessShare(share, session, passcode);
 
         const viewerEmail = session?.user ? String(session.user.email || session.user.googleEmail || "") : null;
         const viewerUserId = session?.user?.id ?? null;

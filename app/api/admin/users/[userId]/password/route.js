@@ -1,7 +1,7 @@
 // app/api/admin/users/[userId]/password/route.js
 
 import { NextResponse } from "next/server";
-import bcrypt from "bcryptjs";
+import bcrypt from "bcrypt";
 import prisma from "@/lib/db";
 import { getSession } from "@/lib/session";
 import { ensureAdminSession, parseUserId, getUserForAdmin } from "@/lib/adminAuth";
