@@ -314,8 +314,12 @@ export async function POST(req) {
                 return NextResponse.json({ success: false, code: "explorer_invalid_path" }, { status: 400 });
             }
 
-            const userFolder = getUserUploadPath(userId);
+            const userFolder = path.resolve(getUserUploadPath(userId));
             const folderPath = path.resolve(folderTargetResult.resolvedPath, name);
+            const isInsideUserFolder = folderPath === userFolder || folderPath.startsWith(userFolder + path.sep);
+            if (!isInsideUserFolder) {
+                return NextResponse.json({ success: false, code: "explorer_invalid_path" }, { status: 400 });
+            }
             try {
                 await fs.access(folderPath);
                 return NextResponse.json({ success: true, code: "directory_exists", message: "Folder already exists" }, { status: 200 });
