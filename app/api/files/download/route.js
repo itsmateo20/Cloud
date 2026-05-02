@@ -4,18 +4,17 @@ import { getSession } from "@/lib/session";
 import prisma from "@/lib/db";
 import { verifyFolderOwnership } from "@/lib/folderAuth";
 import { getMimeType, shouldForceDownload } from "@/lib/mimeTypes";
-import { getUserUploadPath } from "@/lib/paths";
+import { resolveUserUploadPath } from "@/lib/paths";
 import { NextResponse } from "next/server";
 import fs from "fs/promises";
 import { createReadStream } from "fs";
 import path from "path";
-import { normalizeRelativeUploadPath } from "@/utils/uploadPath";
 
 export async function GET(req) {
     try {
         const url = new URL(req.url);
         const fileId = url.searchParams.get('fileId');
-        const filePath = normalizeRelativeUploadPath(url.searchParams.get('path') || '');
+        const filePath = url.searchParams.get('path') || '';
 
         const session = await getSession();
         if (!session) {
@@ -44,16 +43,16 @@ export async function GET(req) {
             }, { status: 400 });
         }
 
-        const userFolder = getUserUploadPath(userId);
-        const requestedPath = path.join(userFolder, filePath);
-
-        if (!requestedPath.startsWith(userFolder)) {
+        const resolvedPath = resolveUserUploadPath(userId, filePath);
+        if (!resolvedPath.isInside) {
             return NextResponse.json({
                 success: false,
                 code: "explorer_invalid_path",
                 message: "Invalid file path"
             }, { status: 400 });
         }
+
+        const requestedPath = resolvedPath.resolvedPath;
 
         try {
             const stat = await fs.stat(requestedPath);
@@ -75,7 +74,7 @@ export async function GET(req) {
                 const fileRecord = await prisma.file.findFirst({
                     where: {
                         ownerId: userId,
-                        path: filePath
+                        path: resolvedPath.relativePath
                     },
                     select: { name: true }
                 });

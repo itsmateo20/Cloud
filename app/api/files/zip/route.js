@@ -7,7 +7,7 @@ import fs from "fs/promises";
 import { createReadStream } from "fs";
 import path from "path";
 import archiver from "archiver";
-import { getUserUploadPath } from "@/lib/paths";
+import { getUserUploadPath, resolvePathWithinBase } from "@/lib/paths";
 
 export async function POST(req) {
     try {
@@ -46,19 +46,20 @@ export async function POST(req) {
 
         const validatedFiles = [];
         const seenPaths = new Set();
-        const normalizedUserFolder = path.resolve(userFolder);
 
         const addFileIfValid = async (relativePath) => {
             const normalizedRelative = String(relativePath || '').replace(/\\/g, '/').replace(/^\/+/, '');
-            const fullPath = path.resolve(userFolder, normalizedRelative);
+            const resolvedPath = resolvePathWithinBase(userFolder, normalizedRelative);
 
-            if (!fullPath.startsWith(normalizedUserFolder)) {
+            if (!resolvedPath.isInside) {
                 return NextResponse.json({
                     success: false,
                     code: "invalid_path",
                     message: `Invalid file path: ${relativePath}`
                 }, { status: 400 });
             }
+
+            const fullPath = resolvedPath.resolvedPath;
 
             let stat;
             try {

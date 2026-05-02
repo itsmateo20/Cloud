@@ -1,3 +1,5 @@
+// app/qr/[token]/page.js
+
 import QRHandler from '@/components/qr/QRHandler';
 import styles from '@/components/qr/QRHandler.module.css';
 

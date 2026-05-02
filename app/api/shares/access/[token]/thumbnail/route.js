@@ -1,10 +1,12 @@
+// app/api/shares/access/[token]/thumbnail/route.js
+
 import { NextResponse } from "next/server";
 import fs from "fs/promises";
 import path from "path";
 import sharp from "sharp";
 import { getSession } from "@/lib/session";
 import { canAccessShare, ensureShareTables, getShareByToken } from "@/lib/shares";
-import { getUserUploadPath } from "@/lib/paths";
+import { getUserUploadPath, resolvePathWithinBase } from "@/lib/paths";
 
 function decodePasscodeFromQuery(url) {
     const encoded = url.searchParams.get("pc") || "";
@@ -48,7 +50,9 @@ export async function GET(req, { params }) {
             return NextResponse.json({ success: false, code: access.code, message: access.message }, { status: access.status });
         }
 
-        const matchedItem = (share.items || []).find((item) => item.path === itemPath);
+        const userFolder = getUserUploadPath(share.ownerId);
+        const itemResolution = resolvePathWithinBase(userFolder, itemPath);
+        const matchedItem = (share.items || []).find((item) => item.path === itemResolution.relativePath);
         if (!matchedItem) {
             return NextResponse.json({ success: false, code: "share_item_not_found", message: "File is not part of this share" }, { status: 404 });
         }
@@ -59,11 +63,10 @@ export async function GET(req, { params }) {
             });
         }
 
-        const userFolder = getUserUploadPath(share.ownerId);
-        const fullPath = path.join(userFolder, itemPath);
-        if (!fullPath.startsWith(userFolder)) {
+        if (!itemResolution.isInside) {
             return NextResponse.json({ success: false, code: "share_invalid_path", message: "Invalid path" }, { status: 403 });
         }
+        const fullPath = itemResolution.resolvedPath;
 
         const fileExtension = path.extname(fullPath).toLowerCase();
         const isImage = [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".svg"].includes(fileExtension);

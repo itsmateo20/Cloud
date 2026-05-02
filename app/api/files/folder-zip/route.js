@@ -7,7 +7,7 @@ import fs from "fs/promises";
 import { createReadStream } from "fs";
 import path from "path";
 import archiver from "archiver";
-import { getUserUploadPath } from "@/lib/paths";
+import { resolveUserUploadPath } from "@/lib/paths";
 
 async function getAllFilesInDirectory(dirPath, basePath = '') {
     const files = [];
@@ -72,16 +72,15 @@ export async function POST(req) {
             }, { status: 400 });
         }
 
-        const userFolder = getUserUploadPath(userId);
-        const targetFolderPath = path.join(userFolder, folderPath);
-
-        if (!targetFolderPath.startsWith(userFolder)) {
+        const targetFolderResult = resolveUserUploadPath(userId, folderPath);
+        if (!targetFolderResult.isInside) {
             return NextResponse.json({
                 success: false,
                 code: "invalid_path",
                 message: "Invalid folder path"
             }, { status: 400 });
         }
+        const targetFolderPath = targetFolderResult.resolvedPath;
 
         try {
             const stat = await fs.stat(targetFolderPath);
@@ -241,16 +240,15 @@ export async function GET(req) {
             }, { status: 400 });
         }
 
-        const userFolder = getUserUploadPath(userId);
-        const targetFolderPath = path.join(userFolder, folderPath);
-
-        if (!targetFolderPath.startsWith(userFolder)) {
+        const targetFolderResult = resolveUserUploadPath(userId, folderPath);
+        if (!targetFolderResult.isInside) {
             return NextResponse.json({
                 success: false,
                 code: "invalid_path",
                 message: "Invalid folder path"
             }, { status: 400 });
         }
+        const targetFolderPath = targetFolderResult.resolvedPath;
 
         try {
             const stat = await fs.stat(targetFolderPath);

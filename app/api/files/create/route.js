@@ -1,9 +1,11 @@
+// app/api/files/create/route.js
+
 import { NextResponse } from 'next/server';
 import path from 'path';
 import fs from 'fs/promises';
 import { verifyFolderOwnership, initializeUserFolder } from '@/lib/folderAuth';
 import { getSession } from '@/lib/session';
-import { getUserUploadPath, ensureUserUploadPath } from '@/lib/paths';
+import { ensureUserUploadPath, resolvePathWithinBase } from '@/lib/paths';
 import { normalizeRelativeUploadPath } from '@/utils/uploadPath';
 
 function validateName(name) {
@@ -43,13 +45,19 @@ export async function POST(req) {
             }
         }
 
-        const userBase = getUserUploadPath(userId);
         const normalizedCurrentPath = normalizeRelativeUploadPath(String(currentPath || ''));
-        const targetDir = path.join(userBase, normalizedCurrentPath);
+        const pathResult = await ensureUserUploadPath(userId);
+        if (!pathResult.success) {
+            return NextResponse.json({ success: false, code: 'directory_error', message: `Failed to create upload directory: ${pathResult.error}` }, { status: 500 });
+        }
 
-        if (!targetDir.startsWith(userBase)) {
+        const userBase = path.resolve(pathResult.path);
+        const targetDirResult = resolvePathWithinBase(userBase, normalizedCurrentPath);
+        if (!targetDirResult.isInside) {
             return NextResponse.json({ success: false, code: 'path_traversal', message: 'Invalid path' }, { status: 400 });
         }
+
+        const targetDir = targetDirResult.resolvedPath;
 
         try { await fs.access(targetDir); } catch { await fs.mkdir(targetDir, { recursive: true }); }
 
@@ -58,7 +66,7 @@ export async function POST(req) {
             finalName += '.txt';
         }
 
-        const targetPath = path.join(targetDir, finalName);
+        const targetPath = path.resolve(targetDir, finalName);
         try {
             await fs.access(targetPath);
             return NextResponse.json({ success: false, code: 'exists', message: 'Item already exists' }, { status: 409 });
@@ -81,7 +89,7 @@ export async function POST(req) {
             code: 'created',
             item: {
                 name: finalName,
-                path: path.join(normalizedCurrentPath || '', finalName).replace(/\\/g, '/'),
+                path: path.join(targetDirResult.relativePath || '', finalName).split(path.sep).join('/'),
                 size: stat.isDirectory() ? 0 : stat.size,
                 isDirectory: stat.isDirectory(),
                 modified: stat.mtime

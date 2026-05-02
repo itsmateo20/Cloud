@@ -9,6 +9,7 @@ import path from "path";
 import crypto from "crypto";
 import { ensureUserUploadPath, ensureTempBasePath, getTempDirForToken } from "@/lib/paths";
 import { normalizeRelativeUploadPath } from "@/utils/uploadPath";
+import { resolvePathWithinBase } from "@/lib/paths";
 
 export async function POST(req) {
     try {
@@ -80,9 +81,18 @@ export async function POST(req) {
             }, { status: 500 });
         }
 
-        const userFolder = pathResult.path;
+        const userFolder = path.resolve(pathResult.path);
         const normalizedCurrentPath = normalizeRelativeUploadPath(String(currentPath || ''));
-        const targetDir = normalizedCurrentPath ? path.join(userFolder, normalizedCurrentPath) : userFolder;
+        const targetDirResult = resolvePathWithinBase(userFolder, normalizedCurrentPath);
+        if (!targetDirResult.isInside) {
+            return NextResponse.json({
+                success: false,
+                code: 'directory_error',
+                message: 'Invalid target directory'
+            }, { status: 400 });
+        }
+
+        const targetDir = targetDirResult.resolvedPath;
         const finalPath = path.join(targetDir, fileName);
 
         try {

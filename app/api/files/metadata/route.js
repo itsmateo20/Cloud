@@ -5,13 +5,12 @@ import { verifyFolderOwnership } from "@/lib/folderAuth";
 import { NextResponse } from "next/server";
 import fs from "fs/promises";
 import path from "path";
-import { getUserUploadPath } from "@/lib/paths";
-import { normalizeRelativeUploadPath } from "@/utils/uploadPath";
+import { resolveUserUploadPath } from "@/lib/paths";
 
 export async function GET(req) {
     try {
         const url = new URL(req.url);
-        const filePath = normalizeRelativeUploadPath(url.searchParams.get('path') || '');
+        const filePath = url.searchParams.get('path') || '';
 
         const session = await getSession();
         if (!session) {
@@ -40,16 +39,16 @@ export async function GET(req) {
             }, { status: 400 });
         }
 
-        const userFolder = getUserUploadPath(userId);
-        const requestedPath = path.join(userFolder, filePath);
-
-        if (!requestedPath.startsWith(userFolder)) {
+        const resolvedPath = resolveUserUploadPath(userId, filePath);
+        if (!resolvedPath.isInside) {
             return NextResponse.json({
                 success: false,
                 code: "explorer_invalid_path",
                 message: "Invalid file path"
             }, { status: 400 });
         }
+
+        const requestedPath = resolvedPath.resolvedPath;
 
         try {
             const stat = await fs.stat(requestedPath);

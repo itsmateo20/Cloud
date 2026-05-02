@@ -6,9 +6,19 @@ import path from "path";
 import { getSession } from "@/lib/session";
 import prisma from "@/lib/db";
 import { verifyFolderOwnership } from "@/lib/folderAuth";
-import { getUserUploadPath, getUserFileUrl } from "@/lib/paths";
+import { getUserUploadPath, getUserFileUrl, resolveUserUploadPath } from "@/lib/paths";
 
 const isUniqueConstraintError = (error) => error?.code === "P2002" || String(error?.message || "").includes("Unique constraint failed");
+
+function validateName(name) {
+    if (!name || typeof name !== "string") return "missing_name";
+    const trimmed = name.trim();
+    if (!trimmed) return "empty_name";
+    if (trimmed.length > 255) return "name_too_long";
+    if (/[\\/:*?"<>|]/.test(trimmed)) return "illegal_chars";
+    if (trimmed.includes("..")) return "dotdot_not_allowed";
+    return null;
+}
 
 export async function GET(req) {
     const session = await getSession();
@@ -25,10 +35,11 @@ export async function GET(req) {
     const limit = Number.isFinite(limitParam) && limitParam > 0 ? Math.min(limitParam, 500) : null;
     const cursor = url.searchParams.get("cursor") || null;
 
-    const userFolder = getUserUploadPath(userId);
-    const targetPath = path.join(userFolder, requestedPath);
+    const targetPathResult = resolveUserUploadPath(userId, requestedPath);
+    if (!targetPathResult.isInside) return NextResponse.json({ success: false, code: "explorer_invalid_path" }, { status: 400 });
 
-    if (!targetPath.startsWith(userFolder)) return NextResponse.json({ success: false, code: "explorer_invalid_path" }, { status: 400 });
+    const userFolder = getUserUploadPath(userId);
+    const targetPath = targetPathResult.resolvedPath;
 
     const infoPath = path.join(userFolder, "USRINF.INF");
     const infoData = { id: userId, email };
@@ -293,11 +304,18 @@ export async function POST(req) {
         const { action, path: targetPath, name } = await req.json();
 
         if (action === 'create_folder') {
-            const userFolder = getUserUploadPath(userId);
-            const folderPath = path.join(userFolder, targetPath || "", name);
-            if (!folderPath.startsWith(userFolder)) {
+            const nameValidation = validateName(name);
+            if (nameValidation) {
+                return NextResponse.json({ success: false, code: nameValidation, message: "Invalid name" }, { status: 400 });
+            }
+
+            const folderTargetResult = resolveUserUploadPath(userId, targetPath || "");
+            if (!folderTargetResult.isInside) {
                 return NextResponse.json({ success: false, code: "explorer_invalid_path" }, { status: 400 });
             }
+
+            const userFolder = getUserUploadPath(userId);
+            const folderPath = path.resolve(folderTargetResult.resolvedPath, name);
             try {
                 await fs.access(folderPath);
                 return NextResponse.json({ success: true, code: "directory_exists", message: "Folder already exists" }, { status: 200 });
@@ -308,9 +326,8 @@ export async function POST(req) {
             const relativePath = path.relative(userFolder, folderPath).replace(/\\/g, '/');
             let parentFolder = null;
             if (targetPath) {
-                const parentPath = targetPath;
                 parentFolder = await prisma.folder.findFirst({
-                    where: { ownerId: userId, path: parentPath }
+                    where: { ownerId: userId, path: folderTargetResult.relativePath }
                 });
             }
 
@@ -341,12 +358,19 @@ export async function POST(req) {
         }
 
         if (action === 'create_file') {
+            const nameValidation = validateName(name);
+            if (nameValidation) {
+                return NextResponse.json({ success: false, code: nameValidation, message: "Invalid name" }, { status: 400 });
+            }
+
             const { content = '' } = await req.json();
-            const userFolder = getUserUploadPath(userId);
-            const filePath = path.join(userFolder, targetPath || "", name);
-            if (!filePath.startsWith(userFolder)) {
+            const fileTargetResult = resolveUserUploadPath(userId, targetPath || "");
+            if (!fileTargetResult.isInside) {
                 return NextResponse.json({ success: false, code: "explorer_invalid_path" }, { status: 400 });
             }
+
+            const userFolder = getUserUploadPath(userId);
+            const filePath = path.resolve(fileTargetResult.resolvedPath, name);
             try {
                 await fs.access(filePath);
                 return NextResponse.json({ success: false, code: "file_exists", message: "File already exists" }, { status: 400 });
@@ -358,7 +382,7 @@ export async function POST(req) {
             let folder = null;
             if (targetPath) {
                 folder = await prisma.folder.findFirst({
-                    where: { ownerId: userId, path: targetPath }
+                    where: { ownerId: userId, path: fileTargetResult.relativePath }
                 });
             }
 

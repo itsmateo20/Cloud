@@ -7,7 +7,7 @@ import { createReadStream } from "fs";
 import archiver from "archiver";
 import { getSession } from "@/lib/session";
 import { canAccessShare, ensureShareTables, getShareByToken, logShareAccess } from "@/lib/shares";
-import { getUserUploadPath } from "@/lib/paths";
+import { getUserUploadPath, resolvePathWithinBase } from "@/lib/paths";
 import { getMimeType } from "@/lib/mimeTypes";
 
 function decodePasscodeFromQuery(url) {
@@ -135,16 +135,17 @@ export async function GET(req, { params }) {
             return NextResponse.json({ success: false, code: access.code, message: access.message }, { status: access.status });
         }
 
-        const matchedItem = (share.items || []).find((item) => item.path === itemPath && ["file", "folder"].includes(item.type));
+        const userFolder = getUserUploadPath(share.ownerId);
+        const itemResolution = resolvePathWithinBase(userFolder, itemPath);
+        const matchedItem = (share.items || []).find((item) => item.path === itemResolution.relativePath && ["file", "folder"].includes(item.type));
         if (!matchedItem) {
             return NextResponse.json({ success: false, code: "share_item_not_found", message: "File is not part of this share" }, { status: 404 });
         }
 
-        const userFolder = getUserUploadPath(share.ownerId);
-        const targetPath = path.join(userFolder, itemPath);
-        if (!targetPath.startsWith(userFolder)) {
+        if (!itemResolution.isInside) {
             return NextResponse.json({ success: false, code: "share_invalid_path", message: "Invalid path" }, { status: 403 });
         }
+        const targetPath = itemResolution.resolvedPath;
 
         const stat = await fs.stat(targetPath);
 

@@ -1,3 +1,5 @@
+// app/api/storage/check/route.js
+
 import { NextResponse } from 'next/server';
 import fs from 'fs/promises';
 import { getUploadBasePath } from '@/lib/paths';

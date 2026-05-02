@@ -1,3 +1,5 @@
+// components/app/CodeEditor.js
+
 "use client";
 
 import { useState, useEffect, useRef } from 'react';

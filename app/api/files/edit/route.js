@@ -1,10 +1,12 @@
+// app/api/files/edit/route.js
+
 import { getSession } from "@/lib/session";
 import { NextResponse } from "next/server";
 import prisma from "@/lib/db";
 import { verifyFolderOwnership } from "@/lib/folderAuth";
 import fs from "fs";
 import path from "path";
-import { getUserUploadPath } from "@/lib/paths";
+import { resolveUserUploadPath } from "@/lib/paths";
 
 export async function POST(req) {
     try {
@@ -33,9 +35,18 @@ export async function POST(req) {
                 message: "Folder authentication failed: " + folderVerification.error
             }, { status: 403 });
         }
+        const resolvedPath = resolveUserUploadPath(session.user.id, filePath);
+        if (!resolvedPath.isInside) {
+            return NextResponse.json({
+                success: false,
+                code: "invalid_path",
+                message: "Invalid file path"
+            }, { status: 400 });
+        }
+
         const file = await prisma.file.findFirst({
             where: {
-                path: filePath,
+                path: resolvedPath.relativePath,
                 ownerId: session.user.id
             }
         });
@@ -47,15 +58,7 @@ export async function POST(req) {
                 message: "File not found or access denied"
             }, { status: 404 });
         }
-        const userFolder = getUserUploadPath(session.user.id);
-        const absoluteFilePath = path.join(userFolder, filePath);
-        if (!absoluteFilePath.startsWith(userFolder)) {
-            return NextResponse.json({
-                success: false,
-                code: "invalid_path",
-                message: "Invalid file path"
-            }, { status: 400 });
-        }
+        const absoluteFilePath = resolvedPath.resolvedPath;
         if (!fs.existsSync(absoluteFilePath)) {
             return NextResponse.json({
                 success: false,

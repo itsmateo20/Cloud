@@ -1,3 +1,5 @@
+// app/api/admin/users/[userId]/password/route.js
+
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import prisma from "@/lib/db";

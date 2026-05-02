@@ -6,7 +6,7 @@ import { verifyFolderOwnership } from "@/lib/folderAuth";
 import { NextResponse } from "next/server";
 import fs from "fs/promises";
 import path from "path";
-import { getUserUploadPath } from "@/lib/paths";
+import { resolveUserUploadPath } from "@/lib/paths";
 import { getMimeType } from "@/lib/mimeTypes";
 
 export async function GET(req) {
@@ -59,15 +59,15 @@ export async function GET(req) {
             }, { status: 400 });
         }
 
-        const userFolder = getUserUploadPath(userId);
-        const requestedPath = path.join(userFolder, filePath);
-
-        if (!requestedPath.startsWith(userFolder)) {
+        const resolvedPath = resolveUserUploadPath(userId, filePath);
+        if (!resolvedPath.isInside) {
             return NextResponse.json({
                 success: false,
                 code: "invalid_path"
             }, { status: 400 });
         }
+
+        const requestedPath = resolvedPath.resolvedPath;
 
         try {
 

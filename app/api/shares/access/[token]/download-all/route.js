@@ -7,7 +7,7 @@ import path from "path";
 import archiver from "archiver";
 import { getSession } from "@/lib/session";
 import { canAccessShare, ensureShareTables, getShareByToken, logShareAccess } from "@/lib/shares";
-import { getUserUploadPath } from "@/lib/paths";
+import { getUserUploadPath, resolvePathWithinBase } from "@/lib/paths";
 
 function decodePasscodeFromQuery(url) {
     const encoded = url.searchParams.get("pc") || "";
@@ -127,8 +127,10 @@ export async function GET(req, { params }) {
         const seen = new Set();
 
         for (const item of (share.items || [])) {
-            const targetPath = path.join(userFolder, item.path);
-            if (!targetPath.startsWith(userFolder)) continue;
+            const resolved = resolvePathWithinBase(userFolder, item.path);
+            if (!resolved.isInside) continue;
+
+            const targetPath = resolved.resolvedPath;
 
             try {
                 const stat = await fs.stat(targetPath);
@@ -140,7 +142,7 @@ export async function GET(req, { params }) {
                         zipFiles.push(file);
                     }
                 } else if (item.type === "file" && stat.isFile()) {
-                    const relativePath = path.basename(item.path);
+                    const relativePath = resolved.relativePath;
                     if (!seen.has(relativePath)) {
                         seen.add(relativePath);
                         zipFiles.push({ fullPath: targetPath, relativePath, mtime: stat.mtime });

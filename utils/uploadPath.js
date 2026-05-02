@@ -1,3 +1,5 @@
+// utils/uploadPath.js
+
 export function normalizeRelativeUploadPath(input = '') {
     if (!input || typeof input !== 'string') return '';
 

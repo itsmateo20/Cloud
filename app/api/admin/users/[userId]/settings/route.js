@@ -1,3 +1,5 @@
+// app/api/admin/users/[userId]/settings/route.js
+
 import { NextResponse } from "next/server";
 import prisma from "@/lib/db";
 import { getSession } from "@/lib/session";

@@ -1,3 +1,5 @@
+// app/manifest.js
+
 export default function manifest() {
     return {
         name: "Cloud Storage",

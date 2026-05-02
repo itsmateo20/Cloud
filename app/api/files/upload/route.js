@@ -7,7 +7,7 @@ import { getSession } from "@/lib/session";
 import { verifyFolderOwnership } from "@/lib/folderAuth";
 import { preserveFileMetadata } from "@/utils/fileMetadata.server";
 import { normalizeRelativeUploadPath } from "@/utils/uploadPath";
-import { getUserUploadPath, ensureUserUploadPath } from "@/lib/paths";
+import { ensureUserUploadPath, resolvePathWithinBase } from "@/lib/paths";
 
 export async function POST(req) {
     const session = await getSession();
@@ -47,8 +47,13 @@ export async function POST(req) {
             }, { status: 500 });
         }
 
-        const userFolder = pathResult.path;
-        const targetFolder = path.join(userFolder, targetPath);
+        const userFolder = path.resolve(pathResult.path);
+        const targetFolderResult = resolvePathWithinBase(userFolder, targetPath);
+        if (!targetFolderResult.isInside) {
+            return NextResponse.json({ success: false, code: "explorer_invalid_path" }, { status: 400 });
+        }
+
+        const targetFolder = targetFolderResult.resolvedPath;
 
         try {
             await fs.mkdir(targetFolder, { recursive: true });
@@ -69,8 +74,9 @@ export async function POST(req) {
 
             const fileName = path.basename(String(file.name || '').replace(/\\/g, '/'));
             if (!fileName) continue;
-            const filePath = path.join(targetFolder, fileName);
-            if (!filePath.startsWith(userFolder)) return NextResponse.json({ success: false, code: "explorer_invalid_path" }, { status: 400 });
+            const filePathResult = resolvePathWithinBase(userFolder, path.relative(userFolder, path.join(targetFolder, fileName)));
+            if (!filePathResult.isInside) return NextResponse.json({ success: false, code: "explorer_invalid_path" }, { status: 400 });
+            const filePath = filePathResult.resolvedPath;
 
             let finalPath = filePath;
             let counter = 1;

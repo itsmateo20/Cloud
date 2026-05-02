@@ -6,7 +6,7 @@ import path from "path";
 import { getSession } from "@/lib/session";
 import { verifyFolderOwnership } from "@/lib/folderAuth";
 import prisma from "@/lib/db";
-import { getUserUploadPath } from "@/lib/paths";
+import { resolveUserUploadPath } from "@/lib/paths";
 
 export async function POST(req) {
     try {
@@ -21,13 +21,14 @@ export async function POST(req) {
         const folderVerification = await verifyFolderOwnership(id);
         if (!folderVerification.isValid) return NextResponse.json({ success: false, code: "folder_auth_failed", message: "Folder authentication failed: " + folderVerification.error }, { status: 403 });
 
-        const userFolder = getUserUploadPath(id);
         const deletedItems = [];
 
         for (const itemPath of paths) {
-            const fullPath = path.join(userFolder, itemPath);
+            const resolvedPath = resolveUserUploadPath(id, itemPath);
+            if (!resolvedPath.isInside) return NextResponse.json({ success: false, code: "explorer_invalid_path" }, { status: 400 });
 
-            if (!fullPath.startsWith(userFolder)) return NextResponse.json({ success: false, code: "explorer_invalid_path" }, { status: 400 });
+            const fullPath = resolvedPath.resolvedPath;
+            const safeItemPath = resolvedPath.relativePath;
 
             const stats = await fs.stat(fullPath);
 
@@ -38,8 +39,8 @@ export async function POST(req) {
                     where: {
                         ownerId: id,
                         OR: [
-                            { path: itemPath },
-                            { path: { startsWith: `${itemPath}/` } }
+                            { path: safeItemPath },
+                            { path: { startsWith: `${safeItemPath}/` } }
                         ]
                     }
                 });
@@ -47,8 +48,8 @@ export async function POST(req) {
                     where: {
                         ownerId: id,
                         OR: [
-                            { path: itemPath },
-                            { path: { startsWith: `${itemPath}/` } }
+                            { path: safeItemPath },
+                            { path: { startsWith: `${safeItemPath}/` } }
                         ]
                     }
                 });
@@ -57,14 +58,14 @@ export async function POST(req) {
                 await prisma.file.deleteMany({
                     where: {
                         ownerId: id,
-                        path: itemPath
+                        path: safeItemPath
                     }
                 });
             }
 
             deletedItems.push({
-                name: path.basename(itemPath),
-                path: itemPath,
+                name: path.basename(safeItemPath),
+                path: safeItemPath,
                 type: stats.isDirectory() ? 'folder' : 'file'
             });
         }

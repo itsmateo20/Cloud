@@ -1,3 +1,5 @@
+/* components/app/StorageRootErrorScreen.module.css */
+
 .screen {
     min-height: calc(100vh - var(--top-nav-height));
     width: 100%;

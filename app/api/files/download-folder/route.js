@@ -1,11 +1,12 @@
 // app/api/files/download-folder/route.js
+
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { verifyFolderOwnership } from "@/lib/folderAuth";
 import fs from "fs/promises";
 import path from "path";
 import archiver from "archiver";
-import { getUserUploadPath } from "@/lib/paths";
+import { resolveUserUploadPath } from "@/lib/paths";
 
 export async function GET(req) {
     const session = await getSession();
@@ -22,10 +23,9 @@ export async function GET(req) {
     if (!folderPath) return NextResponse.json({ success: false, code: "missing_path" }, { status: 400 });
 
     try {
-        const userFolder = getUserUploadPath(userId);
-        const targetPath = path.join(userFolder, folderPath);
-
-        if (!targetPath.startsWith(userFolder)) return NextResponse.json({ success: false, code: "invalid_path" }, { status: 400 });
+        const targetPathResult = resolveUserUploadPath(userId, folderPath);
+        if (!targetPathResult.isInside) return NextResponse.json({ success: false, code: "invalid_path" }, { status: 400 });
+        const targetPath = targetPathResult.resolvedPath;
 
         const stat = await fs.stat(targetPath);
         if (!stat.isDirectory()) return NextResponse.json({ success: false, code: "not_a_folder" }, { status: 400 });

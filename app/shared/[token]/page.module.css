@@ -1,3 +1,5 @@
+/* app/shared/[token]/page.module.css */
+
 .pageShell {
     min-height: 100dvh;
     padding: clamp(20px, 3vw, 36px);

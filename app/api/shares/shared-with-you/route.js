@@ -1,3 +1,5 @@
+// app/api/shares/shared-with-you/route.js
+
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { ensureShareTables, listSharesForViewerEmail } from "@/lib/shares";

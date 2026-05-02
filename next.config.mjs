@@ -1,3 +1,4 @@
+// next.config.mjs
 
 const nextConfig = {
     async redirects() {
@@ -42,8 +43,7 @@ const nextConfig = {
     },
 
     allowedDevOrigins: [
-        'localhost',
-        'itsmateo20.ddns.net'
+        'localhost'
     ],
 
     experimental: {

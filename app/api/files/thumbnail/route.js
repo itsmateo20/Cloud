@@ -6,7 +6,7 @@ import path from "path";
 import { getSession } from "@/lib/session";
 import sharp from "sharp";
 import fsSync from 'fs';
-import { getUserUploadPath } from "@/lib/paths";
+import { resolveUserUploadPath } from "@/lib/paths";
 
 export async function GET(req) {
     const session = await getSession();
@@ -26,11 +26,11 @@ export async function GET(req) {
 
     try {
         const { id: userId } = session.user;
-        const userFolder = getUserUploadPath(userId);
-        const fullPath = path.join(userFolder, filePath);
-        if (!fullPath.startsWith(userFolder)) {
+        const resolvedPath = resolveUserUploadPath(userId, filePath);
+        if (!resolvedPath.isInside) {
             return NextResponse.json({ error: "Invalid file path" }, { status: 403 });
         }
+        const fullPath = resolvedPath.resolvedPath;
         try {
             await fs.access(fullPath);
         } catch {
@@ -68,8 +68,8 @@ export async function GET(req) {
 
         if (isImage) {
             try {
-                const thumbnailsDir = path.join(userFolder, '.thumbnails');
-                const relativeSafe = filePath.startsWith('/') ? filePath.slice(1) : filePath;
+                const thumbnailsDir = path.join(resolveUserUploadPath(userId).basePath, '.thumbnails');
+                const relativeSafe = resolvedPath.relativePath;
                 const cacheFile = path.join(thumbnailsDir, relativeSafe + `.thumb.${targetSize}.jpg`);
                 await fs.mkdir(path.dirname(cacheFile), { recursive: true });
 

@@ -1,3 +1,5 @@
+// components/app/StorageRootErrorScreen.js
+
 "use client";
 
 import { AlertTriangle, RefreshCw } from 'lucide-react';

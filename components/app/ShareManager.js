@@ -1,3 +1,5 @@
+// components/app/ShareManager.js
+
 "use client";
 
 import React from "react";

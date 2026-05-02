@@ -1,3 +1,5 @@
+// app/api/admin/impersonate/stop/route.js
+
 import { NextResponse } from "next/server";
 import prisma from "@/lib/db";
 import { getSession, createSession } from "@/lib/session";

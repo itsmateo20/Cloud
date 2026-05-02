@@ -1,10 +1,12 @@
+// app/api/files/video-thumbnail/route.js
+
 import { NextResponse } from 'next/server';
 import fs from 'fs/promises';
 import fsSync from 'fs';
 import path from 'path';
 import { getSession } from '@/lib/session';
 import { spawn } from 'child_process';
-import { getUserUploadPath } from '@/lib/paths';
+import { resolveUserUploadPath } from '@/lib/paths';
 
 export async function GET(req) {
     const session = await getSession();
@@ -18,9 +20,9 @@ export async function GET(req) {
 
     try {
         const { id: userId } = session.user;
-        const userFolder = getUserUploadPath(userId);
-        const fullPath = path.join(userFolder, filePath);
-        if (!fullPath.startsWith(userFolder)) return NextResponse.json({ error: 'Invalid file path' }, { status: 403 });
+        const resolvedPath = resolveUserUploadPath(userId, filePath);
+        if (!resolvedPath.isInside) return NextResponse.json({ error: 'Invalid file path' }, { status: 403 });
+        const fullPath = resolvedPath.resolvedPath;
 
         await fs.access(fullPath).catch(() => { throw new Error('NOT_FOUND'); });
         const videoExt = path.extname(fullPath).toLowerCase();
@@ -33,8 +35,8 @@ export async function GET(req) {
         const ifNoneMatch = req.headers.get('if-none-match');
         if (ifNoneMatch && ifNoneMatch === etag) return new NextResponse(null, { status: 304, headers: { 'ETag': etag } });
 
-        const rel = filePath.startsWith('/') ? filePath.slice(1) : filePath;
-        const thumbsDir = path.join(userFolder, '.thumbnails');
+        const thumbsDir = path.join(resolveUserUploadPath(userId).basePath, '.thumbnails');
+        const rel = resolvedPath.relativePath;
         const outFile = path.join(thumbsDir, `${rel}.video.${targetSize}.jpg`);
         await fs.mkdir(path.dirname(outFile), { recursive: true });
 
