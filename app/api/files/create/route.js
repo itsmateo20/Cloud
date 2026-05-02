@@ -3,20 +3,11 @@
 import { NextResponse } from 'next/server';
 import path from 'path';
 import fs from 'fs/promises';
+import sanitizeFilename from 'sanitize-filename';
 import { verifyFolderOwnership, initializeUserFolder } from '@/lib/folderAuth';
 import { getSession } from '@/lib/session';
 import { ensureUserUploadPath, resolvePathWithinBase } from '@/lib/paths';
 import { normalizeRelativeUploadPath } from '@/utils/uploadPath';
-
-function validateName(name) {
-    if (!name || typeof name !== 'string') return 'missing_name';
-    const trimmed = name.trim();
-    if (!trimmed) return 'empty_name';
-    if (trimmed.length > 255) return 'name_too_long';
-    if (/[\\/:*?"<>|]/.test(trimmed)) return 'illegal_chars';
-    if (trimmed.includes('..')) return 'dotdot_not_allowed';
-    return null;
-}
 
 export async function POST(req) {
     try {
@@ -29,12 +20,11 @@ export async function POST(req) {
         const body = await req.json();
         const { name, type, currentPath = '' } = body || {};
 
-        const validationCode = validateName(name);
-        if (validationCode) {
-            return NextResponse.json({ success: false, code: validationCode, message: 'Invalid name' }, { status: 400 });
-        }
-
         const safeType = ['folder', 'file', 'text'].includes(type) ? type : 'file';
+        const safeName = sanitizeFilename(String(name || '').trim());
+        if (!safeName || safeName.length > 255) {
+            return NextResponse.json({ success: false, code: 'invalid_name', message: 'Invalid name' }, { status: 400 });
+        }
 
         let ownership = await verifyFolderOwnership(userId);
         if (!ownership.isValid) {
@@ -61,7 +51,7 @@ export async function POST(req) {
 
         try { await fs.access(targetDir); } catch { await fs.mkdir(targetDir, { recursive: true }); }
 
-        let finalName = name.trim();
+        let finalName = safeName;
         if (safeType === 'text' && !finalName.includes('.')) {
             finalName += '.txt';
         }
