@@ -3,16 +3,17 @@
 import { NextResponse } from "next/server";
 import { signUp } from "@/lib/auth";
 import { createSession } from "@/lib/session";
+import { normalizeEmailAddress } from "@/lib/email";
 
 export async function POST(req) {
     try {
         const { email, password } = await req.json();
         if (!email || !password) return NextResponse.json({ success: false, code: "email_password_missing", message: "Email and password are required." }, { status: 400 });
 
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(email)) return NextResponse.json({ success: false, code: "invalid_email", message: "Invalid email format." }, { status: 400 });
+        const normalizedEmail = normalizeEmailAddress(email);
+        if (!normalizedEmail) return NextResponse.json({ success: false, code: "invalid_email", message: "Invalid email format." }, { status: 400 });
 
-        const response = await signUp(email, password);
+        const response = await signUp(normalizedEmail, password);
 
         if (!response.success) return NextResponse.json({ success: false, code: response?.code, message: response?.error || "Signup failed." }, { status: 500 });
 

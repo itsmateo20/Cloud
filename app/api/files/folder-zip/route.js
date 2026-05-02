@@ -7,6 +7,7 @@ import fs from "fs/promises";
 import { createReadStream } from "fs";
 import path from "path";
 import archiver from "archiver";
+import sanitizeFilename from "sanitize-filename";
 import { resolveUserUploadPath } from "@/lib/paths";
 
 async function getAllFilesInDirectory(dirPath, basePath = '') {
@@ -114,7 +115,7 @@ export async function POST(req) {
 
         const totalSize = allFiles.reduce((sum, file) => sum + file.size, 0);
 
-        const sanitizedZipName = (zipName || path.basename(folderPath) || 'folder').replace(/[^a-zA-Z0-9_-]/g, '_') + '.zip';
+        const sanitizedZipName = `${sanitizeFilename(zipName || path.basename(folderPath) || 'folder') || 'folder'}.zip`;
 
         const archive = archiver('zip', {
             zlib: { level: 1 }
@@ -280,8 +281,8 @@ export async function GET(req) {
             }, { status: 400 });
         }
 
-        const folderName = path.basename(folderPath) || 'folder';
-        const sanitizedZipName = folderName.replace(/[^a-zA-Z0-9_-]/g, '_') + '.zip';
+        const folderName = sanitizeFilename(path.basename(folderPath) || 'folder') || 'folder';
+        const sanitizedZipName = `${folderName}.zip`;
 
         const totalSize = files.reduce((sum, file) => sum + file.size, 0);
 

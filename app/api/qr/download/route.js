@@ -6,6 +6,7 @@ import { join } from 'path';
 import archiver from 'archiver';
 import { getUserUploadPath } from '@/lib/paths';
 import { deleteQrTokenById, findQrTokenByToken } from '@/lib/qrTokens';
+import sanitizeFilename from 'sanitize-filename';
 
 export async function POST(request) {
     try {
@@ -76,7 +77,7 @@ export async function POST(request) {
                             const filePath = join(getUserUploadPath(userId), item.path);
 
                             const fileBuffer = await readFile(filePath);
-                            archive.append(fileBuffer, { name: item.name });
+                            archive.append(fileBuffer, { name: sanitizeFilename(item.name) || item.name || 'file' });
 
                         } catch (error) {
 
@@ -112,7 +113,7 @@ export async function POST(request) {
                 return new Response(fileBuffer, {
                     headers: {
                         'Content-Type': 'application/octet-stream',
-                        'Content-Disposition': `attachment; filename="${item.name}"`
+                        'Content-Disposition': `attachment; filename="${encodeURIComponent(sanitizeFilename(item.name) || item.name || 'file')}"`
                     }
                 });
 

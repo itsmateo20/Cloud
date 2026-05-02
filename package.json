@@ -49,10 +49,10 @@
         "re-resizable": "^6.11.2",
         "react": "^19.2.5",
         "react-dom": "^19.2.5",
+        "sanitize-filename": "^1.6.4",
         "sharp": "^0.34.5",
         "socket.io": "^4.8.3",
-        "socket.io-client": "^4.8.3",
-        "sanitize-filename": "^1.6.4"
+        "socket.io-client": "^4.8.3"
     },
     "devDependencies": {
         "@types/bun": "latest",

@@ -7,6 +7,7 @@ import fs from "fs/promises";
 import { createReadStream } from "fs";
 import path from "path";
 import archiver from "archiver";
+import sanitizeFilename from "sanitize-filename";
 import { getUserUploadPath, resolvePathWithinBase } from "@/lib/paths";
 
 export async function POST(req) {
@@ -42,7 +43,7 @@ export async function POST(req) {
         }
 
         const userFolder = getUserUploadPath(userId);
-        const sanitizedZipName = (zipName || 'download').replace(/[^a-zA-Z0-9_-]/g, '_') + '.zip';
+        const sanitizedZipName = `${sanitizeFilename(zipName || 'download') || 'download'}.zip`;
 
         const validatedFiles = [];
         const seenPaths = new Set();

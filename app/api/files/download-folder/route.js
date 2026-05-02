@@ -6,6 +6,7 @@ import { verifyFolderOwnership } from "@/lib/folderAuth";
 import fs from "fs/promises";
 import path from "path";
 import archiver from "archiver";
+import sanitizeFilename from "sanitize-filename";
 import { resolveUserUploadPath } from "@/lib/paths";
 
 export async function GET(req) {
@@ -30,7 +31,7 @@ export async function GET(req) {
         const stat = await fs.stat(targetPath);
         if (!stat.isDirectory()) return NextResponse.json({ success: false, code: "not_a_folder" }, { status: 400 });
 
-        const folderName = path.basename(targetPath) || "folder";
+        const folderName = sanitizeFilename(path.basename(targetPath) || "folder") || "folder";
         const zipFileName = `${folderName}.zip`;
 
         const archive = archiver('zip', {

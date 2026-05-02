@@ -9,6 +9,7 @@ import { NextResponse } from "next/server";
 import fs from "fs/promises";
 import { createReadStream } from "fs";
 import path from "path";
+import sanitizeFilename from "sanitize-filename";
 
 export async function GET(req) {
     try {
@@ -69,7 +70,7 @@ export async function GET(req) {
             const fileName = path.basename(requestedPath);
             const fileSize = fileStat.size;
 
-            let displayName = fileName;
+            let displayName = sanitizeFilename(fileName) || fileName || 'download';
             try {
                 const fileRecord = await prisma.file.findFirst({
                     where: {
@@ -80,7 +81,7 @@ export async function GET(req) {
                 });
 
                 if (fileRecord?.name) {
-                    displayName = fileRecord.name;
+                    displayName = sanitizeFilename(fileRecord.name) || displayName;
                 }
             } catch (dbError) {
 

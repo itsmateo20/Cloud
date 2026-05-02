@@ -8,6 +8,7 @@ import { getSession } from "@/lib/session";
 import { canAccessShare, ensureShareTables, getShareByToken } from "@/lib/shares";
 import { getUserUploadPath, resolvePathWithinBase } from "@/lib/paths";
 import { getMimeType } from "@/lib/mimeTypes";
+import sanitizeFilename from "sanitize-filename";
 
 function decodePasscodeFromQuery(url) {
     const encoded = url.searchParams.get("pc") || "";
@@ -88,7 +89,8 @@ export async function GET(req, { params }) {
         }
 
         const fileSize = stat.size;
-        const contentType = getMimeType(path.basename(targetPath));
+        const safeName = sanitizeFilename(path.basename(targetPath)) || path.basename(targetPath) || "download";
+        const contentType = getMimeType(safeName);
         const rangeHeader = req.headers.get("range");
 
         if (rangeHeader) {
@@ -125,7 +127,7 @@ export async function GET(req, { params }) {
                     "Content-Length": String(chunkSize),
                     "Content-Range": `bytes ${start}-${end}/${fileSize}`,
                     "Accept-Ranges": "bytes",
-                    "Content-Disposition": `inline; filename="${encodeURIComponent(path.basename(targetPath))}"`,
+                    "Content-Disposition": `inline; filename="${encodeURIComponent(safeName)}"`,
                     "Cache-Control": "private, max-age=60"
                 }
             });
@@ -148,7 +150,7 @@ export async function GET(req, { params }) {
             headers: {
                 "Content-Type": contentType,
                 "Content-Length": String(fileSize),
-                "Content-Disposition": `inline; filename="${encodeURIComponent(path.basename(targetPath))}"`,
+                "Content-Disposition": `inline; filename="${encodeURIComponent(safeName)}"`,
                 "Accept-Ranges": "bytes",
                 "Cache-Control": "private, max-age=60"
             }

@@ -8,6 +8,7 @@ import archiver from "archiver";
 import { getSession } from "@/lib/session";
 import { canAccessShare, ensureShareTables, getShareByToken, logShareAccess } from "@/lib/shares";
 import { getUserUploadPath, resolvePathWithinBase } from "@/lib/paths";
+import sanitizeFilename from "sanitize-filename";
 
 function decodePasscodeFromQuery(url) {
     const encoded = url.searchParams.get("pc") || "";
@@ -166,7 +167,7 @@ export async function GET(req, { params }) {
             userAgent
         });
 
-        const zipName = `${String(share.name || "share").replace(/[^a-zA-Z0-9_-]/g, "_")}.zip`;
+        const zipName = `${sanitizeFilename(String(share.name || "share")) || "share"}.zip`;
         const stream = buildZipStream(zipFiles);
 
         return new Response(stream, {

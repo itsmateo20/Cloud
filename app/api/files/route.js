@@ -11,16 +11,6 @@ import { getUserUploadPath, getUserFileUrl, resolveUserUploadPath } from "@/lib/
 
 const isUniqueConstraintError = (error) => error?.code === "P2002" || String(error?.message || "").includes("Unique constraint failed");
 
-function validateName(name) {
-    if (!name || typeof name !== "string") return "missing_name";
-    const trimmed = name.trim();
-    if (!trimmed) return "empty_name";
-    if (trimmed.length > 255) return "name_too_long";
-    if (/[\\/:*?"<>|]/.test(trimmed)) return "illegal_chars";
-    if (trimmed.includes("..")) return "dotdot_not_allowed";
-    return null;
-}
-
 export async function GET(req) {
     const session = await getSession();
     if (!session?.success || !session?.user?.id) return NextResponse.json({ success: false, code: "unauthorized" }, { status: 401 });
@@ -305,14 +295,9 @@ export async function POST(req) {
         const { action, path: targetPath, name } = await req.json();
 
         if (action === 'create_folder') {
-            const nameValidation = validateName(name);
-            if (nameValidation) {
-                return NextResponse.json({ success: false, code: nameValidation, message: "Invalid name" }, { status: 400 });
-            }
-
-            const safeName = sanitizeFilename(name.trim());
-            if (!safeName || safeName !== name.trim()) {
-                return NextResponse.json({ success: false, code: "illegal_chars", message: "Invalid name" }, { status: 400 });
+            const safeName = sanitizeFilename(String(name || "").trim());
+            if (!safeName || safeName.length > 255) {
+                return NextResponse.json({ success: false, code: "invalid_name", message: "Invalid name" }, { status: 400 });
             }
 
             const folderTargetResult = resolveUserUploadPath(userId, targetPath || "");
@@ -368,9 +353,9 @@ export async function POST(req) {
         }
 
         if (action === 'create_file') {
-            const nameValidation = validateName(name);
-            if (nameValidation) {
-                return NextResponse.json({ success: false, code: nameValidation, message: "Invalid name" }, { status: 400 });
+            const safeName = sanitizeFilename(String(name || "").trim());
+            if (!safeName || safeName.length > 255) {
+                return NextResponse.json({ success: false, code: "invalid_name", message: "Invalid name" }, { status: 400 });
             }
 
             const { content = '' } = await req.json();
@@ -380,7 +365,7 @@ export async function POST(req) {
             }
 
             const userFolder = getUserUploadPath(userId);
-            const filePath = path.resolve(fileTargetResult.resolvedPath, name);
+            const filePath = path.resolve(fileTargetResult.resolvedPath, safeName);
             const normalizedBase = path.resolve(fileTargetResult.resolvedPath);
             const relativeToBase = path.relative(normalizedBase, filePath);
             if (!relativeToBase || relativeToBase.startsWith("..") || path.isAbsolute(relativeToBase)) {
@@ -403,11 +388,11 @@ export async function POST(req) {
 
             const file = await prisma.file.create({
                 data: {
-                    name: name,
+                    name: safeName,
                     path: relativePath,
                     ownerId: userId,
                     size: stats.size,
-                    type: path.extname(name).slice(1) || "unknown",
+                    type: path.extname(safeName).slice(1) || "unknown",
                     folderId: folder?.id || null
                 }
             });
@@ -417,7 +402,7 @@ export async function POST(req) {
                     userId,
                     path: targetPath || "",
                     action: "create",
-                    file: { id: file.id, name: file.name, path: file.path, type: "file" }
+                    file: { id: file.id, name: safeName, path: file.path, type: "file" }
                 };
                 global.io?.to(room).emit("file-updated", payload);
             } catch { }

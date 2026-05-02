@@ -3,6 +3,7 @@
 import { NextResponse } from "next/server";
 import fs from "fs/promises";
 import path from "path";
+import sanitizeFilename from "sanitize-filename";
 import { getSession } from "@/lib/session";
 import { verifyFolderOwnership } from "@/lib/folderAuth";
 import { preserveFileMetadata } from "@/utils/fileMetadata.server";
@@ -72,8 +73,8 @@ export async function POST(req) {
             const file = files[i];
             if (!file || typeof file === 'string') continue;
 
-            const fileName = path.basename(String(file.name || '').replace(/\\/g, '/'));
-            if (!fileName) continue;
+            const fileName = sanitizeFilename(path.basename(String(file.name || '').replace(/\\/g, '/')));
+            if (!fileName || fileName.length > 255) continue;
             const filePathResult = resolvePathWithinBase(userFolder, path.relative(userFolder, path.join(targetFolder, fileName)));
             if (!filePathResult.isInside) return NextResponse.json({ success: false, code: "explorer_invalid_path" }, { status: 400 });
             const filePath = filePathResult.resolvedPath;

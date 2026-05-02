@@ -9,6 +9,7 @@ import { getSession } from "@/lib/session";
 import { canAccessShare, ensureShareTables, getShareByToken, logShareAccess } from "@/lib/shares";
 import { getUserUploadPath, resolvePathWithinBase } from "@/lib/paths";
 import { getMimeType } from "@/lib/mimeTypes";
+import sanitizeFilename from "sanitize-filename";
 
 function decodePasscodeFromQuery(url) {
     const encoded = url.searchParams.get("pc") || "";
@@ -170,7 +171,7 @@ export async function GET(req, { params }) {
                 userAgent
             });
 
-            const zipName = `${path.basename(targetPath).replace(/[^a-zA-Z0-9_-]/g, "_")}.zip`;
+            const zipName = `${sanitizeFilename(path.basename(targetPath) || "folder") || "folder"}.zip`;
             const zipStream = buildZipStream(filesInFolder);
 
             return new Response(zipStream, {
@@ -215,7 +216,7 @@ export async function GET(req, { params }) {
             headers: {
                 "Content-Type": getMimeType(path.basename(targetPath)),
                 "Content-Length": String(stat.size),
-                "Content-Disposition": `attachment; filename="${encodeURIComponent(path.basename(targetPath))}"`,
+                "Content-Disposition": `attachment; filename="${encodeURIComponent(sanitizeFilename(path.basename(targetPath)) || path.basename(targetPath) || "download")}"`,
                 "Cache-Control": "no-cache"
             }
         });

@@ -3,20 +3,11 @@
 import { NextResponse } from "next/server";
 import fs from "fs/promises";
 import path from "path";
+import sanitizeFilename from "sanitize-filename";
 import { getSession } from "@/lib/session";
 import { verifyFolderOwnership } from "@/lib/folderAuth";
 import prisma from "@/lib/db";
 import { resolveUserUploadPath } from "@/lib/paths";
-
-function validateName(name) {
-    if (!name || typeof name !== 'string') return 'missing_name';
-    const trimmed = name.trim();
-    if (!trimmed) return 'empty_name';
-    if (trimmed.length > 255) return 'name_too_long';
-    if (/[\\/:*?"<>|]/.test(trimmed)) return 'illegal_chars';
-    if (trimmed.includes('..')) return 'dotdot_not_allowed';
-    return null;
-}
 
 export async function POST(req) {
     try {
@@ -25,8 +16,8 @@ export async function POST(req) {
 
         const { oldPath, newName } = await req.json();
         if (!oldPath || !newName) return NextResponse.json({ success: false, code: "missing_parameters", message: "oldPath and newName are required" }, { status: 400 });
-        const validationCode = validateName(newName);
-        if (validationCode) return NextResponse.json({ success: false, code: validationCode, message: "Invalid name" }, { status: 400 });
+        const safeNewName = sanitizeFilename(String(newName || '').trim());
+        if (!safeNewName || safeNewName.length > 255) return NextResponse.json({ success: false, code: "invalid_name", message: "Invalid name" }, { status: 400 });
         const { id } = session.user;
         const folderVerification = await verifyFolderOwnership(id);
         if (!folderVerification.isValid) return NextResponse.json({ success: false, code: "folder_auth_failed", message: "Folder authentication failed: " + folderVerification.error }, { status: 403 });
@@ -36,7 +27,7 @@ export async function POST(req) {
 
         const userFolder = oldResolved.basePath;
         const oldFullPath = oldResolved.resolvedPath;
-        const newFullPath = path.resolve(path.dirname(oldFullPath), newName);
+        const newFullPath = path.resolve(path.dirname(oldFullPath), safeNewName);
         const relativeNewPath = path.relative(userFolder, newFullPath).replace(/\\/g, '/');
         const newResolved = resolveUserUploadPath(id, relativeNewPath);
 
@@ -56,7 +47,7 @@ export async function POST(req) {
             },
             data: {
                 path: newPath,
-                name: newName
+                name: safeNewName
             }
         });
 
@@ -67,7 +58,7 @@ export async function POST(req) {
                 path: path.dirname(oldResolved.relativePath).replace(".", ""),
                 action: "rename",
                 oldName: path.basename(oldResolved.relativePath),
-                newName,
+                newName: safeNewName,
             };
             global.io?.to(room).emit("file-updated", payloadFU);
         } catch { }
@@ -80,7 +71,7 @@ export async function POST(req) {
                 oldPath: oldResolved.relativePath,
                 newPath: newPath,
                 oldName: path.basename(oldResolved.relativePath),
-                newName: newName
+                newName: safeNewName
             };
             global.io?.to(room).emit("folder-structure-updated", payloadFS);
         } catch { }
