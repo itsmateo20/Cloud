@@ -42,7 +42,12 @@ export async function POST(req) {
 
         if (!newResolved.isInside) return NextResponse.json({ success: false, code: "explorer_invalid_path" }, { status: 400 });
 
-        await fs.rename(oldFullPath, newFullPath);
+        const canonicalNewFullPath = path.resolve(userFolder, newResolved.relativePath);
+        if (canonicalNewFullPath !== userFolder && !canonicalNewFullPath.startsWith(userFolder + path.sep)) {
+            return NextResponse.json({ success: false, code: "explorer_invalid_path" }, { status: 400 });
+        }
+
+        await fs.rename(oldFullPath, canonicalNewFullPath);
         const newPath = newResolved.relativePath;
         await prisma.file.updateMany({
             where: {
