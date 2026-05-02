@@ -46,8 +46,8 @@ const nextConfig = {
         'localhost'
     ],
 
-    experimental: {
-        browserDebugInfoInTerminal: true,
+    logging: {
+        browserToTerminal: 'true',
     },
 };
 
