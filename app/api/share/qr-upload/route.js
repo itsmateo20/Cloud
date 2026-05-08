@@ -1,10 +1,10 @@
 // app/api/share/qr-upload/route.js
 
 import { NextResponse } from 'next/server';
-import { writeFile, mkdir } from 'fs/promises';
-import { join } from 'path';
+import { access, mkdir, writeFile } from 'fs/promises';
+import path from 'path';
 import prisma from '@/lib/db';
-import { ensureUploadBasePath } from '@/lib/paths';
+import { ensureUploadBasePath, resolvePathWithinBase } from '@/lib/paths';
 
 export async function POST(request) {
     try {
@@ -61,7 +61,15 @@ export async function POST(request) {
             }, { status: 500 });
         }
 
-        const uploadDir = join(basePathResult.path, targetPath || '');
+        const uploadDirResult = resolvePathWithinBase(basePathResult.path, targetPath || '');
+        if (!uploadDirResult.isInside) {
+            return NextResponse.json({
+                success: false,
+                message: 'Invalid target path'
+            }, { status: 400 });
+        }
+
+        const uploadDir = uploadDirResult.resolvedPath;
         try {
             await mkdir(uploadDir, { recursive: true });
         } catch (error) {
@@ -79,14 +87,14 @@ export async function POST(request) {
             const baseName = originalName.includes('.') ? originalName.substring(0, originalName.lastIndexOf('.')) : originalName;
 
             let fileName = originalName;
-            let filePath = join(uploadDir, fileName);
+            let filePath = path.join(uploadDir, fileName);
             let counter = 1;
 
             while (true) {
                 try {
-                    await import('fs').then(fs => fs.promises.access(filePath));
+                    await access(filePath);
                     fileName = `${baseName} (${counter})${ext}`;
-                    filePath = join(uploadDir, fileName);
+                    filePath = path.join(uploadDir, fileName);
                     counter++;
                 } catch {
                     break;
@@ -95,7 +103,7 @@ export async function POST(request) {
 
             await writeFile(filePath, buffer);
 
-            const relativePath = join(targetPath || '', fileName).replace(/\\/g, '/');
+            const relativePath = path.posix.join(uploadDirResult.relativePath || '', fileName);
 
             try {
                 await prisma.file.create({

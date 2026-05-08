@@ -9,6 +9,7 @@ import { createReadStream } from "fs";
 import path from "path";
 import { resolveUserUploadPath } from "@/lib/paths";
 import { getMimeType } from "@/lib/mimeTypes";
+import { Readable } from "stream";
 
 export async function GET(req) {
     try {
@@ -88,27 +89,6 @@ async function streamFile(req, filePath, fileName = null) {
                 return new Response('Range Not Satisfiable', { status: 416 });
             }
 
-            const stream = createReadStream(filePath, { start, end });
-            const readableStream = new ReadableStream({
-                start(controller) {
-                    stream.on('data', (chunk) => {
-                        controller.enqueue(new Uint8Array(chunk));
-                    });
-
-                    stream.on('end', () => {
-                        controller.close();
-                    });
-
-                    stream.on('error', (error) => {
-                        controller.error(error);
-                    });
-                },
-
-                cancel() {
-                    stream.destroy();
-                }
-            });
-
             const headers = {
                 'Content-Range': `bytes ${start}-${end}/${fileSize}`,
                 'Accept-Ranges': 'bytes',
@@ -120,32 +100,11 @@ async function streamFile(req, filePath, fileName = null) {
                 'Access-Control-Allow-Headers': 'Range, Content-Type'
             };
 
-            return new Response(readableStream, {
+            return new Response(Readable.toWeb(createReadStream(filePath, { start, end })), {
                 status: 206,
                 headers
             });
         } else {
-            const stream = createReadStream(filePath);
-            const readableStream = new ReadableStream({
-                start(controller) {
-                    stream.on('data', (chunk) => {
-                        controller.enqueue(new Uint8Array(chunk));
-                    });
-
-                    stream.on('end', () => {
-                        controller.close();
-                    });
-
-                    stream.on('error', (error) => {
-                        controller.error(error);
-                    });
-                },
-
-                cancel() {
-                    stream.destroy();
-                }
-            });
-
             const headers = {
                 'Content-Length': fileSize.toString(),
                 'Content-Type': contentType,
@@ -156,7 +115,7 @@ async function streamFile(req, filePath, fileName = null) {
                 'Access-Control-Allow-Headers': 'Range, Content-Type'
             };
 
-            return new Response(readableStream, {
+            return new Response(Readable.toWeb(createReadStream(filePath)), {
                 status: 200,
                 headers
             });

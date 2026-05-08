@@ -45,10 +45,6 @@ const normalizeUploadSelection = (files) => {
     return [files];
   }
 
-  if (typeof FileList !== 'undefined' && files instanceof FileList) {
-    return Array.from(files).filter(Boolean);
-  }
-
   if (typeof files === 'object' && typeof files.length === 'number' && typeof files !== 'string') {
     return Array.from(files).filter(Boolean);
   }
@@ -1473,7 +1469,28 @@ export default function Page() {
   };
 
   const handleFilesUpload = (files) => {
-    uploadFiles(files);
+    const selectedFiles = normalizeUploadSelection(files);
+
+    if (selectedFiles.length > 0) {
+      uploadFiles(selectedFiles);
+      return;
+    }
+
+    if (typeof document === 'undefined') return;
+
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.multiple = true;
+    input.style.display = 'none';
+    document.body.appendChild(input);
+    input.onchange = (event) => {
+      const pickedFiles = normalizeUploadSelection(event.target.files);
+      if (pickedFiles.length > 0) {
+        uploadFiles(pickedFiles);
+      }
+      input.remove();
+    };
+    input.click();
   };
 
   const handleBackNavigation = () => {

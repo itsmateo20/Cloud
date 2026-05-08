@@ -7,6 +7,7 @@ import path from 'path';
 import { getSession } from '@/lib/session';
 import { spawn } from 'child_process';
 import { resolveUserUploadPath } from '@/lib/paths';
+import { Readable } from 'stream';
 
 export async function GET(req) {
     const session = await getSession();
@@ -72,10 +73,11 @@ export async function GET(req) {
             });
         }
 
-        const buf = await fs.readFile(outFile);
-        return new NextResponse(buf, {
+        const outStat = await fs.stat(outFile);
+        return new NextResponse(Readable.toWeb(fsSync.createReadStream(outFile)), {
             headers: {
                 'Content-Type': 'image/jpeg',
+                'Content-Length': outStat.size.toString(),
                 'Cache-Control': 'public, max-age=86400',
                 'ETag': etag
             }

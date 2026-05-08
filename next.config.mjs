@@ -1,6 +1,10 @@
 // next.config.mjs
 
 const nextConfig = {
+    outputFileTracingExcludes: {
+        '/*': ['./next.config.mjs'],
+    },
+
     async redirects() {
         return [
             {

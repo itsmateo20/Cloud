@@ -5,9 +5,11 @@ import prisma from "@/lib/db";
 import { verifyFolderOwnership } from "@/lib/folderAuth";
 import { NextResponse } from "next/server";
 import fs from "fs/promises";
+import { createReadStream } from "fs";
 import path from "path";
 import { resolveUserUploadPath } from "@/lib/paths";
 import { getMimeType } from "@/lib/mimeTypes";
+import { Readable } from "stream";
 
 export async function GET(req) {
     try {
@@ -79,11 +81,10 @@ export async function GET(req) {
                 }, { status: 400 });
             }
 
-            const fileBuffer = await fs.readFile(requestedPath);
             const mimeType = getMimeType(filePath);
             const contentType = mimeType === 'application/octet-stream' && fileRecord?.type ? fileRecord.type : mimeType;
 
-            return new Response(fileBuffer, {
+            return new Response(Readable.toWeb(createReadStream(requestedPath)), {
                 headers: {
                     'Content-Type': contentType,
                     'Content-Length': stat.size.toString(),

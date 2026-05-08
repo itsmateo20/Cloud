@@ -2,6 +2,7 @@
 
 import { NextResponse } from "next/server";
 import fs from "fs/promises";
+import { createWriteStream } from "fs";
 import path from "path";
 import sanitizeFilename from "sanitize-filename";
 import { getSession } from "@/lib/session";
@@ -9,6 +10,8 @@ import { verifyFolderOwnership } from "@/lib/folderAuth";
 import { preserveFileMetadata } from "@/utils/fileMetadata.server";
 import { normalizeRelativeUploadPath } from "@/utils/uploadPath";
 import { ensureUserUploadPath, resolvePathWithinBase } from "@/lib/paths";
+import { Readable } from "stream";
+import { pipeline } from "stream/promises";
 
 export async function POST(req) {
     const session = await getSession();
@@ -73,8 +76,12 @@ export async function POST(req) {
             const file = files[i];
             if (!file || typeof file === 'string') continue;
 
-            const fileName = sanitizeFilename(path.basename(String(file.name || '').replace(/\\/g, '/')));
-            if (!fileName || fileName.length > 255) continue;
+            const originalName = path.basename(String(file.name || '').replace(/\\/g, '/'));
+            const originalExtension = path.extname(originalName);
+            const baseName = path.basename(originalName, originalExtension);
+            const safeBaseName = sanitizeFilename(baseName) || 'upload';
+            const safeExtension = sanitizeFilename(originalExtension) || originalExtension;
+            const fileName = `${safeBaseName}${safeExtension}`.slice(0, 255) || 'upload';
             const filePathResult = resolvePathWithinBase(userFolder, path.relative(userFolder, path.join(targetFolder, fileName)));
             if (!filePathResult.isInside) return NextResponse.json({ success: false, code: "explorer_invalid_path" }, { status: 400 });
             const filePath = filePathResult.resolvedPath;
@@ -93,9 +100,7 @@ export async function POST(req) {
                 }
             }
 
-            const arrayBuffer = await file.arrayBuffer();
-            const buffer = Buffer.from(arrayBuffer);
-            await fs.writeFile(finalPath, buffer);
+            await pipeline(Readable.fromWeb(file.stream()), createWriteStream(finalPath));
 
             const fileMetadata = metadata[i];
             if (fileMetadata) {
@@ -110,7 +115,7 @@ export async function POST(req) {
             uploadedFiles.push({
                 name: path.basename(finalPath),
                 path: path.relative(userFolder, finalPath).replace(/\\/g, '/'),
-                size: buffer.length,
+                size: Number(file.size) || 0,
                 metadataPreserved: !!fileMetadata
             });
         }

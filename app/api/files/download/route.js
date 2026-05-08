@@ -10,6 +10,7 @@ import fs from "fs/promises";
 import { createReadStream } from "fs";
 import path from "path";
 import sanitizeFilename from "sanitize-filename";
+import { Readable } from "stream";
 
 export async function GET(req) {
     try {
@@ -109,28 +110,6 @@ export async function GET(req) {
             }
 
             const contentLength = end - start + 1;
-            const stream = createReadStream(requestedPath, { start, end });
-
-            const readableStream = new ReadableStream({
-                start(controller) {
-                    stream.on('data', (chunk) => {
-                        controller.enqueue(new Uint8Array(chunk));
-                    });
-
-                    stream.on('end', () => {
-                        controller.close();
-                    });
-
-                    stream.on('error', (error) => {
-                        controller.error(error);
-                    });
-                },
-
-                cancel() {
-                    stream.destroy();
-                }
-            });
-
             const mimeType = getMimeType(displayName);
             const forceDownload = shouldForceDownload(displayName);
 
@@ -150,7 +129,7 @@ export async function GET(req) {
                 headers['Content-Range'] = `bytes ${start}-${end}/${fileSize}`;
             }
 
-            return new Response(readableStream, {
+            return new Response(Readable.toWeb(createReadStream(requestedPath, { start, end })), {
                 status: isPartialContent ? 206 : 200,
                 headers
             });

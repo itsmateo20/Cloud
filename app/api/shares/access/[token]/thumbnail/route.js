@@ -6,7 +6,7 @@ import path from "path";
 import sharp from "sharp";
 import { getSession } from "@/lib/session";
 import { canAccessShare, ensureShareTables, getShareByToken } from "@/lib/shares";
-import { getUserUploadPath, resolvePathWithinBase } from "@/lib/paths";
+import { normalizeRelativeUploadPath } from "@/utils/uploadPath";
 
 function decodePasscodeFromQuery(url) {
     const encoded = url.searchParams.get("pc") || "";
@@ -50,9 +50,16 @@ export async function GET(req, { params }) {
             return NextResponse.json({ success: false, code: access.code, message: access.message }, { status: access.status });
         }
 
-        const userFolder = getUserUploadPath(share.ownerId);
-        const itemResolution = resolvePathWithinBase(userFolder, itemPath);
-        const matchedItem = (share.items || []).find((item) => item.path === itemResolution.relativePath);
+        const uploadFolder = process.env.UPLOAD_FOLDER?.trim() || "uploads";
+        const userFolder = path.resolve(uploadFolder, String(share.ownerId));
+        const normalizedItemPath = normalizeRelativeUploadPath(itemPath);
+        const itemResolution = {
+            basePath: path.resolve(userFolder),
+            resolvedPath: normalizedItemPath ? path.resolve(userFolder, /*turbopackIgnore: true*/ normalizedItemPath) : path.resolve(userFolder),
+            relativePath: normalizedItemPath,
+            isInside: true
+        };
+        const matchedItem = (share.items || []).find((item) => item.path === normalizedItemPath);
         if (!matchedItem) {
             return NextResponse.json({ success: false, code: "share_item_not_found", message: "File is not part of this share" }, { status: 404 });
         }
@@ -63,7 +70,9 @@ export async function GET(req, { params }) {
             });
         }
 
-        if (!itemResolution.isInside) {
+        const relative = path.relative(itemResolution.basePath, itemResolution.resolvedPath);
+        const isInside = relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
+        if (!isInside) {
             return NextResponse.json({ success: false, code: "share_invalid_path", message: "Invalid path" }, { status: 403 });
         }
         const fullPath = itemResolution.resolvedPath;

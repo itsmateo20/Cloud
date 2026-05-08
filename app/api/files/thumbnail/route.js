@@ -2,11 +2,13 @@
 
 import { NextResponse } from "next/server";
 import fs from "fs/promises";
+import { createReadStream } from "fs";
 import path from "path";
 import { getSession } from "@/lib/session";
 import sharp from "sharp";
 import fsSync from 'fs';
 import { resolveUserUploadPath } from "@/lib/paths";
+import { Readable } from "stream";
 
 export async function GET(req) {
     const session = await getSession();
@@ -52,10 +54,11 @@ export async function GET(req) {
 
         if (isSvg) {
             try {
-                const svgContent = await fs.readFile(fullPath, 'utf-8');
-                return new NextResponse(svgContent, {
+                const svgStat = await fs.stat(fullPath);
+                return new NextResponse(Readable.toWeb(createReadStream(fullPath)), {
                     headers: {
                         'Content-Type': 'image/svg+xml',
+                        'Content-Length': svgStat.size.toString(),
                         'Cache-Control': 'public, max-age=2592000, immutable',
                         'ETag': etag,
                         'Expires': new Date(Date.now() + 2592000000).toUTCString()
@@ -84,16 +87,17 @@ export async function GET(req) {
                 }
 
                 if (!useCached) {
-                    const imageBuffer = await fs.readFile(fullPath);
-                    const pipeline = sharp(imageBuffer).resize(targetSize, targetSize, { fit: 'cover', position: 'center' }).jpeg({ quality: targetSize <= 96 ? 60 : 72, mozjpeg: true });
-                    const outBuffer = await pipeline.toBuffer();
-                    await fs.writeFile(cacheFile, outBuffer);
+                    await sharp(fullPath)
+                        .resize(targetSize, targetSize, { fit: 'cover', position: 'center' })
+                        .jpeg({ quality: targetSize <= 96 ? 60 : 72, mozjpeg: true })
+                        .toFile(cacheFile);
                 }
 
-                const fileStream = await fs.readFile(cacheFile);
-                return new NextResponse(fileStream, {
+                const cacheStat = await fs.stat(cacheFile);
+                return new NextResponse(Readable.toWeb(createReadStream(cacheFile)), {
                     headers: {
                         'Content-Type': 'image/jpeg',
+                        'Content-Length': cacheStat.size.toString(),
                         'Cache-Control': 'public, max-age=2592000, immutable',
                         'ETag': etag,
                         'Expires': new Date(Date.now() + 2592000000).toUTCString()
