@@ -55,7 +55,7 @@ export async function GET(req, { params }) {
         const normalizedItemPath = normalizeRelativeUploadPath(itemPath);
         const itemResolution = {
             basePath: path.resolve(userFolder),
-            resolvedPath: normalizedItemPath ? path.resolve(userFolder, /*turbopackIgnore: true*/ normalizedItemPath) : path.resolve(userFolder),
+            resolvedPath: normalizedItemPath ? path.resolve(userFolder,  normalizedItemPath) : path.resolve(userFolder),
             relativePath: normalizedItemPath,
             isInside: true
         };
