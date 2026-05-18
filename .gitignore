@@ -9,6 +9,7 @@
 /app/api/database
 package-lock.json
 bun.*
+yarn.*
 
 # Capacitor
 android/
