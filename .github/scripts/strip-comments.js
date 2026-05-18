@@ -19,6 +19,18 @@ const EXCLUDE_PATTERNS = [
   '**/next.config.js',
 ];
 
+const PRESERVED_BLOCK_COMMENT_PATTERN = /^\/\*\s*turbopackIgnore:\s*true\s*\*\/$/;
+
+function stripBlockComments(content) {
+  return content.replace(/\/\*[\s\S]*?\*\//g, comment => {
+    if (PRESERVED_BLOCK_COMMENT_PATTERN.test(comment)) {
+      return comment;
+    }
+
+    return '';
+  });
+}
+
 function stripComments(content, filePath) {
   const ext = path.extname(filePath);
 
@@ -38,8 +50,7 @@ function stripComments(content, filePath) {
       }
     }
 
-    remainingContent = remainingContent
-      .replace(/\/\*[\s\S]*?\*\//g, '')
+    remainingContent = stripBlockComments(remainingContent)
       .split('\n')
       .map(line => {
         let inString = false;
@@ -105,7 +116,7 @@ function stripComments(content, filePath) {
       remainingContent = content.substring(headerMatch[0].length);
     }
 
-    remainingContent = remainingContent.replace(/\/\*[\s\S]*?\*\//g, '');
+    remainingContent = stripBlockComments(remainingContent);
   }
 
   let cleaned = headerComment + remainingContent;

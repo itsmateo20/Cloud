@@ -1,6 +1,6 @@
 # Comment Stripper GitHub Action
 
-Automatically removes all inline comments from code files except the top-of-file path headers.
+Automatically removes inline comments from code files except the top-of-file path headers and required build-tool annotations like `/*turbopackIgnore: true*/`.
 
 ## What it does
 
@@ -13,6 +13,8 @@ Automatically removes all inline comments from code files except the top-of-file
   - Block comments `/* ... */`
   - Single-line comments `//`
   - Trailing comments after code
+
+  Required annotations such as `/*turbopackIgnore: true*/` are preserved.
 
 ## Files processed
 
