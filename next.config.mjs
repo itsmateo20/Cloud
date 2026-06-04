@@ -1,6 +1,8 @@
 // next.config.mjs
 
 const nextConfig = {
+    htmlLimitedBots: /.*/,
+
     outputFileTracingExcludes: {
         '/*': ['./next.config.mjs'],
     },

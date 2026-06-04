@@ -1,5 +1,4 @@
 // app/layout.js
-
 import fonts from "@/app/fonts";
 import "@/public/styles/globals.css";
 
@@ -48,7 +47,7 @@ export async function generateMetadata() {
     },
     openGraph: {
       title: "Home | Cloud Storage App",
-      description: "The Cloud Storage App is a web-based application designed for users to store and manage their files and folders in the cloud.",
+      description: "The Cloud Storage App is a web-based application designed for users to store and manage their files and folders in the cloud. It offers a convenient way to organize, upload, download, and delete files and folders, making it easy to access your data from anywhere.",
       url: siteUrl,
       siteName: "Cloud Storage App",
       images: [
@@ -66,7 +65,7 @@ export async function generateMetadata() {
     twitter: {
       card: "summary_large_image",
       title: "Home | Cloud Storage App",
-      description: "The Cloud Storage App is a web-based application designed for users to store and manage their files and folders in the cloud.",
+      description: "The Cloud Storage App is a web-based application designed for users to store and manage their files and folders in the cloud. It offers a convenient way to organize, upload, download, and delete files and folders, making it easy to access your data from anywhere.",
       creator: "@itsmateo20",
       site: "@itsmateo20",
       images: [
@@ -90,7 +89,7 @@ export const viewport = {
   ],
 };
 
-export default function RootLayout({ children }) {
+export default async function RootLayout({ children }) {
   return (
     <html lang="en" className={fonts.join(' ')}>
       <body>

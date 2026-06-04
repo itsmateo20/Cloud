@@ -25,7 +25,8 @@ import {
   Settings as SettingsIcon,
   AlertTriangle,
   User as UserIcon,
-  Shield
+  Shield,
+  Download
 } from "lucide-react";
 import { useAuth } from "@/context/AuthProvider";
 import ConfirmModal from "./ConfirmModal";
@@ -34,7 +35,7 @@ import style from "./Settings.module.css";
 import SoftLoading from "../SoftLoading";
 import gravatar from "gravatar";
 
-export default function Settings({ onClose, onViewModeChange, onSortByChange, onThemeChange, isMobile = false, initialSection = "profile" }) {
+export default function Settings({ onClose, onViewModeChange, onSortByChange, onThemeChange, onThumbnailResolutionChange, isMobile = false, initialSection = "profile" }) {
   const { user, signout } = useAuth();
 
   const [theme, setTheme] = useState("device");
@@ -56,10 +57,15 @@ export default function Settings({ onClose, onViewModeChange, onSortByChange, on
     }
   }, [initialSection]);
 
+  // Account deletion states
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [deleteEmail, setDeleteEmail] = useState("");
   const [deletePassword, setDeletePassword] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Export data states
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportType, setExportType] = useState('both');
+  const [isExporting, setIsExporting] = useState(false);
 
   const [initialSettings, setInitialSettings] = useState(null);
   const [sessionTokens, setSessionTokens] = useState([]);
@@ -218,6 +224,14 @@ export default function Settings({ onClose, onViewModeChange, onSortByChange, on
     }
   }, [defaultSort, onSortByChange, settingsLoaded]);
 
+  useEffect(() => {
+    if (settingsLoaded && thumbnailResolution) {
+      if (onThumbnailResolutionChange) {
+        onThumbnailResolutionChange(thumbnailResolution);
+      }
+    }
+  }, [thumbnailResolution, onThumbnailResolutionChange, settingsLoaded]);
+
   const loadSessionTokens = async () => {
     setTokensLoading(true);
     setTokensError("");
@@ -311,35 +325,56 @@ export default function Settings({ onClose, onViewModeChange, onSortByChange, on
   };
 
   const handleDeleteAccount = async () => {
-    if (deleteEmail !== user.email) {
-      alert("Email doesn't match your account email.");
-      return;
-    }
-
     if (!deletePassword.trim()) {
-      alert("Please enter your password.");
+      alert("Please enter your password");
       return;
     }
 
     setIsDeleting(true);
     try {
-      const response = await api.post('/api/user/delete', JSON.stringify({
-        email: deleteEmail,
+      const response = await api.post('/api/user/delete', {
         password: deletePassword
-      }));
+      });
 
       if (response.success) {
+        alert('Your account has been disabled and scheduled for deletion in 30 days. You have been logged out of all devices.');
         await signout();
       } else {
-        alert(response.message || "Failed to delete account. Please check your credentials.");
+        alert(response.message || "Failed to delete account. Please check your password.");
       }
     } catch (error) {
       alert("An error occurred while deleting your account. Please try again.");
     } finally {
       setIsDeleting(false);
       setShowDeleteConfirm(false);
-      setDeleteEmail("");
       setDeletePassword("");
+    }
+  };
+
+  const handleExportData = async () => {
+    setIsExporting(true);
+    try {
+      const response = await api.post('/api/user/export-data', {
+        exportType: exportType
+      });
+
+      // Create blob from response and download
+      const blob = new Blob([response], { type: 'application/zip' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `cloud-export-${new Date().toISOString().split('T')[0]}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      alert('Your data has been exported and downloaded successfully!');
+      setShowExportModal(false);
+    } catch (error) {
+      alert("Failed to export data. Please try again.");
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -688,8 +723,20 @@ export default function Settings({ onClose, onViewModeChange, onSortByChange, on
             {activeSection === "danger" && (
               <div className={style.dangerCard}>
                 <SettingCard
+                  title="Export Data"
+                  description="Download a copy of all your files and database entries"
+                >
+                  <button
+                    className={style.secondaryButton}
+                    onClick={() => setShowExportModal(true)}
+                  >
+                    Download My Data
+                  </button>
+                </SettingCard>
+
+                <SettingCard
                   title="Delete Account"
-                  description="Permanently delete your account and all data"
+                  description="Disable your account for 30 days, then permanently delete all data"
                 >
                   <button
                     className={style.dangerButton}
@@ -710,34 +757,24 @@ export default function Settings({ onClose, onViewModeChange, onSortByChange, on
         title="Delete Account"
         onClose={() => {
           setShowDeleteConfirm(false);
-          setDeleteEmail("");
           setDeletePassword("");
         }}
         onConfirm={handleDeleteAccount}
-        confirmText={isDeleting ? "Deleting..." : "Delete Account"}
+        confirmText={isDeleting ? "Deleting..." : "Disable Account"}
         isDestructive={true}
         isLoading={isDeleting}
       >
         <div className={style.deleteForm}>
           <p className={style.warningText}>
-            ⚠️ This action cannot be undone. This will permanently delete your account and remove all your photos, videos, folders, and any memories saved on the disk.
+            ⚠️ Your account will be disabled for 30 days. After that, all your data will be permanently deleted. You can cancel the deletion anytime within those 30 days.
+          </p>
+
+          <p className={style.infoText}>
+            An email will be sent to {user?.email} with instructions on how to cancel the deletion.
           </p>
 
           <div className={style.formGroup}>
-            <label htmlFor="delete-email">Enter your email address to confirm:</label>
-            <input
-              id="delete-email"
-              type="email"
-              value={deleteEmail}
-              onChange={(e) => setDeleteEmail(e.target.value)}
-              placeholder={user?.email}
-              className={style.formInput}
-              disabled={isDeleting}
-            />
-          </div>
-
-          <div className={style.formGroup}>
-            <label htmlFor="delete-password">Enter your password:</label>
+            <label htmlFor="delete-password">Enter your password to confirm:</label>
             <input
               id="delete-password"
               type="password"
@@ -750,6 +787,89 @@ export default function Settings({ onClose, onViewModeChange, onSortByChange, on
           </div>
         </div>
       </ConfirmModal>
+
+      {/* Export Data Modal */}
+      {showExportModal && (
+        <div className={style.modalOverlay}>
+          <div className={style.modal}>
+            <div className={style.modalHeader}>
+              <h2>Export Your Data</h2>
+              <button
+                className={style.closeButton}
+                onClick={() => setShowExportModal(false)}
+                disabled={isExporting}
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            <div className={style.modalBody}>
+              <p>Select what data you would like to export:</p>
+
+              <div className={style.exportOptions}>
+                <label className={style.exportOption}>
+                  <input
+                    type="radio"
+                    value="files"
+                    checked={exportType === 'files'}
+                    onChange={(e) => setExportType(e.target.value)}
+                    disabled={isExporting}
+                  />
+                  <span>
+                    <strong>All Cloud Stored Files</strong>
+                    <small>All your files and folders from cloud storage</small>
+                  </span>
+                </label>
+
+                <label className={style.exportOption}>
+                  <input
+                    type="radio"
+                    value="database"
+                    checked={exportType === 'database'}
+                    onChange={(e) => setExportType(e.target.value)}
+                    disabled={isExporting}
+                  />
+                  <span>
+                    <strong>Database Entries</strong>
+                    <small>User info, settings, and metadata (password removed for security)</small>
+                  </span>
+                </label>
+
+                <label className={style.exportOption}>
+                  <input
+                    type="radio"
+                    value="both"
+                    checked={exportType === 'both'}
+                    onChange={(e) => setExportType(e.target.value)}
+                    disabled={isExporting}
+                  />
+                  <span>
+                    <strong>Everything</strong>
+                    <small>All files and database entries combined</small>
+                  </span>
+                </label>
+              </div>
+            </div>
+
+            <div className={style.modalFooter}>
+              <button
+                className={style.secondaryButton}
+                onClick={() => setShowExportModal(false)}
+                disabled={isExporting}
+              >
+                Cancel
+              </button>
+              <button
+                className={style.primaryButton}
+                onClick={handleExportData}
+                disabled={isExporting}
+              >
+                {isExporting ? "Exporting..." : "Download Export"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

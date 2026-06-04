@@ -73,6 +73,22 @@ function createConcurrencyQueue(maxConcurrency) {
     return api;
 }
 
+const getThumbnailSizeParam = (resolution) => {
+    const normalized = String(resolution || 'medium').toLowerCase();
+
+    switch (normalized) {
+        case 'high':
+        case 'large':
+            return 'large';
+        case 'low':
+        case 'small':
+            return 'small';
+        case 'medium':
+        default:
+            return 'medium';
+    }
+};
+
 const ThumbnailWithLoader = ({ src, alt, cacheRef, queue, currentPath }) => {
     const cacheKey = `${currentPath}||${src}`;
     const [loaded, setLoaded] = useState(() => cacheRef?.current?.has(cacheKey));
@@ -348,8 +364,10 @@ const FileList = forwardRef(({
     user,
     mobile = false,
     sharesOnly = false,
+    thumbnailResolution = 'medium',
 }, ref) => {
     const toast = (() => { try { return useToast(); } catch { return null; } })();
+    const thumbnailSize = useMemo(() => getThumbnailSizeParam(thumbnailResolution), [thumbnailResolution]);
 
     const thumbnailCacheRef = useRef(new Map());
     const thumbnailQueueRef = useRef();
@@ -379,20 +397,20 @@ const FileList = forwardRef(({
             const fullPath = normalizedPath || (path === '/' ? `/${file.name}` : `${path || ''}/${file.name}`);
             const mod = file.modified || file.modifiedAt || file.updatedAt || file.createdAt || '';
             const v = mod ? new Date(mod).getTime() : '';
-            return `/api/files/thumbnail?path=${encodeURIComponent(fullPath)}${v ? `&v=${v}` : ''}&size=medium`;
+            return `/api/files/thumbnail?path=${encodeURIComponent(fullPath)}${v ? `&v=${v}` : ''}&size=${thumbnailSize}`;
         }
         return null;
-    }, []);
+    }, [thumbnailSize]);
     getVideoThumbnailUrl = useCallback((file, path) => {
         if (isVideo(file.name)) {
             const normalizedPath = String(file?.path || '').replace(/\\/g, '/').replace(/^\/+/, '').replace(/^uploads\/\d+\//, '');
             const fullPath = normalizedPath || (path === '/' ? `/${file.name}` : `${path || ''}/${file.name}`);
             const mod = file.modified || file.modifiedAt || file.updatedAt || file.createdAt || '';
             const v = mod ? new Date(mod).getTime() : '';
-            return `/api/files/video-thumbnail?path=${encodeURIComponent(fullPath)}${v ? `&v=${v}` : ''}&size=medium`;
+            return `/api/files/video-thumbnail?path=${encodeURIComponent(fullPath)}${v ? `&v=${v}` : ''}&size=${thumbnailSize}`;
         }
         return null;
-    }, []);
+    }, [thumbnailSize]);
     const [folders, setFolders] = useState([]);
     const [files, setFiles] = useState([]);
     const [loading, setLoading] = useState(false);

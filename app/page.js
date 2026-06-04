@@ -79,6 +79,22 @@ const dedupeUploadSelection = (files) => {
   return uniqueFiles;
 };
 
+const resolveThumbnailSizeParam = (resolution) => {
+  const normalized = String(resolution || 'medium').toLowerCase();
+
+  switch (normalized) {
+    case 'high':
+    case 'large':
+      return 'large';
+    case 'low':
+    case 'small':
+      return 'small';
+    case 'medium':
+    default:
+      return 'medium';
+  }
+};
+
 let socket;
 
 export default function Page() {
@@ -91,6 +107,7 @@ export default function Page() {
   const [sortBy, setSortBy] = useState("name");
   const [desktopViewMode, setDesktopViewMode] = useState("details");
   const [mobileViewMode, setMobileViewMode] = useState("list");
+  const [thumbnailResolution, setThumbnailResolution] = useState("medium");
   const [favorites, setFavorites] = useState({ files: [], folders: [] });
   const [storageInfo, setStorageInfo] = useState({ totalSize: 0, totalFiles: 0 });
   const [storageLoading, setStorageLoading] = useState(false);
@@ -259,12 +276,15 @@ export default function Page() {
       if (settings) {
         setDesktopViewMode(settings.defaultView);
         setSortBy(settings.defaultSort);
+        setThumbnailResolution(settings.thumbnailResolution || 'medium');
       } else if (typeof window !== 'undefined') {
 
         const savedView = localStorage.getItem('cloud-default-view') || 'details';
         const savedSort = localStorage.getItem('cloud-default-sort') || 'name';
+        const savedThumbnailResolution = localStorage.getItem('cloud-thumbnail-resolution') || 'medium';
         setDesktopViewMode(savedView);
         setSortBy(savedSort);
+        setThumbnailResolution(savedThumbnailResolution);
       }
 
       setSettingsLoaded(true);
@@ -586,17 +606,19 @@ export default function Page() {
       .replace(/^uploads\/\d+\//, '');
     if (!normalizedPath) return null;
 
+    const thumbnailSize = resolveThumbnailSizeParam(thumbnailResolution);
+
     const ext = file.name.split('.').pop()?.toLowerCase();
     const isImage = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'].includes(ext);
     const isVideo = ['mp4', 'avi', 'mov', 'webm', 'mkv', 'wmv'].includes(ext);
 
     if (isImage) {
-      const thumbnailUrl = `/api/files/thumbnail?path=${encodeURIComponent(normalizedPath)}&size=small`;
+      const thumbnailUrl = `/api/files/thumbnail?path=${encodeURIComponent(normalizedPath)}&size=${thumbnailSize}`;
       return thumbnailUrl;
     }
 
     if (isVideo) {
-      const thumbnailUrl = `/api/files/video-thumbnail?path=${encodeURIComponent(normalizedPath)}&size=small`;
+      const thumbnailUrl = `/api/files/video-thumbnail?path=${encodeURIComponent(normalizedPath)}&size=${thumbnailSize}`;
       return thumbnailUrl;
     }
 
@@ -881,12 +903,17 @@ export default function Page() {
       return;
     }
 
+    if (typeof document === 'undefined') return;
+
     const input = document.createElement('input');
     input.type = 'file';
     input.multiple = true;
+    input.style.display = 'none';
+    document.body.appendChild(input);
     input.onchange = (e) => {
       const fileList = normalizeUploadSelection(e.target.files);
       if (fileList.length > 0) uploadFiles(fileList);
+      input.remove();
     };
     input.click();
   };
@@ -1706,6 +1733,7 @@ export default function Page() {
                     onThemeChange={handleThemeChange}
                     onViewModeChange={setDesktopViewMode}
                     onSortByChange={setSortBy}
+                    onThumbnailResolutionChange={setThumbnailResolution}
                     initialSection={settingsInitialSection}
                     isMobile={false}
                   />
@@ -1732,6 +1760,7 @@ export default function Page() {
                     viewMode={viewMode}
                     user={user}
                     mobile={isMobile}
+                    thumbnailResolution={thumbnailResolution}
                     sharesOnly={true}
                   />
                 ) : showAdminUsers ? (
@@ -1754,6 +1783,7 @@ export default function Page() {
                     viewMode={viewMode}
                     user={user}
                     mobile={isMobile}
+                    thumbnailResolution={thumbnailResolution}
                   />
                 )}
               </div>
