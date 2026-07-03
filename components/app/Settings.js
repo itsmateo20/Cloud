@@ -857,7 +857,6 @@ export default function Settings({ onClose, onViewModeChange, onSortByChange, on
         }
       />
 
-
       {showExportModal && (
         <div className={style.modalOverlay} onMouseDown={() => !isExporting && setShowExportModal(false)}>
           <div className={style.modal} onMouseDown={(event) => event.stopPropagation()}>
