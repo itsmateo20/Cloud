@@ -1,11 +1,10 @@
-// setup.js
-
 require('dotenv/config');
 const { spawn } = require('child_process');
 
 async function run(cmd, args, opts = {}) {
     return new Promise((resolve, reject) => {
-        const child = spawn(cmd, args, { stdio: 'inherit', shell: false, ...opts });
+        // Turning shell: true on prevents Windows spawn errors with .cmd/.bat scripts
+        const child = spawn(cmd, args, { stdio: 'inherit', shell: true, ...opts });
         child.on('close', (code) => {
             if (code === 0) resolve();
             else reject(new Error(`${cmd} ${args.join(' ')} exited with code ${code}`));
@@ -17,28 +16,32 @@ async function run(cmd, args, opts = {}) {
 }
 
 async function main() {
-
     process.env.DATABASE_URL = process.env.DATABASE_URL || 'file:./prisma/database.sqlite';
 
-    const isWin = process.platform === 'win32';
-    const preferredRunner = process.env.USE_BUN ? 'bunx' : 'npx';
-    const runner = isWin ? `${preferredRunner}.cmd` : preferredRunner;
+    // Auto-detect if running inside Bun or Node without needing manual env variables
+    const isBun = !!process.versions.bun;
+    const runner = isBun ? 'bunx' : 'npx';
+
+    console.log(`Initializing database using ${runner}...`);
 
     try {
-        await run(runner, ['prisma', 'migrate', 'deploy']);
+        // Changed 'migrate deploy' to 'db push' to force database table initialization
+        await run(runner, ['prisma', 'db', 'push']);
         await run(runner, ['prisma', 'generate']);
+        console.log('🎉 Database setup completed successfully!');
     } catch (err) {
-        if (err && err.message && /ENOENT/.test(err.message)) {
-            console.warn(`${runner} not found, falling back to using npm exec`);
-            await run('npm', ['exec', '--', 'prisma', 'migrate', 'deploy']);
+        console.warn(`\n⚠️  ${runner} setup failed, attempting npm fallback...`);
+        try {
+            await run('npm', ['exec', '--', 'prisma', 'db', 'push']);
             await run('npm', ['exec', '--', 'prisma', 'generate']);
-        } else {
-            throw err;
+            console.log('🎉 Database setup completed successfully via npm fallback!');
+        } catch (fallbackErr) {
+            throw new Error(`Both primary setup and fallback failed. Original error: ${err.message}`);
         }
     }
 }
 
 main().catch((err) => {
-    console.error('Setup failed:', err?.message || err);
+    console.error('\n❌ Setup failed:', err?.message || err);
     process.exitCode = 1;
 });
