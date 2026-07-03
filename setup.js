@@ -3,7 +3,7 @@ const { spawn } = require('child_process');
 
 async function run(cmd, args, opts = {}) {
     return new Promise((resolve, reject) => {
-        // Turning shell: true on prevents Windows spawn errors with .cmd/.bat scripts
+
         const child = spawn(cmd, args, { stdio: 'inherit', shell: true, ...opts });
         child.on('close', (code) => {
             if (code === 0) resolve();
@@ -18,14 +18,13 @@ async function run(cmd, args, opts = {}) {
 async function main() {
     process.env.DATABASE_URL = process.env.DATABASE_URL || 'file:./prisma/database.sqlite';
 
-    // Auto-detect if running inside Bun or Node without needing manual env variables
     const isBun = !!process.versions.bun;
     const runner = isBun ? 'bunx' : 'npx';
 
     console.log(`Initializing database using ${runner}...`);
 
     try {
-        // Changed 'migrate deploy' to 'db push' to force database table initialization
+
         await run(runner, ['prisma', 'db', 'push']);
         await run(runner, ['prisma', 'generate']);
         console.log('🎉 Database setup completed successfully!');
