@@ -48,7 +48,7 @@ export async function POST(request) {
         const data = JSON.parse(qrToken.data);
 
         if (downloadAll) {
-            const archive = archiver('zip', { zlib: { level: 9 } });
+            const archive = new ZipArchive({ zlib: { level: 9 } });
 
             const chunks = [];
 

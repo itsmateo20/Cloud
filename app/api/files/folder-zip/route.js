@@ -6,7 +6,7 @@ import { NextResponse } from "next/server";
 import fs from "fs/promises";
 import { createReadStream } from "fs";
 import path from "path";
-import archiver from "archiver";
+import { ZipArchive } from "archiver";
 import sanitizeFilename from "sanitize-filename";
 import { resolveUserUploadPath } from "@/lib/paths";
 
@@ -117,9 +117,7 @@ export async function POST(req) {
 
         const sanitizedZipName = `${sanitizeFilename(zipName || path.basename(folderPath) || 'folder') || 'folder'}.zip`;
 
-        const archive = archiver('zip', {
-            zlib: { level: 1 }
-        });
+        const archive = new ZipArchive({ zlib: { level: 9 } });
 
         let archiveFinalized = false;
         let hasError = false;
@@ -286,9 +284,7 @@ export async function GET(req) {
 
         const totalSize = files.reduce((sum, file) => sum + file.size, 0);
 
-        const archive = archiver('zip', {
-            zlib: { level: 1 }
-        });
+        const archive = new ZipArchive({ zlib: { level: 9 } });
 
         let archiveFinalized = false;
         let hasError = false;

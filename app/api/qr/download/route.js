@@ -54,7 +54,7 @@ export async function POST(request) {
         }
 
         if (downloadAll) {
-            const archive = archiver('zip', { zlib: { level: 9 } });
+            const archive = new ZipArchive({ zlib: { level: 9 } });
 
             const chunks = [];
 

@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 import fs from "fs/promises";
 import path from "path";
 import { createReadStream } from "fs";
-import archiver from "archiver";
+import { ZipArchive } from "archiver";
 import { getSession } from "@/lib/session";
 import { canAccessShare, ensureShareTables, getShareByToken, logShareAccess } from "@/lib/shares";
 import { getUserUploadPath, resolvePathWithinBase } from "@/lib/paths";
@@ -53,7 +53,7 @@ async function getAllFilesInDirectory(dirPath, basePath = "") {
 }
 
 function buildZipStream(files) {
-    const archive = archiver("zip", { zlib: { level: 6 } });
+    const archive = new ZipArchive({ zlib: { level: 9 } });
     let archiveFinalized = false;
     let hasError = false;
 

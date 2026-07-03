@@ -1,13 +1,14 @@
 // app/account-disabled/page.js
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { api } from "@/utils/api";
 import style from "@/public/styles/login.module.css";
 import { Download, RotateCcw } from "lucide-react";
 
-export default function AccountDisabledPage() {
+// 1. Move all your original component logic into a sub-component
+function AccountDisabledContent() {
     const searchParams = useSearchParams();
     const queryEmail = searchParams.get("email") || "";
     const querySignature = searchParams.get("signature") || "";
@@ -153,5 +154,20 @@ export default function AccountDisabledPage() {
                 {success && <p className={style.success}>{success}</p>}
             </div>
         </div>
+    );
+}
+
+// 2. Keep the main default export as a wrapper wrapped in Suspense
+export default function AccountDisabledPage() {
+    return (
+        <Suspense fallback={
+            <div className={style.container}>
+                <div className={style.loginBox}>
+                    <h1 className={style.title}>Loading...</h1>
+                </div>
+            </div>
+        }>
+            <AccountDisabledContent />
+        </Suspense>
     );
 }

@@ -6,7 +6,7 @@ import { NextResponse } from "next/server";
 import fs from "fs/promises";
 import { createReadStream } from "fs";
 import path from "path";
-import archiver from "archiver";
+import { ZipArchive } from "archiver";
 import sanitizeFilename from "sanitize-filename";
 import { getUserUploadPath, resolvePathWithinBase } from "@/lib/paths";
 
@@ -128,9 +128,7 @@ export async function POST(req) {
             }, { status: 400 });
         }
 
-        const archive = archiver('zip', {
-            zlib: { level: 6 }
-        });
+        const archive = new ZipArchive({ zlib: { level: 9 } });
 
         let archiveFinalized = false;
         let hasError = false;

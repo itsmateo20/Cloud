@@ -5,7 +5,7 @@ import { getSession } from "@/lib/session";
 import { verifyFolderOwnership } from "@/lib/folderAuth";
 import fs from "fs/promises";
 import path from "path";
-import archiver from "archiver";
+import { ZipArchive } from "archiver";
 import sanitizeFilename from "sanitize-filename";
 import { resolveUserUploadPath } from "@/lib/paths";
 
@@ -34,9 +34,7 @@ export async function GET(req) {
         const folderName = sanitizeFilename(path.basename(targetPath) || "folder") || "folder";
         const zipFileName = `${folderName}.zip`;
 
-        const archive = archiver('zip', {
-            zlib: { level: 9 }
-        });
+        const archive = new ZipArchive({ zlib: { level: 9 } });
 
         const headers = new Headers({
             'Content-Type': 'application/zip',
