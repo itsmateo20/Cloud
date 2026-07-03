@@ -26,7 +26,6 @@ export async function POST(req) {
             );
         }
 
-        // Get user and verify password
         const user = await prisma.user.findUnique({
             where: { id: userId }
         });
@@ -46,7 +45,6 @@ export async function POST(req) {
             );
         }
 
-        // Schedule deletion for 30 days from now
         const deletionDate = new Date();
         deletionDate.setDate(deletionDate.getDate() + 30);
 
@@ -58,7 +56,6 @@ export async function POST(req) {
             }
         });
 
-        // Revoke all client tokens to log user out of all devices
         await prisma.clientToken.updateMany({
             where: { userId: userId },
             data: { revokedAt: new Date() }

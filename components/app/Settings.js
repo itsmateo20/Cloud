@@ -57,12 +57,10 @@ export default function Settings({ onClose, onViewModeChange, onSortByChange, on
     }
   }, [initialSection]);
 
-  // Account deletion states
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deletePassword, setDeletePassword] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Export data states
   const [showExportModal, setShowExportModal] = useState(false);
   const [exportType, setExportType] = useState('both');
   const [isExporting, setIsExporting] = useState(false);
@@ -859,7 +857,7 @@ export default function Settings({ onClose, onViewModeChange, onSortByChange, on
         }
       />
 
-      {/* Export Data Modal */}
+      {}
       {showExportModal && (
         <div className={style.modalOverlay} onMouseDown={() => !isExporting && setShowExportModal(false)}>
           <div className={style.modal} onMouseDown={(event) => event.stopPropagation()}>

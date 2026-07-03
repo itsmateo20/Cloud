@@ -14,7 +14,6 @@ export async function POST(req) {
 
         let userId = session?.user?.id;
 
-        // Check if account is actually scheduled for deletion
         let user = null;
 
         if (!userId) {
@@ -47,7 +46,6 @@ export async function POST(req) {
             );
         }
 
-        // Cancel the deletion
         await prisma.user.update({
             where: { id: userId },
             data: {

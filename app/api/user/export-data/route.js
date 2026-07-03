@@ -88,9 +88,8 @@ export async function POST(req) {
             throw error;
         });
 
-        // Add database entries as JSON
         if (['database', 'both'].includes(exportType)) {
-            // User info (without password)
+
             const userExport = {
                 id: user.id,
                 email: user.email,
@@ -102,12 +101,10 @@ export async function POST(req) {
             };
             archive.append(JSON.stringify(userExport, null, 2), { name: 'user.json' });
 
-            // User settings
             if (user.settings) {
                 archive.append(JSON.stringify(user.settings, null, 2), { name: 'usersettings.json' });
             }
 
-            // Files metadata
             if (user.files.length > 0) {
                 const filesExport = user.files.map(f => ({
                     id: f.id,
@@ -121,7 +118,6 @@ export async function POST(req) {
                 archive.append(JSON.stringify(filesExport, null, 2), { name: 'files_metadata.json' });
             }
 
-            // Folders metadata
             if (user.folders.length > 0) {
                 const foldersExport = user.folders.map(f => ({
                     id: f.id,
@@ -134,15 +130,13 @@ export async function POST(req) {
             }
         }
 
-        // Add user files
         if (['files', 'both'].includes(exportType)) {
             try {
                 const userPath = resolveUserUploadPath(userId).resolvedPath;
 
-                // Check if user folder exists
                 try {
                     await fs.access(userPath);
-                    // Recursively add all files
+
                     const addFilesRecursive = async (srcPath, arcPath) => {
                         const entries = await fs.readdir(srcPath, { withFileTypes: true });
 
@@ -150,7 +144,6 @@ export async function POST(req) {
                             const entryPath = path.join(srcPath, entry.name);
                             const archivePath = path.join(arcPath, entry.name);
 
-                            // Skip thumbnail cache
                             if (entry.name === '.thumbnails') continue;
 
                             if (entry.isDirectory()) {
