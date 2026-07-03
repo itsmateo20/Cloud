@@ -7,7 +7,6 @@ import { api } from "@/utils/api";
 import style from "@/public/styles/login.module.css";
 import { Download, RotateCcw } from "lucide-react";
 
-// 1. Move all your original component logic into a sub-component
 function AccountDisabledContent() {
     const searchParams = useSearchParams();
     const queryEmail = searchParams.get("email") || "";
@@ -157,7 +156,6 @@ function AccountDisabledContent() {
     );
 }
 
-// 2. Keep the main default export as a wrapper wrapped in Suspense
 export default function AccountDisabledPage() {
     return (
         <Suspense fallback={
