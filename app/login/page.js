@@ -43,6 +43,9 @@ export default function Page() {
 
         if (passwordRequirements.uppercase && passwordRequirements.lowercase && passwordRequirements.number && passwordRequirements.special && passwordRequirements.minLength) {
             const response = await login(email, password);
+            if (response?.code === "account_deleted") {
+                return;
+            }
             const errorMsg = await getError(response?.code, { detailed: false, lang: "en" });
             setError(errorMsg.message);
         } else {

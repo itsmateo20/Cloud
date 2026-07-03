@@ -1,18 +1,29 @@
 // app/account-disabled/page.js
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { api } from "@/utils/api";
 import style from "@/public/styles/login.module.css";
 import { Download, RotateCcw } from "lucide-react";
 
 export default function AccountDisabledPage() {
-    const [email, setEmail] = useState("");
-    const [daysRemaining, setDaysRemaining] = useState(null);
+    const searchParams = useSearchParams();
+    const queryEmail = searchParams.get("email") || "";
+    const querySignature = searchParams.get("signature") || "";
+
+    const [email, setEmail] = useState(queryEmail);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
     const [success, setSuccess] = useState("");
-    const [accountInfo, setAccountInfo] = useState(null);
+    const [accountInfo, setAccountInfo] = useState(queryEmail ? { email: queryEmail, signature: querySignature } : null);
+
+    useEffect(() => {
+        if (queryEmail) {
+            setEmail(queryEmail);
+            setAccountInfo({ email: queryEmail, signature: querySignature });
+        }
+    }, [queryEmail, querySignature]);
 
     const checkAccountStatus = async () => {
         if (!email.trim()) {
@@ -23,9 +34,7 @@ export default function AccountDisabledPage() {
         setLoading(true);
         setError("");
         try {
-            // This would need a special endpoint to check deletion status by email
-            // For now, we'll show a generic message
-            setSuccess("Account found. You can cancel the deletion or download your data.");
+            setSuccess("If your account is in the deletion window, you can cancel deletion from this page.");
             setAccountInfo({ email });
         } catch (err) {
             setError("Failed to check account status");
@@ -38,7 +47,10 @@ export default function AccountDisabledPage() {
         setLoading(true);
         setError("");
         try {
-            const response = await api.post('/api/user/cancel-deletion');
+            const response = await api.post('/api/user/cancel-deletion', {
+                email: accountInfo?.email || email,
+                signature: accountInfo?.signature || querySignature,
+            });
             if (response.success) {
                 setSuccess("Deletion cancelled! You can now log in to your account.");
             } else {
@@ -55,12 +67,14 @@ export default function AccountDisabledPage() {
         setLoading(true);
         setError("");
         try {
-            const response = await api.post('/api/user/export-data', {
-                exportType: 'both'
+            const response = await api.downloadBlob('/api/user/export-data', {
+                exportType: 'both',
+                email: accountInfo?.email || email,
+                signature: accountInfo?.signature || querySignature,
             });
 
-            if (response instanceof Blob) {
-                const url = window.URL.createObjectURL(response);
+            if (response?.success && response.blob) {
+                const url = window.URL.createObjectURL(response.blob);
                 const a = document.createElement('a');
                 a.href = url;
                 a.download = `cloud-export-${new Date().toISOString().split('T')[0]}.zip`;
@@ -69,6 +83,8 @@ export default function AccountDisabledPage() {
                 window.URL.revokeObjectURL(url);
                 document.body.removeChild(a);
                 setSuccess("Your data has been downloaded!");
+            } else {
+                setError(response?.message || "Failed to download data");
             }
         } catch (err) {
             setError("Failed to download data");
@@ -91,7 +107,7 @@ export default function AccountDisabledPage() {
                     </p>
                 </div>
 
-                {!accountInfo ? (
+                {!accountInfo || !accountInfo.signature ? (
                     <div className={style.form}>
                         <div className={style.formGroup}>
                             <label htmlFor="email">Enter your email address:</label>
@@ -107,11 +123,7 @@ export default function AccountDisabledPage() {
                             />
                         </div>
 
-                        <button
-                            onClick={checkAccountStatus}
-                            disabled={loading}
-                            className={style.submitButton}
-                        >
+                        <button onClick={checkAccountStatus} disabled={loading} className={style.submitButton}>
                             {loading ? "Checking..." : "Check Account"}
                         </button>
                     </div>

@@ -5,21 +5,49 @@ import prisma from '@/lib/db';
 import { resolveUserUploadPath } from '@/lib/paths';
 import fs from 'fs/promises';
 import path from 'path';
-import archiver from 'archiver';
 import { Readable } from 'stream';
+import { ZipArchive } from 'archiver';
+import { normalizeEmailAddress } from '@/lib/email';
+import { verifyAccountDeletionSignature } from '@/lib/accountDeletion';
+
+export const runtime = 'nodejs';
 
 export async function POST(req) {
     try {
         const session = await getSession();
-        if (!session?.user?.id) {
-            return NextResponse.json(
-                { success: false, message: 'Unauthorized' },
-                { status: 401 }
-            );
-        }
+        const body = await req.json().catch(() => ({}));
+        const exportType = body?.exportType;
+        const bodyEmail = normalizeEmailAddress(body?.email);
+        const bodySignature = typeof body?.signature === 'string' ? body.signature : '';
 
-        const userId = session.user.id;
-        const { exportType } = await req.json(); // 'files', 'database', or 'both'
+        let userId = session?.user?.id || null;
+
+        if (!userId) {
+            if (!bodyEmail || !bodySignature || !verifyAccountDeletionSignature(bodyEmail, bodySignature)) {
+                return NextResponse.json(
+                    { success: false, message: 'Unauthorized' },
+                    { status: 401 }
+                );
+            }
+
+            const signedUser = await prisma.user.findFirst({
+                where: {
+                    OR: [
+                        { email: bodyEmail },
+                        { googleEmail: bodyEmail }
+                    ]
+                }
+            });
+
+            if (!signedUser || !signedUser.isDeleted || !signedUser.deletionScheduledAt) {
+                return NextResponse.json(
+                    { success: false, message: 'Account is not scheduled for deletion' },
+                    { status: 400 }
+                );
+            }
+
+            userId = signedUser.id;
+        }
 
         if (!['files', 'database', 'both'].includes(exportType)) {
             return NextResponse.json(
@@ -45,9 +73,20 @@ export async function POST(req) {
             );
         }
 
-        // Create a readable stream for the ZIP file
-        const archive = archiver('zip', { zlib: { level: 9 } });
-        const readableStream = Readable.from(archive);
+        const archive = new ZipArchive({ zlib: { level: 9 } });
+
+        archive.on('warning', (warning) => {
+            if (warning.code === 'ENOENT') {
+                console.warn('Archive warning:', warning);
+                return;
+            }
+
+            throw warning;
+        });
+
+        archive.on('error', (error) => {
+            throw error;
+        });
 
         // Add database entries as JSON
         if (['database', 'both'].includes(exportType)) {
@@ -118,11 +157,8 @@ export async function POST(req) {
                                 await addFilesRecursive(entryPath, archivePath);
                             } else {
                                 try {
-                                    const fileStats = await fs.stat(entryPath);
-                                    const fileStream = await fs.readFile(entryPath);
-                                    archive.append(fileStream, {
-                                        name: archivePath.replace(/\\/g, '/'),
-                                        date: fileStats.mtime
+                                    archive.file(entryPath, {
+                                        name: archivePath.replace(/\\/g, '/')
                                     });
                                 } catch (err) {
                                     console.error(`Failed to add file ${entryPath}:`, err);
@@ -140,18 +176,12 @@ export async function POST(req) {
             }
         }
 
-        // Finalize the archive
-        archive.finalize();
-
-        // Handle archive errors
-        archive.on('error', (err) => {
-            console.error('Archive error:', err);
-        });
-
         const timestamp = new Date().toISOString().split('T')[0];
         const filename = `cloud-export-${timestamp}.zip`;
+        const responseBody = Readable.toWeb(archive);
+        archive.finalize();
 
-        return new NextResponse(readableStream, {
+        return new NextResponse(responseBody, {
             headers: {
                 'Content-Type': 'application/zip',
                 'Content-Disposition': `attachment; filename="${filename}"`,

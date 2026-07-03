@@ -2,23 +2,43 @@
 import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/session';
 import prisma from '@/lib/db';
+import { verifyAccountDeletionSignature } from '@/lib/accountDeletion';
+import { normalizeEmailAddress } from '@/lib/email';
 
 export async function POST(req) {
     try {
         const session = await getSession();
-        if (!session?.user?.id) {
-            return NextResponse.json(
-                { success: false, message: 'Unauthorized' },
-                { status: 401 }
-            );
-        }
+        const body = await req.json().catch(() => ({}));
+        const bodyEmail = normalizeEmailAddress(body?.email);
+        const bodySignature = typeof body?.signature === 'string' ? body.signature : '';
 
-        const userId = session.user.id;
+        let userId = session?.user?.id;
 
         // Check if account is actually scheduled for deletion
-        const user = await prisma.user.findUnique({
-            where: { id: userId }
-        });
+        let user = null;
+
+        if (!userId) {
+            if (!bodyEmail || !bodySignature || !verifyAccountDeletionSignature(bodyEmail, bodySignature)) {
+                return NextResponse.json(
+                    { success: false, message: 'Unauthorized' },
+                    { status: 401 }
+                );
+            }
+
+            user = await prisma.user.findFirst({
+                where: {
+                    OR: [
+                        { email: bodyEmail },
+                        { googleEmail: bodyEmail }
+                    ]
+                }
+            });
+            userId = user?.id;
+        } else {
+            user = await prisma.user.findUnique({
+                where: { id: userId }
+            });
+        }
 
         if (!user || !user.isDeleted || !user.deletionScheduledAt) {
             return NextResponse.json(

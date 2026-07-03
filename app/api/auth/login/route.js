@@ -14,7 +14,20 @@ export async function POST(req) {
 
         const response = await signIn(normalizedEmail, password);
 
-        if (!response.success) return NextResponse.json({ success: false, code: response.code, error: response.error }, { status: 500 });
+        if (!response.success) {
+            const status = response.code === "account_deleted" ? 403 : 500;
+            return NextResponse.json(
+                {
+                    success: false,
+                    code: response.code,
+                    error: response.error,
+                    email: response.email,
+                    signature: response.signature,
+                    deletionScheduledAt: response.deletionScheduledAt,
+                },
+                { status }
+            );
+        }
 
         await createSession({ id: response.user.id, email: response.user.email, googleEmail: response.user?.googleEmail, provider: response.user.provider, admin: response.user.admin }, req);
         return NextResponse.json({ success: true, code: "login_success", user: response.user }, { status: 200 });

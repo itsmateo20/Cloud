@@ -3,6 +3,8 @@ import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/session';
 import prisma from '@/lib/db';
 import { verifyPassword } from '@/lib/auth';
+import { buildAccountDisabledPath } from '@/lib/accountDeletion';
+import { getSiteUrl } from '@/lib/getSiteUrl';
 
 export async function POST(req) {
     try {
@@ -57,17 +59,18 @@ export async function POST(req) {
         });
 
         // Revoke all client tokens to log user out of all devices
-        await prisma.clientToken.updateMany(
-            { userId: userId },
-            { revokedAt: new Date() }
-        );
+        await prisma.clientToken.updateMany({
+            where: { userId: userId },
+            data: { revokedAt: new Date() }
+        });
 
-        // TODO: Send email notification about account deletion
-        // emailService.sendAccountDisabledEmail(user.email, deletionDate);
+        const cancelPath = buildAccountDisabledPath(user.email || user.googleEmail);
+        const cancelUrl = cancelPath ? `${await getSiteUrl()}${cancelPath}` : null;
 
         return NextResponse.json({
             success: true,
-            message: 'Account has been disabled and scheduled for deletion'
+            message: 'Account has been disabled and scheduled for deletion',
+            cancelUrl
         });
     } catch (error) {
         console.error('Delete account error:', error);

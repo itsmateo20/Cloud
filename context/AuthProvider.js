@@ -23,6 +23,7 @@ export const AuthProvider = ({ children, locked = true }) => {
         "/signup",
         "/signup/google",
         "/logged-out",
+        "/account-disabled",
     ];
 
     const isPublicRoute = (currentPath) => {
@@ -109,7 +110,13 @@ export const AuthProvider = ({ children, locked = true }) => {
         setSoftLoading(true);
         try {
             const data = await api.post("/api/auth/login", { email, password });
-            if (!data.success) return { success: false, code: data.code };
+            if (!data.success) {
+                if (data.code === "account_deleted" && data.email && data.signature) {
+                    router.push(`/account-disabled?email=${encodeURIComponent(data.email)}&signature=${encodeURIComponent(data.signature)}`);
+                }
+
+                return { success: false, code: data.code, email: data.email, signature: data.signature };
+            }
             setUser(data.user);
 
             const urlParams = new URLSearchParams(window.location.search);

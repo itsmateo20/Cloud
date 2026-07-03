@@ -3,6 +3,7 @@
 import { NextResponse } from "next/server";
 import { createSession } from "@/lib/session";
 import { authenticationWithGoogle } from "@/lib/auth";
+import { buildAccountDisabledPath } from "@/lib/accountDeletion";
 
 import crypto from "crypto";
 import { cookies } from "next/headers";
@@ -48,6 +49,15 @@ export async function GET(req) {
 
         const response = await authenticationWithGoogle(googleUser.email, type);
         if (!response.success) {
+            if (response.code === "account_deleted") {
+                const disabledPath = buildAccountDisabledPath(response.email || googleUser.email);
+                if (disabledPath) {
+                    return NextResponse.redirect(`${siteUrl}${disabledPath}`);
+                }
+
+                return NextResponse.redirect(`${siteUrl}/login?error=account_deleted`);
+            }
+
             if (type === "login") {
                 if (response.code === "user_already_exists_link_google") return NextResponse.redirect(`${siteUrl}/link-account/google?email=${encodeURIComponent(googleUser.email)}&signature=${signEmail(googleUser.email)}`);
                 else if (response.code === "user_not_found") return NextResponse.redirect(`${siteUrl}/login/google?email=${encodeURIComponent(googleUser.email)}&signature=${signEmail(googleUser.email)}`);

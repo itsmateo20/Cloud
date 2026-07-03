@@ -66,6 +66,10 @@ export default function Settings({ onClose, onViewModeChange, onSortByChange, on
   const [showExportModal, setShowExportModal] = useState(false);
   const [exportType, setExportType] = useState('both');
   const [isExporting, setIsExporting] = useState(false);
+  const [exportPhase, setExportPhase] = useState('Preparing export...');
+  const [exportBytesDownloaded, setExportBytesDownloaded] = useState(0);
+  const [exportTotalBytes, setExportTotalBytes] = useState(0);
+  const [exportElapsedSeconds, setExportElapsedSeconds] = useState(0);
 
   const [initialSettings, setInitialSettings] = useState(null);
   const [sessionTokens, setSessionTokens] = useState([]);
@@ -353,13 +357,54 @@ export default function Settings({ onClose, onViewModeChange, onSortByChange, on
 
   const handleExportData = async () => {
     setIsExporting(true);
+    setExportPhase('Preparing export archive...');
+    setExportBytesDownloaded(0);
+    setExportTotalBytes(0);
+    setExportElapsedSeconds(0);
+
     try {
-      const response = await api.post('/api/user/export-data', {
+      const response = await api.raw('POST', '/api/user/export-data', {
         exportType: exportType
       });
 
-      // Create blob from response and download
-      const blob = new Blob([response], { type: 'application/zip' });
+      if (!response.ok) {
+        let errorMessage = 'Failed to export data. Please try again.';
+        try {
+          const errorJson = await response.json();
+          errorMessage = errorJson?.message || errorMessage;
+        } catch {
+        }
+        alert(errorMessage);
+        return;
+      }
+
+      const totalBytes = Number(response.headers.get('content-length') || 0);
+      if (Number.isFinite(totalBytes) && totalBytes > 0) {
+        setExportTotalBytes(totalBytes);
+      }
+
+      const reader = response.body?.getReader();
+      if (!reader) {
+        alert('Export stream is not available in this browser.');
+        return;
+      }
+
+      setExportPhase('Downloading archive...');
+      const chunks = [];
+      let downloaded = 0;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        if (value) {
+          chunks.push(value);
+          downloaded += value.length;
+          setExportBytesDownloaded(downloaded);
+        }
+      }
+
+      const blob = new Blob(chunks, { type: response.headers.get('content-type') || 'application/zip' });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -372,11 +417,35 @@ export default function Settings({ onClose, onViewModeChange, onSortByChange, on
       alert('Your data has been exported and downloaded successfully!');
       setShowExportModal(false);
     } catch (error) {
-      alert("Failed to export data. Please try again.");
+      alert(error?.message || "Failed to export data. Please try again.");
     } finally {
       setIsExporting(false);
     }
   };
+
+  useEffect(() => {
+    if (!isExporting) return;
+
+    const timer = setInterval(() => {
+      setExportElapsedSeconds((current) => current + 1);
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [isExporting]);
+
+  const formatBytes = (bytes) => {
+    if (!bytes || bytes <= 0) return '0 B';
+    const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+    const unitIndex = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
+    const normalized = bytes / Math.pow(1024, unitIndex);
+    const precision = unitIndex === 0 ? 0 : normalized >= 100 ? 0 : normalized >= 10 ? 1 : 2;
+    return `${normalized.toFixed(precision)} ${units[unitIndex]}`;
+  };
+
+  const hasKnownExportTotal = exportTotalBytes > 0;
+  const exportProgressPercent = hasKnownExportTotal
+    ? Math.min(100, Math.round((exportBytesDownloaded / exportTotalBytes) * 100))
+    : 0;
 
   const themeOptions = [
     { value: "light", label: "Light", icon: <Sun size={18} /> },
@@ -730,6 +799,7 @@ export default function Settings({ onClose, onViewModeChange, onSortByChange, on
                     className={style.secondaryButton}
                     onClick={() => setShowExportModal(true)}
                   >
+                    <Download size={18} />
                     Download My Data
                   </button>
                 </SettingCard>
@@ -753,45 +823,46 @@ export default function Settings({ onClose, onViewModeChange, onSortByChange, on
       </div>
 
       <ConfirmModal
-        isOpen={showDeleteConfirm}
+        open={showDeleteConfirm}
         title="Delete Account"
-        onClose={() => {
+        onCancel={() => {
           setShowDeleteConfirm(false);
           setDeletePassword("");
         }}
         onConfirm={handleDeleteAccount}
-        confirmText={isDeleting ? "Deleting..." : "Disable Account"}
-        isDestructive={true}
+        confirmLabel={isDeleting ? "Deleting..." : "Disable Account"}
+        destructive={true}
         isLoading={isDeleting}
-      >
-        <div className={style.deleteForm}>
-          <p className={style.warningText}>
-            ⚠️ Your account will be disabled for 30 days. After that, all your data will be permanently deleted. You can cancel the deletion anytime within those 30 days.
-          </p>
+        message={
+          <div className={style.deleteForm}>
+            <p className={style.warningText}>
+              ⚠️ Your account will be disabled for 30 days. After that, all your data will be permanently deleted. You can cancel the deletion anytime within those 30 days.
+            </p>
 
-          <p className={style.infoText}>
-            An email will be sent to {user?.email} with instructions on how to cancel the deletion.
-          </p>
+            <p className={style.infoText}>
+              You can cancel deletion from the account-disabled page while the 30-day window is still active.
+            </p>
 
-          <div className={style.formGroup}>
-            <label htmlFor="delete-password">Enter your password to confirm:</label>
-            <input
-              id="delete-password"
-              type="password"
-              value={deletePassword}
-              onChange={(e) => setDeletePassword(e.target.value)}
-              placeholder="Your password"
-              className={style.formInput}
-              disabled={isDeleting}
-            />
+            <div className={style.formGroup}>
+              <label htmlFor="delete-password">Enter your password to confirm:</label>
+              <input
+                id="delete-password"
+                type="password"
+                value={deletePassword}
+                onChange={(e) => setDeletePassword(e.target.value)}
+                placeholder="Your password"
+                className={style.formInput}
+                disabled={isDeleting}
+              />
+            </div>
           </div>
-        </div>
-      </ConfirmModal>
+        }
+      />
 
       {/* Export Data Modal */}
       {showExportModal && (
-        <div className={style.modalOverlay}>
-          <div className={style.modal}>
+        <div className={style.modalOverlay} onMouseDown={() => !isExporting && setShowExportModal(false)}>
+          <div className={style.modal} onMouseDown={(event) => event.stopPropagation()}>
             <div className={style.modalHeader}>
               <h2>Export Your Data</h2>
               <button
@@ -805,6 +876,28 @@ export default function Settings({ onClose, onViewModeChange, onSortByChange, on
 
             <div className={style.modalBody}>
               <p>Select what data you would like to export:</p>
+
+              {isExporting && (
+                <div className={style.exportProgressContainer}>
+                  <div className={style.exportProgressHeader}>
+                    <strong>{exportPhase}</strong>
+                    <span>{exportElapsedSeconds}s elapsed</span>
+                  </div>
+                  <div className={style.exportProgressTrack}>
+                    <div
+                      className={`${style.exportProgressFill} ${!hasKnownExportTotal ? style.indeterminateProgress : ''}`}
+                      style={hasKnownExportTotal ? { width: `${exportProgressPercent}%` } : undefined}
+                    />
+                  </div>
+                  <div className={style.exportProgressMeta}>
+                    <span>
+                      Downloaded {formatBytes(exportBytesDownloaded)}
+                      {hasKnownExportTotal ? ` of ${formatBytes(exportTotalBytes)}` : ''}
+                    </span>
+                    {hasKnownExportTotal && <span>{exportProgressPercent}%</span>}
+                  </div>
+                </div>
+              )}
 
               <div className={style.exportOptions}>
                 <label className={style.exportOption}>

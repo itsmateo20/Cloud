@@ -7,20 +7,31 @@ import styles from './ConfirmModal.module.css';
 
 export function ConfirmModal({
     open,
+    isOpen,
     title = 'Confirm Action',
     message = 'Are you sure?',
     confirmLabel = 'Confirm',
     cancelLabel = 'Cancel',
     onConfirm,
     onCancel,
-    destructive = false,
-    extraActions = null
+    destructive,
+    isDestructive,
+    isLoading = false,
+    confirmDisabled = false,
+    extraActions = null,
+    children = null,
+    onClose
 }) {
-    const [visible, setVisible] = useState(open);
+    const resolvedOpen = open ?? isOpen ?? false;
+    const resolvedOnCancel = onCancel ?? onClose;
+    const resolvedDestructive = destructive ?? isDestructive ?? false;
+    const body = children ?? message;
+
+    const [visible, setVisible] = useState(resolvedOpen);
     const [closing, setClosing] = useState(false);
 
     useEffect(() => {
-        if (open) {
+        if (resolvedOpen) {
             setVisible(true);
             setClosing(false);
         } else if (visible) {
@@ -28,18 +39,18 @@ export function ConfirmModal({
             const t = setTimeout(() => { setVisible(false); setClosing(false); }, 180);
             return () => clearTimeout(t);
         }
-    }, [open, visible]);
+    }, [resolvedOpen, visible]);
 
     const escHandler = useCallback((e) => {
-        if (!(open || closing)) return;
+        if (!(resolvedOpen || closing)) return;
         if (e.key === 'Escape') {
             e.preventDefault();
-            onCancel?.();
+            resolvedOnCancel?.();
         }
-    }, [open, closing, onCancel]);
+    }, [resolvedOpen, closing, resolvedOnCancel]);
 
     useEffect(() => {
-        if (open && visible) {
+        if (resolvedOpen && visible) {
             document.addEventListener('keydown', escHandler);
             document.body.style.overflow = 'hidden';
             return () => {
@@ -52,26 +63,27 @@ export function ConfirmModal({
             const t = setTimeout(() => { document.body.style.overflow = ''; }, 180);
             return () => clearTimeout(t);
         }
-    }, [open, visible, closing, escHandler]);
+    }, [resolvedOpen, visible, closing, escHandler]);
 
     if (!visible) return null;
 
     return (
-        <div className={`${styles.backdrop} ${closing ? styles.backdropClosing : ''}`} role="dialog" aria-modal="true" aria-labelledby="confirm-modal-title" onMouseDown={(e) => { if (e.target === e.currentTarget) onCancel?.(); }}>
+        <div className={`${styles.backdrop} ${closing ? styles.backdropClosing : ''}`} role="dialog" aria-modal="true" aria-labelledby="confirm-modal-title" onMouseDown={(e) => { if (e.target === e.currentTarget) resolvedOnCancel?.(); }}>
             <div className={`${styles.modal} ${closing ? styles.modalClosing : ''}`} onClick={(e) => e.stopPropagation()}>
                 <div className={styles.header}>
                     <h3 id="confirm-modal-title" className={styles.title}>{title}</h3>
                 </div>
-                <div className={styles.body}>{message}</div>
+                <div className={styles.body}>{body}</div>
                 <div className={styles.actions}>
                     {extraActions}
-                    <button className={`${styles.button} ${styles.outline}`} onClick={onCancel}>{cancelLabel}</button>
+                    <button className={`${styles.button} ${styles.outline}`} onClick={resolvedOnCancel}>{cancelLabel}</button>
                     <button
-                        className={`${styles.button} ${destructive ? styles.danger : styles.primary}`}
+                        className={`${styles.button} ${resolvedDestructive ? styles.danger : styles.primary}`}
                         onClick={onConfirm}
-                        autoFocus
+                        autoFocus={!isLoading}
+                        disabled={isLoading || confirmDisabled}
                     >
-                        {confirmLabel}
+                        {isLoading ? 'Working...' : confirmLabel}
                     </button>
                 </div>
             </div>
