@@ -2,7 +2,7 @@
 
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
-import { ensureShareTables, listSharesForViewerEmail } from "@/lib/shares";
+import { cleanupExpiredShares, ensureShareTables, listSharesForViewerEmail } from "@/lib/shares";
 
 export async function GET() {
     const session = await getSession();
@@ -17,6 +17,7 @@ export async function GET() {
 
     try {
         await ensureShareTables();
+        await cleanupExpiredShares();
         const shares = await listSharesForViewerEmail(viewerEmail);
         return NextResponse.json({ success: true, shares }, { status: 200 });
     } catch {

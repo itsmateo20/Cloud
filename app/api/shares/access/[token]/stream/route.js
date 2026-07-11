@@ -108,19 +108,8 @@ export async function GET(req, { params }) {
             }
 
             const chunkSize = (end - start) + 1;
-            const stream = createReadStream(targetPath, { start, end });
-            const readableStream = new ReadableStream({
-                start(controller) {
-                    stream.on("data", (chunk) => controller.enqueue(new Uint8Array(chunk)));
-                    stream.on("end", () => controller.close());
-                    stream.on("error", (error) => controller.error(error));
-                },
-                cancel() {
-                    stream.destroy();
-                }
-            });
 
-            return new Response(readableStream, {
+            return new Response(Readable.toWeb(createReadStream(targetPath, { start, end })), {
                 status: 206,
                 headers: {
                     "Content-Type": contentType,
@@ -133,19 +122,7 @@ export async function GET(req, { params }) {
             });
         }
 
-        const stream = createReadStream(targetPath);
-        const readableStream = new ReadableStream({
-            start(controller) {
-                stream.on("data", (chunk) => controller.enqueue(new Uint8Array(chunk)));
-                stream.on("end", () => controller.close());
-                stream.on("error", (error) => controller.error(error));
-            },
-            cancel() {
-                stream.destroy();
-            }
-        });
-
-        return new Response(readableStream, {
+        return new Response(Readable.toWeb(createReadStream(targetPath)), {
             status: 200,
             headers: {
                 "Content-Type": contentType,

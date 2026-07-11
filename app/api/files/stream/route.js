@@ -104,22 +104,22 @@ async function streamFile(req, filePath, fileName = null) {
                 status: 206,
                 headers
             });
-        } else {
-            const headers = {
-                'Content-Length': fileSize.toString(),
-                'Content-Type': contentType,
-                'Accept-Ranges': 'bytes',
-                'Cache-Control': 'no-cache',
-                'Access-Control-Allow-Origin': '*',
-                'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
-                'Access-Control-Allow-Headers': 'Range, Content-Type'
-            };
-
-            return new Response(Readable.toWeb(createReadStream(filePath)), {
-                status: 200,
-                headers
-            });
         }
+
+        const headers = {
+            'Content-Length': fileSize.toString(),
+            'Content-Type': contentType,
+            'Accept-Ranges': 'bytes',
+            'Cache-Control': 'no-cache',
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
+            'Access-Control-Allow-Headers': 'Range, Content-Type'
+        };
+
+        return new Response(Readable.toWeb(createReadStream(filePath)), {
+            status: 200,
+            headers
+        });
 
     } catch (fileError) {
 

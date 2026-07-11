@@ -5,8 +5,8 @@ import { api } from './api';
 export class Uploader {
     constructor() {
         this.uploadQueue = new Map();
-        this.CHUNK_SIZE = 8 * 1024 * 1024;
-        this.MAX_CONCURRENT_CHUNKS = 2;
+        this.CHUNK_SIZE = 16 * 1024 * 1024;
+        this.MAX_CONCURRENT_CHUNKS = 4;
         this.RETRY_ATTEMPTS = 3;
         this.RETRY_DELAY = 1000;
     }

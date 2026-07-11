@@ -93,6 +93,19 @@ export default function SharedWithYou({ toast }) {
 
         if (!response?.success) {
             setSelectedShareData(null);
+            if (response?.code === "share_expired") {
+                setShares((prev) => prev.filter((entry) => Number(entry.id) !== Number(share.id)));
+                if (Number(selectedShareId) === Number(share.id)) {
+                    setSelectedShareId(null);
+                }
+                setPasscodeInput("");
+                setLoadingSelected(false);
+                const refreshResponse = await api.get("/api/shares/shared-with-you");
+                if (refreshResponse?.success) {
+                    setShares(refreshResponse.shares || []);
+                }
+                return;
+            }
             if (response?.code === "share_passcode_required" || response?.code === "share_passcode_invalid") {
                 setPasscodesByShareId((prev) => {
                     const next = { ...prev };

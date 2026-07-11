@@ -317,50 +317,54 @@ export class DownloadManager {
                 const blob = await response.blob();
                 this.downloadBlob(blob, fileName, lastModified);
             } else {
-                const chunks = [];
                 const totalChunks = Math.ceil(fileSize / this.chunkSize);
+                const chunks = new Array(totalChunks);
                 let downloadedBytes = 0;
+                let completedChunks = 0;
                 let lastTime = Date.now();
+                let nextChunkIndex = 0;
 
-                for (let i = 0; i < totalChunks; i++) {
-                    if (abortController.signal.aborted) {
-                        throw new Error('Download cancelled');
-                    }
-
-                    const start = i * this.chunkSize;
-                    const end = Math.min(start + this.chunkSize - 1, fileSize - 1);
-
-                    const chunkData = await this.downloadChunk(url, start, end, abortController.signal);
-                    chunks.push(new Uint8Array(chunkData));
-                    downloadedBytes += chunkData.byteLength;
-
-                    const now = Date.now();
-                    const timeDiff = (now - lastTime) / 1000;
-                    const speed = timeDiff > 0 ? (chunkData.byteLength / timeDiff) : 0;
-
-                    window.dispatchEvent(new CustomEvent('downloadProgress', {
-                        detail: {
-                            id: downloadId,
-                            loaded: downloadedBytes,
-                            total: fileSize,
-                            speed,
-                            chunk: i + 1,
-                            totalChunks,
-                            type: 'chunked'
+                const worker = async () => {
+                    while (true) {
+                        if (abortController.signal.aborted) {
+                            throw new Error('Download cancelled');
                         }
-                    }));
 
-                    lastTime = now;
-                }
+                        const currentIndex = nextChunkIndex++;
+                        if (currentIndex >= totalChunks) return;
 
-                const combinedArray = new Uint8Array(fileSize);
-                let offset = 0;
-                for (const chunk of chunks) {
-                    combinedArray.set(chunk, offset);
-                    offset += chunk.length;
-                }
+                        const start = currentIndex * this.chunkSize;
+                        const end = Math.min(start + this.chunkSize - 1, fileSize - 1);
+                        const chunkData = await this.downloadChunk(url, start, end, abortController.signal);
 
-                const blob = new Blob([combinedArray]);
+                        chunks[currentIndex] = new Uint8Array(chunkData);
+                        downloadedBytes += chunkData.byteLength;
+                        completedChunks += 1;
+
+                        const now = Date.now();
+                        const timeDiff = (now - lastTime) / 1000;
+                        const speed = timeDiff > 0 ? (chunkData.byteLength / timeDiff) : 0;
+
+                        window.dispatchEvent(new CustomEvent('downloadProgress', {
+                            detail: {
+                                id: downloadId,
+                                loaded: downloadedBytes,
+                                total: fileSize,
+                                speed,
+                                chunk: currentIndex + 1,
+                                totalChunks,
+                                completedChunks,
+                                type: 'chunked'
+                            }
+                        }));
+
+                        lastTime = now;
+                    }
+                };
+
+                await Promise.all(Array.from({ length: Math.min(this.maxConcurrentChunks, totalChunks) }, () => worker()));
+
+                const blob = new Blob(chunks.filter(Boolean));
                 this.downloadBlob(blob, fileName, lastModified);
             }
 

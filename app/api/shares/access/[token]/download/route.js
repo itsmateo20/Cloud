@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import fs from "fs/promises";
 import path from "path";
 import { createReadStream } from "fs";
+import { Readable } from "stream";
 import { ZipArchive } from "archiver";
 import { getSession } from "@/lib/session";
 import { canAccessShare, ensureShareTables, getShareByToken, logShareAccess } from "@/lib/shares";
@@ -199,19 +200,7 @@ export async function GET(req, { params }) {
             userAgent
         });
 
-        const stream = createReadStream(targetPath);
-        const readableStream = new ReadableStream({
-            start(controller) {
-                stream.on("data", (chunk) => controller.enqueue(new Uint8Array(chunk)));
-                stream.on("end", () => controller.close());
-                stream.on("error", (error) => controller.error(error));
-            },
-            cancel() {
-                stream.destroy();
-            }
-        });
-
-        return new Response(readableStream, {
+        return new Response(Readable.toWeb(createReadStream(targetPath)), {
             status: 200,
             headers: {
                 "Content-Type": getMimeType(path.basename(targetPath)),
