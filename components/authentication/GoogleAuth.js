@@ -11,7 +11,7 @@ export function GoogleAuth({ auth, type }) {
     if (googleAuth) return (
         <>
             <h2 className={style.or}>or</h2>
-            <button className={style.gsiMaterialButton} onClick={() => auth(type)}>
+            <button type="button" className={style.gsiMaterialButton} onClick={() => auth(type)}>
                 <div className={style.gsiMaterialButtonState}></div>
                 <div className={style.gsiMaterialButtonContentWrapper}>
                     <div className={style.gsiMaterialButtonIcon}>

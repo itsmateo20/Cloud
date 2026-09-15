@@ -54,7 +54,8 @@ export default function Page({ searchParams }) {
         }
     }, [email, password]);
 
-    const handleLogin = async () => {
+    const handleLogin = async (event) => {
+        event?.preventDefault();
         setError("");
 
         const response = await linkAccount(email, emailLink, password, "google");
@@ -70,48 +71,50 @@ export default function Page({ searchParams }) {
         <Layout mainStyle={style.main} loading={loading} user={user} showNavigation={isMobile === false}>
             <h1 className={style.title}>Google Login Issue</h1>
             <h2 className={style.subtitle}>The Google account you're trying to use isn't linked to any registered account. Please enter your credentials to link it.</h2>
-            <fieldset className={style.inputWithText}>
-                <legend>Email</legend>
-                <input
-                    type="email"
-                    name="email"
-                    defaultValue={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                />
-            </fieldset>
-
-            <fieldset className={style.inputWithText}>
-                <legend>Password</legend>
-                <input
-                    name="password"
-                    type={isVisible ? "text" : "password"}
-                    defaultValue={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    minLength="8"
-                />
-                <button
-                    type="button"
-                    onClick={toggleVisibility}
-                    aria-label="Toggle Password Visibility"
-                >
-                    <Image
-                        src={
-                            isVisible
-                                ? "/assets/authentication/VisibilityOn.svg"
-                                : "/assets/authentication/VisibilityOff.svg"
-                        }
-                        width={30}
-                        height={30}
-                        id="visibilityIcon"
-                        alt="Visibility"
-                        loading="eager"
+            <form onSubmit={handleLogin}>
+                <fieldset className={style.inputWithText}>
+                    <legend>Email</legend>
+                    <input
+                        type="email"
+                        name="email"
+                        defaultValue={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
                     />
-                </button>
-            </fieldset>
+                </fieldset>
 
-            <button onClick={handleLogin} type="button" className={style.loginButton} disabled={softLoading}>{softLoading ? <SoftLoading /> : "Link Account"}</button>
+                <fieldset className={style.inputWithText}>
+                    <legend>Password</legend>
+                    <input
+                        name="password"
+                        type={isVisible ? "text" : "password"}
+                        defaultValue={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                        minLength="8"
+                    />
+                    <button
+                        type="button"
+                        onClick={toggleVisibility}
+                        aria-label="Toggle Password Visibility"
+                    >
+                        <Image
+                            src={
+                                isVisible
+                                    ? "/assets/authentication/VisibilityOn.svg"
+                                    : "/assets/authentication/VisibilityOff.svg"
+                            }
+                            width={30}
+                            height={30}
+                            id="visibilityIcon"
+                            alt="Visibility"
+                            loading="eager"
+                        />
+                    </button>
+                </fieldset>
+
+                <button type="submit" className={style.loginButton} disabled={softLoading}>{softLoading ? <SoftLoading /> : "Link Account"}</button>
+            </form>
 
             {error && <p className="error">{error}</p>}
         </Layout>

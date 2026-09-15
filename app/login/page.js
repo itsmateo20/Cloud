@@ -38,7 +38,8 @@ export default function Page() {
         }
     }, [email, password]);
 
-    const handleLogin = async () => {
+    const handleLogin = async (event) => {
+        event?.preventDefault();
         setError("");
 
         if (passwordRequirements.uppercase && passwordRequirements.lowercase && passwordRequirements.number && passwordRequirements.special && passwordRequirements.minLength) {
@@ -80,49 +81,51 @@ export default function Page() {
         <Layout mainStyle={style.main} loading={loading} user={user} showNavigation={isMobile === false}>
             <h1 className={style.title}>Login</h1>
             <h2 className={style.subtitle}>Login into your cloud storage account</h2>
-            <fieldset className={style.inputWithText}>
-                <legend>Email</legend>
-                <input
-                    type="email"
-                    name="email"
-                    defaultValue={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                />
-            </fieldset>
-
-            <fieldset className={style.inputWithText}>
-                <legend>Password</legend>
-                <input
-                    name="password"
-                    type={isVisible ? "text" : "password"}
-                    defaultValue={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    minLength="8"
-                />
-                <button
-                    type="button"
-                    onClick={toggleVisibility}
-                >
-                    <Image
-                        src={
-                            isVisible
-                                ? "/assets/authentication/VisibilityOn.svg"
-                                : "/assets/authentication/VisibilityOff.svg"
-                        }
-                        width={30}
-                        height={30}
-                        id="visibilityIcon"
-                        alt="Visibility"
-                        loading="eager"
+            <form onSubmit={handleLogin}>
+                <fieldset className={style.inputWithText}>
+                    <legend>Email</legend>
+                    <input
+                        type="email"
+                        name="email"
+                        defaultValue={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
                     />
-                </button>
-            </fieldset>
+                </fieldset>
 
-            <GoogleAuth auth={authWithGoogle} type="login" />
+                <fieldset className={style.inputWithText}>
+                    <legend>Password</legend>
+                    <input
+                        name="password"
+                        type={isVisible ? "text" : "password"}
+                        defaultValue={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                        minLength="8"
+                    />
+                    <button
+                        type="button"
+                        onClick={toggleVisibility}
+                    >
+                        <Image
+                            src={
+                                isVisible
+                                    ? "/assets/authentication/VisibilityOn.svg"
+                                    : "/assets/authentication/VisibilityOff.svg"
+                            }
+                            width={30}
+                            height={30}
+                            id="visibilityIcon"
+                            alt="Visibility"
+                            loading="eager"
+                        />
+                    </button>
+                </fieldset>
 
-            <button onClick={handleLogin} type="button" className={style.loginButton} disabled={softLoading}>{softLoading ? <SoftLoading /> : "Log In"}</button>
+                <GoogleAuth auth={authWithGoogle} type="login" />
+
+                <button type="submit" className={style.loginButton} disabled={softLoading}>{softLoading ? <SoftLoading /> : "Log In"}</button>
+            </form>
             <Link href="/signup" className={style.signupLink}>Don't have an account yet? Sign Up</Link>
 
             {error && <p className="error">{error}</p>}
