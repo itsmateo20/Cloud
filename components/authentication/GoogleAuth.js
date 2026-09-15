@@ -9,7 +9,7 @@ export function GoogleAuth({ auth, type }) {
     const googleAuth = process.env.NEXT_PUBLIC_GOOGLE_AUTH === "true";
 
     if (googleAuth) return (
-        <>
+        <div className={style.googleAuth}>
             <h2 className={style.or}>or</h2>
             <button type="button" className={style.gsiMaterialButton} onClick={() => auth(type)}>
                 <div className={style.gsiMaterialButtonState}></div>
@@ -20,7 +20,7 @@ export function GoogleAuth({ auth, type }) {
                     <span style={{ display: "none" }}>Sign in with Google</span>
                 </div>
             </button>
-        </>
+        </div>
     )
     else return (
         <div style={{ marginTop: "80px" }} />

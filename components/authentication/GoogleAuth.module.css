@@ -1,10 +1,18 @@
 /* components/authentication/googleAuthButton.module.css */
 
+.googleAuth {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
 .or {
     color: var(--alt-text-2);
     font-weight: 800;
     font-size: clamp(14px, 2vw, 16px);
     margin: clamp(5px, 2vw, 15px) 0;
+    text-align: center;
     user-select: none;
 }
 
@@ -40,6 +48,7 @@
     width: 40px;
     max-width: 400px;
     min-width: min-content;
+    align-self: center;
 }
 
 .gsiMaterialButton .gsiMaterialButtonIcon {
