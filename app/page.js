@@ -79,6 +79,13 @@ const dedupeUploadSelection = (files) => {
   return uniqueFiles;
 };
 
+const createUploadId = () => {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+};
+
 const resolveThumbnailSizeParam = (resolution) => {
   const normalized = String(resolution || 'medium').toLowerCase();
 
@@ -899,7 +906,10 @@ export default function Page() {
 
     if (uploadSelection.length > 0) {
 
-      uploadFiles(uploadSelection);
+      uploadFiles(uploadSelection).catch((error) => {
+        console.error('Upload selection error:', error);
+        toast?.addError(`Upload failed: ${error?.message || 'Unknown error'}`);
+      });
       return;
     }
 
@@ -912,9 +922,15 @@ export default function Page() {
     document.body.appendChild(input);
     input.onchange = (e) => {
       const fileList = normalizeUploadSelection(e.target.files);
-      if (fileList.length > 0) uploadFiles(fileList);
+      if (fileList.length > 0) {
+        uploadFiles(fileList).catch((error) => {
+          console.error('Upload selection error:', error);
+          toast?.addError(`Upload failed: ${error?.message || 'Unknown error'}`);
+        });
+      }
       input.remove();
     };
+    input.oncancel = () => input.remove();
     input.click();
   };
 
@@ -1000,6 +1016,7 @@ export default function Page() {
     if (!dataTransfer) return [];
 
     const directFiles = Array.from(dataTransfer.files || []);
+    if (directFiles.length > 0) return dedupeUploadSelection(directFiles);
 
     const items = Array.from(dataTransfer.items || []);
     const itemFileGroups = await Promise.all(items.map(async (item) => {
@@ -1038,7 +1055,7 @@ export default function Page() {
     const totalFilesCount = uploadSelection.length;
     const totalBytes = uploadSelection.reduce((sum, file) => sum + (file.size || 0), 0);
     let uploadedBytesCommitted = 0;
-    const uploadId = crypto.randomUUID();
+    const uploadId = createUploadId();
     let lastProgressAt = Date.now();
     let lastLoaded = 0;
 
@@ -1166,7 +1183,7 @@ export default function Page() {
         const smallFiles = [];
 
         for (const { file } of fileGroup) {
-          if (file.size > 50 * 1024 * 1024) {
+          if (file.size > 8 * 1024 * 1024) {
             const baseBytes = uploadedBytesCommitted;
 
             const largeResult = await uploadLargeFile(file, targetPath, (uploaded, total) => {
@@ -1330,11 +1347,13 @@ export default function Page() {
     try {
       const files = await extractDroppedFiles(e.dataTransfer);
       if (files.length > 0) {
-        uploadFiles(files);
+        await uploadFiles(files);
+      } else {
+        toast?.addError('No files were found in the dropped item');
       }
     } catch (error) {
       console.error('Drop handling error:', error);
-      toast?.addError('Failed to process dropped files');
+      toast?.addError(`Upload failed: ${error?.message || 'Failed to process dropped files'}`);
     }
   };
 

@@ -2,17 +2,24 @@
 
 import { api } from './api';
 
+function createUploadId() {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+        return crypto.randomUUID();
+    }
+    return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+}
+
 export class Uploader {
     constructor() {
         this.uploadQueue = new Map();
-        this.CHUNK_SIZE = 16 * 1024 * 1024;
+        this.CHUNK_SIZE = 4 * 1024 * 1024;
         this.MAX_CONCURRENT_CHUNKS = 4;
         this.RETRY_ATTEMPTS = 3;
         this.RETRY_DELAY = 1000;
     }
 
     async uploadFile(file, currentPath, onProgress, signal) {
-        const uploadId = crypto.randomUUID();
+        const uploadId = createUploadId();
 
         try {
             if (file.size < 50 * 1024 * 1024) {
@@ -38,10 +45,10 @@ export class Uploader {
 
     async uploadFileRegular(file, currentPath, onProgress, signal) {
         const formData = new FormData();
-        formData.append('file', file);
-        formData.append('currentPath', currentPath);
+        formData.append('path', currentPath || '');
+        formData.append('files', file);
 
-        const result = await api.upload('/api/files', formData, { signal });
+        const result = await api.upload('/api/files/upload', formData, { signal });
 
         if (onProgress) onProgress(file.size, file.size, 100);
 
