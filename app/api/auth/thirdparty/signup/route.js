@@ -16,10 +16,14 @@ export async function POST(req) {
 
         if (!response.success) return NextResponse.json({ success: false, code: response?.code, error: response?.error }, { status: 500 });
 
+        let session;
         if (type === "google" && response.user?.googleEmail) {
-            await createSession({ id: response.user.id, email: response.user.email, googleEmail: response.user?.googleEmail, provider: response.user.provider }, req);
+            session = await createSession({ id: response.user.id, email: response.user.email, googleEmail: response.user?.googleEmail, provider: response.user.provider }, req);
         } else {
-            await createSession({ id: response.user.id, email: response.user.email, provider: response.user.provider }, req);
+            session = await createSession({ id: response.user.id, email: response.user.email, provider: response.user.provider }, req);
+        }
+        if (!session.success) {
+            return NextResponse.json({ success: false, code: session.code || "session_creation_failed" }, { status: 500 });
         }
         return NextResponse.json({ success: true, code: "signup_success", user: response.user }, { status: 200 });
     } catch (error) {

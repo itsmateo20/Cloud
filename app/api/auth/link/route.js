@@ -13,7 +13,10 @@ export async function POST(req) {
 
         if (!response.success) return NextResponse.json(response, { status: 500 });
 
-        await createSession({ id: response.user.id, email, googleEmail, provider: response.user.provider }, req);
+        const session = await createSession({ id: response.user.id, email, googleEmail, provider: response.user.provider }, req);
+        if (!session.success) {
+            return NextResponse.json({ success: false, code: session.code || "session_creation_failed" }, { status: 500 });
+        }
         return NextResponse.json({ success: true, code: "account_linked", user: response.user }, { status: 200 });
     } catch (error) {
         return NextResponse.json({ success: false, code: "account_linking_failed", error }, { status: 500 });

@@ -17,13 +17,16 @@ export async function POST(req) {
 
         if (!response.success) return NextResponse.json({ success: false, code: response?.code, message: response?.error || "Signup failed." }, { status: 500 });
 
-        await createSession({
+        const session = await createSession({
             id: response.user.id,
             email: response.user.email,
             googleEmail: response.user?.googleEmail,
             provider: response.user.provider,
             admin: response.user.admin
         }, req);
+        if (!session.success) {
+            return NextResponse.json({ success: false, code: session.code || "session_creation_failed" }, { status: 500 });
+        }
 
         return NextResponse.json({ success: true, code: "signup_success", user: response.user }, { status: 200 });
     } catch (error) {
