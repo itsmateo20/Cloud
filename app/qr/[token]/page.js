@@ -2,16 +2,13 @@
 
 import QRHandler from '@/components/qr/QRHandler';
 import styles from '@/components/qr/QRHandler.module.css';
+import { findQrTokenByToken, deleteQrTokenById } from '@/lib/qrTokens';
 
 export default async function page({ params }) {
     const { token } = await params;
 
     try {
-        const qrToken = await prisma.qrToken.findUnique({
-            where: {
-                token: token
-            }
-        });
+        const qrToken = await findQrTokenByToken(token);
 
         if (!qrToken) {
             return (
@@ -24,10 +21,8 @@ export default async function page({ params }) {
             );
         }
 
-        if (new Date() > qrToken.expiresAt) {
-            await prisma.qrToken.delete({
-                where: { id: qrToken.id }
-            });
+        if (!qrToken.expiresAt || new Date() > qrToken.expiresAt) {
+            await deleteQrTokenById(qrToken.id);
 
             return (
                 <div className={styles.errorContainer}>
