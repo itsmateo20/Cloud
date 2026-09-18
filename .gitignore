@@ -11,6 +11,7 @@
 package-lock.json
 bun.*
 yarn.*
+.vscode
 
 # Capacitor
 android/

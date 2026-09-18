@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server';
 import { readFile } from 'fs/promises';
 import { join } from 'path';
 import prisma from '@/lib/db';
-import archiver from 'archiver';
+import { ZipArchive } from 'archiver';
 import { getUploadBasePath } from '@/lib/paths';
 import sanitizeFilename from 'sanitize-filename';
 

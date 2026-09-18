@@ -3,7 +3,7 @@
 import { NextResponse } from 'next/server';
 import { readFile } from 'fs/promises';
 import { join } from 'path';
-import archiver from 'archiver';
+import { ZipArchive } from 'archiver';
 import { getUserUploadPath } from '@/lib/paths';
 import { deleteQrTokenById, findQrTokenByToken } from '@/lib/qrTokens';
 import sanitizeFilename from 'sanitize-filename';
@@ -54,7 +54,7 @@ export async function POST(request) {
         }
 
         if (downloadAll) {
-            const archive = archiver('zip', { zlib: { level: 9 } });
+            const archive = new ZipArchive({ zlib: { level: 9 } });
 
             const chunks = [];
 
