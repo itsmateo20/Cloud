@@ -6,7 +6,8 @@ import { useEffect, useMemo, useState } from "react";
 import { api } from "@/utils/api";
 import { useAuth } from "@/context/AuthProvider";
 import styles from "./AdminUsersPanel.module.css";
-import { Shield, Users, KeyRound, FolderOpen, Save, RefreshCw, ArrowLeftRight } from "lucide-react";
+import ConfirmModal from "./ConfirmModal";
+import { Shield, Users, KeyRound, FolderOpen, Save, RefreshCw, ArrowLeftRight, UserPlus, Trash2, Ban } from "lucide-react";
 
 const defaultSettings = {
     theme: "device",
@@ -30,6 +31,12 @@ export default function AdminUsersPanel({ onClose }) {
     const [savingPassword, setSavingPassword] = useState(false);
     const [impersonating, setImpersonating] = useState(false);
     const [message, setMessage] = useState("");
+    const [signupEnabled, setSignupEnabled] = useState(true);
+    const [newUserEmail, setNewUserEmail] = useState("");
+    const [newUserPassword, setNewUserPassword] = useState("");
+    const [showCreateUser, setShowCreateUser] = useState(false);
+    const [activeView, setActiveView] = useState("overview");
+    const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
 
     const selectedUser = useMemo(() => users.find((item) => item.id === selectedUserId) || null, [users, selectedUserId]);
 
@@ -52,7 +59,44 @@ export default function AdminUsersPanel({ onClose }) {
 
     useEffect(() => {
         loadUsers();
+        api.get("/api/admin/settings").then((response) => {
+            if (response?.success) setSignupEnabled(response.settings.signupEnabled);
+        });
     }, []);
+
+    const createUser = async () => {
+        const response = await api.post("/api/admin/users", { email: newUserEmail, password: newUserPassword });
+        if (!response?.success) return setMessage(response?.message || "Failed to create user");
+        setMessage("User created");
+        setNewUserEmail("");
+        setNewUserPassword("");
+        setShowCreateUser(false);
+        loadUsers();
+    };
+
+    const updateUser = async (changes) => {
+        if (!selectedUser) return;
+        const response = await api.patch(`/api/admin/users/${selectedUser.id}`, changes);
+        if (!response?.success) return setMessage(response?.message || "Failed to update user");
+        setMessage("User updated");
+        loadUsers();
+    };
+
+    const removeUser = async () => {
+        if (!selectedUser) return;
+        const response = await api.delete(`/api/admin/users/${selectedUser.id}`);
+        if (!response?.success) return setMessage(response?.message || "Failed to remove user");
+        setSelectedUserId(null);
+        setShowRemoveConfirm(false);
+        setMessage("User removed");
+        loadUsers();
+    };
+
+    const updateSignupPolicy = async (enabled) => {
+        const response = await api.post("/api/admin/settings", { signupEnabled: enabled });
+        if (response?.success) setSignupEnabled(enabled);
+        else setMessage(response?.message || "Failed to update signup policy");
+    };
 
     useEffect(() => {
         if (!selectedUser) return;
@@ -125,24 +169,51 @@ export default function AdminUsersPanel({ onClose }) {
     return (
         <div className={styles.panel}>
             <div className={styles.header}>
-                <h2><Users size={22} /> View Users</h2>
+                <h2><Users size={22} /> {activeView === "users" ? "Manage Users" : "Admin Panel"}</h2>
                 <div className={styles.headerActions}>
                     {user?.impersonatorId && (
                         <button type="button" onClick={handleStopImpersonation} disabled={impersonating} className={styles.secondaryButton}>
                             <ArrowLeftRight size={16} /> Return To Admin
                         </button>
                     )}
-                    <button type="button" onClick={loadUsers} disabled={loading} className={styles.secondaryButton}>
-                        <RefreshCw size={16} /> Refresh
-                    </button>
+                    {activeView === "users" ? (
+                        <>
+                            <button type="button" onClick={() => setActiveView("overview")} className={styles.secondaryButton}>Back</button>
+                            <button type="button" onClick={loadUsers} disabled={loading} className={styles.secondaryButton}>
+                                <RefreshCw size={16} /> Refresh
+                            </button>
+                            <button type="button" onClick={() => setShowCreateUser((value) => !value)} className={styles.secondaryButton}><UserPlus size={16} /> Create User</button>
+                        </>
+                    ) : (
+                        <button type="button" onClick={() => setActiveView("users")} className={styles.secondaryButton}><Users size={16} /> Manage Users</button>
+                    )}
                     <button type="button" onClick={onClose} className={styles.secondaryButton}>Close</button>
                 </div>
             </div>
 
+            {activeView === "overview" && (
+                <div className={styles.overview}>
+                    <div className={styles.card}>
+                        <h4>Registration</h4>
+                        <p className={styles.cardDescription}>Control whether anyone can create accounts on their own.</p>
+                        <label><input type="checkbox" checked={signupEnabled} onChange={(event) => updateSignupPolicy(event.target.checked)} /> Allow public sign up</label>
+                    </div>
+                </div>
+            )}
+
+            {activeView === "users" && showCreateUser && (
+                <div className={styles.card}>
+                    <h4>Create User</h4>
+                    <input value={newUserEmail} onChange={(event) => setNewUserEmail(event.target.value)} placeholder="Email" />
+                    <input type="password" value={newUserPassword} onChange={(event) => setNewUserPassword(event.target.value)} placeholder="Temporary password" />
+                    <button type="button" onClick={createUser} className={styles.primaryButton}><UserPlus size={16} /> Create User</button>
+                </div>
+            )}
+
             {error && <p className={styles.error}>{error}</p>}
             {message && <p className={styles.message}>{message}</p>}
 
-            <div className={styles.grid}>
+            {activeView === "users" && <div className={styles.grid}>
                 <aside className={styles.userList}>
                     {loading ? (
                         <p>Loading users...</p>
@@ -170,6 +241,13 @@ export default function AdminUsersPanel({ onClose }) {
                         <>
                             <h3>{selectedUser.email || selectedUser.googleEmail || `User ${selectedUser.id}`}</h3>
                             <p className={styles.meta}>Provider: {selectedUser.provider} | ID: {selectedUser.id}</p>
+
+                            <div className={styles.card}>
+                                <h4>Account Access</h4>
+                                <button type="button" onClick={() => updateUser({ admin: !selectedUser.admin })} className={styles.secondaryButton}><Shield size={16} /> {selectedUser.admin ? "Remove Admin" : "Make Admin"}</button>
+                                <button type="button" onClick={() => updateUser({ isDisabled: !selectedUser.isDisabled })} className={styles.secondaryButton}><Ban size={16} /> {selectedUser.isDisabled ? "Enable Account" : "Disable Account"}</button>
+                                <button type="button" onClick={() => setShowRemoveConfirm(true)} className={styles.dangerButton}><Trash2 size={16} /> Remove Account</button>
+                            </div>
 
                             <div className={styles.card}>
                                 <h4>User Settings</h4>
@@ -243,7 +321,18 @@ export default function AdminUsersPanel({ onClose }) {
                         </>
                     )}
                 </section>
-            </div>
+            </div>}
+
+            <ConfirmModal
+                open={showRemoveConfirm}
+                title="Remove Account"
+                message={`Remove ${selectedUser?.email || "this user"} and all of their files? This cannot be undone.`}
+                confirmLabel="Remove Account"
+                cancelLabel="Cancel"
+                destructive
+                onCancel={() => setShowRemoveConfirm(false)}
+                onConfirm={removeUser}
+            />
         </div>
     );
 }

@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { signUp } from "@/lib/auth";
 import { createSession } from "@/lib/session";
 import { normalizeEmailAddress } from "@/lib/email";
+import prisma from "@/lib/db";
 
 export async function POST(req) {
     try {
@@ -13,9 +14,20 @@ export async function POST(req) {
         const normalizedEmail = normalizeEmailAddress(email);
         if (!normalizedEmail) return NextResponse.json({ success: false, code: "invalid_email", message: "Invalid email format." }, { status: 400 });
 
+        const userCount = await prisma.user.count();
+        const appSettings = await prisma.appSettings.findUnique({ where: { id: 1 } });
+        if (userCount > 0 && appSettings?.signupEnabled === false) {
+            return NextResponse.json({ success: false, code: "signup_disabled", message: "Sign up is currently disabled." }, { status: 403 });
+        }
+
         const response = await signUp(normalizedEmail, password);
 
         if (!response.success) return NextResponse.json({ success: false, code: response?.code, message: response?.error || "Signup failed." }, { status: 500 });
+
+        if (userCount === 0) {
+            await prisma.user.update({ where: { id: response.user.id }, data: { admin: true } });
+            response.user.admin = true;
+        }
 
         const session = await createSession({
             id: response.user.id,

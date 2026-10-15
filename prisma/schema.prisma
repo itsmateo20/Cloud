@@ -19,6 +19,7 @@ model User {
   updatedAt   DateTime @default(now()) @updatedAt
 
   isDeleted           Boolean   @default(false)
+  isDisabled          Boolean   @default(false)
   deletionScheduledAt DateTime?
 
   files    File[]        @relation("OwnedFiles")
@@ -31,17 +32,25 @@ model User {
 }
 
 model UserSettings {
-  id                  Int    @id @unique @default(autoincrement())
-  userId              Int    @unique
-  theme               String @default("device")
-  language            String @default("en_US")
-  defaultView         String @default("details")
-  defaultSort         String @default("name")
-  imageQuality        String @default("best")
-  uploadQuality       String @default("best")
-  thumbnailResolution String @default("medium")
+  id                  Int     @id @unique @default(autoincrement())
+  userId              Int     @unique
+  theme               String  @default("device")
+  language            String  @default("en_US")
+  defaultView         String  @default("details")
+  defaultSort         String  @default("name")
+  imageQuality        String  @default("best")
+  uploadQuality       String  @default("best")
+  thumbnailResolution String  @default("medium")
+  trashEnabled        Boolean @default(true)
+  trashRetentionDays  Int     @default(30)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model AppSettings {
+  id            Int      @id @default(1)
+  signupEnabled Boolean  @default(true)
+  updatedAt     DateTime @updatedAt
 }
 
 model File {
@@ -104,4 +113,56 @@ model ClientToken {
 
   @@index([userId, kind])
   @@index([userId, revokedAt])
+}
+
+model QrToken {
+  id        Int      @id @default(autoincrement())
+  token     String   @unique
+  type      String
+  data      String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@map("QrToken")
+}
+
+model SharedCollection {
+  id            Int       @id @default(autoincrement())
+  ownerId       Int
+  token         String    @unique
+  name          String
+  requireLogin  Boolean   @default(true)
+  allowedEmails String    @default("[]")
+  passcodeHash  String?
+  expiresAt     DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @default(now())
+
+  @@map("SharedCollection")
+}
+
+model SharedCollectionItem {
+  id        Int      @id @default(autoincrement())
+  shareId   Int
+  itemType  String
+  itemPath  String
+  itemName  String
+  createdAt DateTime @default(now())
+
+  @@map("SharedCollectionItem")
+}
+
+model SharedCollectionAccessLog {
+  id           Int      @id @default(autoincrement())
+  shareId      Int
+  action       String
+  outcome      String
+  itemPath     String?
+  viewerEmail  String?
+  viewerUserId Int?
+  ipAddress    String?
+  userAgent    String?
+  createdAt    DateTime @default(now())
+
+  @@map("SharedCollectionAccessLog")
 }

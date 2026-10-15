@@ -59,6 +59,14 @@ export const AuthProvider = ({ children, locked = true }) => {
             try {
                 setLoading(true);
 
+                if (pathname === "/" || pathname === "/login") {
+                    const bootstrap = await api.get("/api/auth/bootstrap-status");
+                    if (bootstrap?.success && !bootstrap.hasUsers) {
+                        router.replace("/signup?first=1");
+                        return;
+                    }
+                }
+
                 const routeRes = await api.raw('GET', pathname);
                 if (routeRes.status === 404) {
                     setLoading(false);

@@ -7,6 +7,7 @@ import { getSession } from "@/lib/session";
 import { verifyFolderOwnership } from "@/lib/folderAuth";
 import prisma from "@/lib/db";
 import { resolveUserUploadPath } from "@/lib/paths";
+import { moveToTrash } from "@/lib/trash";
 
 export async function POST(req) {
     try {
@@ -17,6 +18,7 @@ export async function POST(req) {
         if (!paths || !Array.isArray(paths) || paths.length === 0) return NextResponse.json({ success: false, code: "missing_parameters", message: "paths array is required" }, { status: 400 });
 
         const { id } = session.user;
+        const settings = await prisma.userSettings.findUnique({ where: { userId: id }, select: { trashEnabled: true } });
 
         const folderVerification = await verifyFolderOwnership(id);
         if (!folderVerification.isValid) return NextResponse.json({ success: false, code: "folder_auth_failed", message: "Folder authentication failed: " + folderVerification.error }, { status: 403 });
@@ -31,6 +33,15 @@ export async function POST(req) {
             const safeItemPath = resolvedPath.relativePath;
 
             const stats = await fs.stat(fullPath);
+
+            if (settings?.trashEnabled !== false) {
+                await moveToTrash(id, safeItemPath);
+                deletedItems.push({ name: path.basename(safeItemPath), path: safeItemPath, type: stats.isDirectory() ? 'folder' : 'file' });
+                try {
+                    global.io?.to(`user:${id}`).emit("trash-updated", { userId: id, action: "move", path: safeItemPath });
+                } catch { }
+                continue;
+            }
 
             if (stats.isDirectory()) {
                 await fs.rmdir(fullPath, { recursive: true });

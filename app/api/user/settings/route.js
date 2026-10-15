@@ -26,7 +26,9 @@ export async function GET() {
                     defaultSort: 'name',
                     imageQuality: 'best',
                     uploadQuality: 'best',
-                    thumbnailResolution: 'medium'
+                    thumbnailResolution: 'medium',
+                    trashEnabled: true,
+                    trashRetentionDays: 30
                 }
             });
         }
@@ -40,7 +42,9 @@ export async function GET() {
                 defaultSort: userSettings.defaultSort,
                 imageQuality: userSettings.imageQuality,
                 uploadQuality: userSettings.uploadQuality,
-                thumbnailResolution: userSettings.thumbnailResolution
+                thumbnailResolution: userSettings.thumbnailResolution,
+                trashEnabled: userSettings.trashEnabled,
+                trashRetentionDays: userSettings.trashRetentionDays
             }
         });
     } catch (error) {
@@ -59,13 +63,16 @@ export async function POST(req) {
         }
 
         const userId = session.user.id;
-        const { theme, language, defaultView, defaultSort, imageQuality, uploadQuality, thumbnailResolution } = await req.json();
+        const { theme, language, defaultView, defaultSort, imageQuality, uploadQuality, thumbnailResolution, trashEnabled, trashRetentionDays } = await req.json();
 
         const validThemes = ['light', 'dark', 'high-contrast', 'device'];
         const validViews = ['extraLargeIcons', 'largeIcons', 'mediumIcons', 'smallIcons', 'list', 'details', 'tiles'];
         const validSorts = ['name', 'date', 'size', 'type'];
         const validQualities = ['best', 'medium', 'low'];
         const validThumbnailResolutions = ['high', 'medium', 'low'];
+        if (trashRetentionDays !== undefined && (!Number.isInteger(Number(trashRetentionDays)) || Number(trashRetentionDays) < 1 || Number(trashRetentionDays) > 3650)) {
+            return NextResponse.json({ success: false, message: 'Trash retention must be between 1 and 3650 days' }, { status: 400 });
+        }
 
         if (theme && !validThemes.includes(theme)) {
             return NextResponse.json({ success: false, message: 'Invalid theme' }, { status: 400 });
@@ -99,6 +106,8 @@ export async function POST(req) {
         if (imageQuality !== undefined) updateData.imageQuality = imageQuality;
         if (uploadQuality !== undefined) updateData.uploadQuality = uploadQuality;
         if (thumbnailResolution !== undefined) updateData.thumbnailResolution = thumbnailResolution;
+        if (trashEnabled !== undefined) updateData.trashEnabled = Boolean(trashEnabled);
+        if (trashRetentionDays !== undefined) updateData.trashRetentionDays = Number(trashRetentionDays);
 
         const userSettings = await prisma.userSettings.upsert({
             where: { userId: userId },
@@ -111,7 +120,9 @@ export async function POST(req) {
                 defaultSort: defaultSort || 'name',
                 imageQuality: imageQuality || 'best',
                 uploadQuality: uploadQuality || 'best',
-                thumbnailResolution: thumbnailResolution || 'medium'
+                thumbnailResolution: thumbnailResolution || 'medium',
+                trashEnabled: trashEnabled === undefined ? true : Boolean(trashEnabled),
+                trashRetentionDays: trashRetentionDays === undefined ? 30 : Number(trashRetentionDays)
             }
         });
 
@@ -125,7 +136,9 @@ export async function POST(req) {
                 defaultSort: userSettings.defaultSort,
                 imageQuality: userSettings.imageQuality,
                 uploadQuality: userSettings.uploadQuality,
-                thumbnailResolution: userSettings.thumbnailResolution
+                thumbnailResolution: userSettings.thumbnailResolution,
+                trashEnabled: userSettings.trashEnabled,
+                trashRetentionDays: userSettings.trashRetentionDays
             }
         });
     } catch (error) {

@@ -28,7 +28,8 @@ export function ContextMenu({
     selectedItems,
     onAction,
     currentPath,
-    mobile = false
+    mobile = false,
+    trashEnabled = true
 }) {
     const menuRef = useRef(null);
     const [showFavoriteSubmenu, setShowFavoriteSubmenu] = useState(false);
@@ -238,7 +239,7 @@ export function ContextMenu({
                         onClick={() => handleAction("delete")}
                     >
                         <span className={styles.icon}><Trash2 size={16} /></span>
-                        Delete{isMultipleSelected ? ` (${selectedItems.length})` : ""}
+                        {trashEnabled ? "Move to Bin" : "Delete"}{isMultipleSelected ? ` (${selectedItems.length})` : ""}
                     </div>
                 </>
             )}

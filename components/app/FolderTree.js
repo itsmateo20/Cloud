@@ -5,12 +5,13 @@ import { useEffect, useState } from "react";
 import styles from "./FolderTree.module.css";
 import { api } from "@/utils/api";
 import SoftLoading from "../SoftLoading";
-import { Star, FolderClosed, FolderOpen, Save, Share2 } from 'lucide-react';
+import { Star, FolderClosed, FolderOpen, Save, Share2, Trash2 } from 'lucide-react';
 
 export default function FolderTree({
     socket,
     onFolderSelect,
     onOpenSharedWithYou,
+    onOpenTrash,
     selectedPath,
     mobile = false,
 }) {
@@ -23,6 +24,7 @@ export default function FolderTree({
     const [tabVisibility, setTabVisibility] = useState({
         favorites: false,
         sharedWithYou: false,
+        trash: false,
     });
 
     useEffect(() => {
@@ -78,11 +80,15 @@ export default function FolderTree({
         socket.on('folder-structure-updated', handleFolderStructure);
         socket.on('file-updated', handleFileUpdated);
         socket.on('favorites-updated', handleContentChange);
+        socket.on('trash-updated', handleContentChange);
+        window.addEventListener('trash-updated', handleContentChange);
 
         return () => {
             socket.off('folder-structure-updated', handleFolderStructure);
             socket.off('file-updated', handleFileUpdated);
             socket.off('favorites-updated', handleContentChange);
+            socket.off('trash-updated', handleContentChange);
+            window.removeEventListener('trash-updated', handleContentChange);
         };
     }, [socket, selectedPath, onFolderSelect]);
 
@@ -235,20 +241,24 @@ export default function FolderTree({
         try {
             const favoritesData = await api.get("/api/user/favorites");
             const sharedWithYouData = await api.get("/api/shares/shared-with-you");
+            const trashData = await api.get("/api/user/trash");
             const hasFavorites = favoritesData.success && (
                 (favoritesData.files && favoritesData.files.length > 0) ||
                 (favoritesData.folders && favoritesData.folders.length > 0)
             );
             const hasSharedWithYou = sharedWithYouData.success && (sharedWithYouData.shares || []).length > 0;
+            const hasTrash = trashData.success && (trashData.items || []).length > 0;
 
             setTabVisibility({
                 favorites: hasFavorites,
                 sharedWithYou: hasSharedWithYou,
+                trash: hasTrash,
             });
         } catch (error) {
             setTabVisibility({
                 favorites: false,
                 sharedWithYou: false,
+                trash: false,
             });
         }
     };
@@ -341,6 +351,16 @@ export default function FolderTree({
                     >
                         <span className={styles.folderIcon}><Share2 size={18} /></span>
                         <span>Shared with you</span>
+                    </div>
+                )}
+
+                {tabVisibility.trash && (
+                    <div
+                        className={styles.specialItem}
+                        onClick={() => onOpenTrash?.()}
+                    >
+                        <span className={styles.folderIcon}><Trash2 size={18} /></span>
+                        <span>Bin</span>
                     </div>
                 )}
             </div>

@@ -365,6 +365,7 @@ const FileList = forwardRef(({
     mobile = false,
     sharesOnly = false,
     thumbnailResolution = 'medium',
+    trashEnabled = true,
 }, ref) => {
     const toast = (() => { try { return useToast(); } catch { return null; } })();
     const thumbnailSize = useMemo(() => getThumbnailSizeParam(thumbnailResolution), [thumbnailResolution]);
@@ -1208,6 +1209,13 @@ const FileList = forwardRef(({
         openShareManager: () => openShareManager(),
         closeShareManager: () => {
             setShareManager(prev => ({ ...prev, visible: false }));
+            setShareRowMenuId(null);
+            setShareItemMenuId(null);
+        },
+        closeMenus: () => {
+            setContextMenu(prev => ({ ...prev, visible: false }));
+            setConfirmState(prev => ({ ...prev, open: false, context: null, action: '' }));
+            setQrModal(prev => ({ ...prev, visible: false }));
             setShareRowMenuId(null);
             setShareItemMenuId(null);
         },
@@ -2718,6 +2726,7 @@ const FileList = forwardRef(({
                     onAction={handleContextMenuAction}
                     currentPath={currentPath}
                     mobile={mobile}
+                    trashEnabled={trashEnabled}
                     onClose={() => setContextMenu(prev => ({ ...prev, visible: false }))}
                 />
             )}

@@ -388,16 +388,19 @@ export function FileViewer({
 
     const currentFile = files[currentFileIndex];
     const getStreamUrl = (file) => {
+        if (file.trashId) return `/api/user/trash/preview?id=${encodeURIComponent(file.trashId)}`;
         const params = new URLSearchParams();
         params.set('path', file.path);
         return `/api/files/stream?${params.toString()}`;
     };
     const getDownloadUrl = (file) => {
+        if (file.trashId) return `/api/user/trash/preview?id=${encodeURIComponent(file.trashId)}`;
         const params = new URLSearchParams();
         params.set('path', file.path);
         return `/api/files/download?${params.toString()}`;
     };
     const getThumbnailUrl = (file, size = 'large') => {
+        if (file.trashId) return `/api/user/trash/preview?id=${encodeURIComponent(file.trashId)}`;
         const params = new URLSearchParams();
         params.set('path', file.path);
         params.set('size', size);

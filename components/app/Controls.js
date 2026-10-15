@@ -50,6 +50,7 @@ const Controls = ({
     onViewChange,
     onRefresh,
     onShare,
+    trashEnabled = true,
     disabled = false
 }) => {
     const selectedArray = Array.isArray(selectedItems)
@@ -299,10 +300,10 @@ const Controls = ({
                     className={`${styles.button} ${!hasSelection ? styles.disabled : ''}`}
                     onClick={onDelete}
                     disabled={!hasSelection || isSpecialPath || disabled}
-                    title="Delete"
+                    title={trashEnabled ? "Move to Bin" : "Delete"}
                 >
                     <span className={styles.icon}><Trash2 size={16} /></span>
-                    <span className={styles.label}>Delete</span>
+                    <span className={styles.label}>{trashEnabled ? "Move to Bin" : "Delete"}</span>
                 </button>
 
                 <button

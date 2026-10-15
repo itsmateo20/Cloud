@@ -281,6 +281,28 @@
   flex-direction: column;
 }
 
+.shareCheckboxRow,
+.fieldLabel {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-color-muted);
+  font-size: 14px;
+}
+
+.fieldLabel {
+  margin-top: 14px;
+}
+
+.fieldLabel input {
+  width: 88px;
+  padding: 8px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+}
+
 .optionGrid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));

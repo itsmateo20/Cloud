@@ -18,6 +18,7 @@ import FileList from "@/components/app/FileList";
 import Controls from "@/components/app/Controls";
 import Settings from "@/components/app/Settings";
 import SharedWithYou from "@/components/app/SharedWithYou";
+import TrashView from "@/components/app/TrashView";
 import AdminUsersPanel from "@/components/app/AdminUsersPanel";
 import StorageRootErrorScreen from "@/components/app/StorageRootErrorScreen";
 import SoftLoading from "@/components/SoftLoading";
@@ -135,6 +136,8 @@ export default function Page() {
   const [settingsInitialSection, setSettingsInitialSection] = useState('profile');
   const [showShares, setShowShares] = useState(false);
   const [showSharedWithYou, setShowSharedWithYou] = useState(false);
+  const [showTrash, setShowTrash] = useState(false);
+  const [trashEnabled, setTrashEnabled] = useState(true);
   const [showAdminUsers, setShowAdminUsers] = useState(false);
   const [settingsLoaded, setSettingsLoaded] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(() => {
@@ -164,7 +167,7 @@ export default function Page() {
   const selectedUnfavoritedCount = Math.max(0, (selectedItems?.length || 0) - selectedFavoritedCount);
   const mobileShouldUnfavorite = selectedItems.length > 0 && selectedUnfavoritedCount === 0;
   const mobileFavoriteActionLabel = mobileShouldUnfavorite ? 'Unfavourite' : 'Favourite';
-  const mobileInSpecialPage = Boolean(showSettings || showShares || showSharedWithYou || showAdminUsers);
+  const mobileInSpecialPage = Boolean(showSettings || showShares || showSharedWithYou || showAdminUsers || showTrash);
   const mobileHidePath = Boolean(mobileInSpecialPage || currentPath === 'favorites');
   const mobilePageTitle = showSettings
     ? 'Settings'
@@ -172,9 +175,11 @@ export default function Page() {
       ? 'Shared Files'
       : showSharedWithYou
         ? 'Shared With You'
-        : showAdminUsers
-          ? 'View Users'
-          : (currentPath === '' ? 'Main Storage' : currentPath === 'favorites' ? 'Favourites' : currentPath?.split('/').pop() || 'Files');
+        : showTrash
+          ? 'Bin'
+          : showAdminUsers
+            ? 'Admin Panel'
+            : (currentPath === '' ? 'Main Storage' : currentPath === 'favorites' ? 'Favourites' : currentPath?.split('/').pop() || 'Files');
 
   const handleStorageRootError = useCallback((error) => {
     if (!error) {
@@ -246,6 +251,7 @@ export default function Page() {
           const response = await api.get('/api/user/settings');
           if (response.success && response.settings) {
             settings = response.settings;
+            setTrashEnabled(response.settings.trashEnabled !== false);
           }
         } catch (error) {
           console.error('Failed to load settings from API:', error);
@@ -662,11 +668,18 @@ export default function Page() {
   };
 
   const handleFolderSelect = (folderPath) => {
-    navigateToFolder(folderPath);
+    setCurrentPath(folderPath || '');
     setShowSettings(false);
     setShowShares(false);
     setShowSharedWithYou(false);
     setShowAdminUsers(false);
+    setShowTrash(false);
+    setShowSortMenu(false);
+    setShowSortOptionsMenu(false);
+    setSelectedItems([]);
+    setPropertiesState({ open: false, items: [] });
+    setControlsDisabled(false);
+    fileListRef.current?.closeMenus?.();
     fileListRef.current?.closeShareManager?.();
   };
 
@@ -683,6 +696,16 @@ export default function Page() {
     setShowShares(false);
     setShowSharedWithYou(true);
     setShowAdminUsers(false);
+    setCurrentPath('');
+    fileListRef.current?.closeShareManager?.();
+  }, []);
+
+  const handleOpenTrash = useCallback(() => {
+    setShowSettings(false);
+    setShowShares(false);
+    setShowSharedWithYou(false);
+    setShowAdminUsers(false);
+    setShowTrash(true);
     setCurrentPath('');
     fileListRef.current?.closeShareManager?.();
   }, []);
@@ -1381,10 +1404,11 @@ export default function Page() {
     if (!selectedItems || selectedItems.length === 0) return;
 
     const itemNames = selectedItems.map(item => item.name).join(', ');
+    const deleteActionLabel = trashEnabled ? 'Move to Bin' : 'Delete';
     setConfirmState({
       open: true,
-      title: `Delete ${selectedItems.length} item${selectedItems.length > 1 ? 's' : ''}`,
-      message: `Are you sure you want to delete: ${itemNames}? This cannot be undone.`,
+      title: `${deleteActionLabel} ${selectedItems.length} item${selectedItems.length > 1 ? 's' : ''}`,
+      message: trashEnabled ? `Move these items to the bin: ${itemNames}?` : `Are you sure you want to delete: ${itemNames}? This cannot be undone.`,
       action: 'bulk-delete'
     });
   };
@@ -1402,7 +1426,7 @@ export default function Page() {
         const paths = selectedItems.map(item => item.path);
         const result = await api.post('/api/files/delete', { paths });
         if (result.success) {
-          toast.addSuccess(`Deleted ${paths.length} item${paths.length > 1 ? 's' : ''}`);
+          toast.addSuccess(`${trashEnabled ? 'Moved to bin' : 'Deleted'} ${paths.length} item${paths.length > 1 ? 's' : ''}`);
           setSelectedItems([]);
           fileListRef.current?.refresh?.();
         } else {
@@ -1501,6 +1525,7 @@ export default function Page() {
     setShowShares(false);
     setShowSharedWithYou(false);
     setShowAdminUsers(false);
+    setShowTrash(false);
     setCurrentPath(undefined);
   };
 
@@ -1702,6 +1727,7 @@ export default function Page() {
               onViewChange={handleViewChange}
               onRefresh={handleRefresh}
               onShare={(items) => fileListRef.current?.openShareCreate?.(items)}
+              trashEnabled={trashEnabled}
               disabled={controlsDisabled || showSettings || showShares || showSharedWithYou || showAdminUsers || propertiesState.open}
             />
             <div className={style.diskContainerRow}>
@@ -1740,6 +1766,7 @@ export default function Page() {
                     socket={socket}
                     onFolderSelect={handleFolderSelect}
                     onOpenSharedWithYou={handleOpenSharedWithYou}
+                    onOpenTrash={handleOpenTrash}
                     selectedPath={currentPath}
                     mobile={isMobile}
                   />
@@ -1758,6 +1785,8 @@ export default function Page() {
                   />
                 ) : showSharedWithYou ? (
                   <SharedWithYou toast={toast} />
+                ) : showTrash ? (
+                  <TrashView toast={toast} />
                 ) : showShares ? (
                   <FileList
                     key="desktop-shares"
@@ -1780,6 +1809,7 @@ export default function Page() {
                     user={user}
                     mobile={isMobile}
                     thumbnailResolution={thumbnailResolution}
+                    trashEnabled={trashEnabled}
                     sharesOnly={true}
                   />
                 ) : showAdminUsers ? (
@@ -1803,6 +1833,7 @@ export default function Page() {
                     user={user}
                     mobile={isMobile}
                     thumbnailResolution={thumbnailResolution}
+                    trashEnabled={trashEnabled}
                   />
                 )}
               </div>
@@ -1958,7 +1989,7 @@ export default function Page() {
                           <button className={style.menuButton} onClick={handleFavorite} aria-label={`${mobileFavoriteActionLabel} selected`} title={mobileFavoriteActionLabel}>
                             <Star size={18} fill={mobileFavoriteActionLabel === 'Unfavourite' ? 'currentColor' : 'none'} />
                           </button>
-                          <button className={style.menuButton} onClick={handleDelete} aria-label="Delete selected">
+                          <button className={style.menuButton} onClick={handleDelete} aria-label={trashEnabled ? "Move selected to bin" : "Delete selected"}>
                             <Trash2 size={18} />
                           </button>
                           <button className={style.menuButton} onClick={handleMobileSelectionShare} aria-label="Share selected">
@@ -2009,6 +2040,8 @@ export default function Page() {
                     />
                   ) : showSharedWithYou ? (
                     <SharedWithYou toast={toast} />
+                  ) : showTrash ? (
+                    <TrashView toast={toast} />
                   ) : showShares ? (
                     <FileList
                       key="mobile-shares"
@@ -2030,6 +2063,7 @@ export default function Page() {
                       viewMode={viewMode}
                       user={user}
                       mobile={isMobile}
+                      trashEnabled={trashEnabled}
                       sharesOnly={true}
                     />
                   ) : showAdminUsers ? (
@@ -2050,6 +2084,7 @@ export default function Page() {
                       viewMode={viewMode}
                       user={user}
                       mobile={isMobile}
+                      trashEnabled={trashEnabled}
                     />
                   )}
                 </div>

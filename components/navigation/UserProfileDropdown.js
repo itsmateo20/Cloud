@@ -93,7 +93,7 @@ export default function UserProfileDropdown({ user, mobile, onOpenSettings, onOp
                 {user?.admin && (
                     <div className={`${nav.userProfileMobileListItem} ${nav.userProfileMobileSettings}`} onClick={onOpenAdminUsers}>
                         <Users size={25} strokeWidth={2} />
-                        <h1>View Users</h1>
+                        <h1>Admin Panel</h1>
                     </div>
                 )}
                 <div className={`${nav.userProfileMobileListItem} ${nav.userProfileMobileLogout}`} onClick={() => signout()}>
@@ -143,7 +143,7 @@ export default function UserProfileDropdown({ user, mobile, onOpenSettings, onOp
                     <li onClick={onOpenSettings}><span>Settings</span><Cog size={22} strokeWidth={3} /></li>
                     <li onClick={() => window.open(`https://en.gravatar.com/emails/`, '_blank')}><span>Edit Gravatar</span><User size={22} strokeWidth={3} /></li>
                     <li onClick={onOpenShares}><span>Shared Files</span><Share2 size={22} strokeWidth={3} /></li>
-                    {user?.admin && <li onClick={onOpenAdminUsers}><span>View Users</span><Users size={22} strokeWidth={3} /></li>}
+                    {user?.admin && <li onClick={onOpenAdminUsers}><span>Admin Panel</span><Users size={22} strokeWidth={3} /></li>}
                 </ul>
                 <ul>
                     <li onClick={() => signout()}><span>Logout</span><LogOut size={22} strokeWidth={3} /></li>

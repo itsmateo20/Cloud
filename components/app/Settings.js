@@ -44,6 +44,8 @@ export default function Settings({ onClose, onViewModeChange, onSortByChange, on
   const [imageQuality, setImageQuality] = useState("best");
   const [uploadQuality, setUploadQuality] = useState("best");
   const [thumbnailResolution, setThumbnailResolution] = useState("medium");
+  const [trashEnabled, setTrashEnabled] = useState(true);
+  const [trashRetentionDays, setTrashRetentionDays] = useState(30);
   const [settingsLoaded, setSettingsLoaded] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -88,7 +90,7 @@ export default function Settings({ onClose, onViewModeChange, onSortByChange, on
           setTimeout(() => setSaveMessage(null), 3000);
         }
         setHasUnsavedChanges(false);
-        const newSettings = { theme, defaultView, defaultSort, imageQuality, uploadQuality, thumbnailResolution, ...settingsToUpdate };
+        const newSettings = { theme, defaultView, defaultSort, imageQuality, uploadQuality, thumbnailResolution, trashEnabled, trashRetentionDays, ...settingsToUpdate };
         setInitialSettings(newSettings);
       } else {
         if (showNotification) {
@@ -114,7 +116,7 @@ export default function Settings({ onClose, onViewModeChange, onSortByChange, on
 
   const handleSaveAll = () => {
     if (!hasUnsavedChanges) return;
-    saveSettings({ theme, defaultView, defaultSort, imageQuality, uploadQuality, thumbnailResolution }, true);
+    saveSettings({ theme, defaultView, defaultSort, imageQuality, uploadQuality, thumbnailResolution, trashEnabled, trashRetentionDays }, true);
   };
 
   const handleResetSettings = () => {
@@ -125,6 +127,8 @@ export default function Settings({ onClose, onViewModeChange, onSortByChange, on
     setImageQuality(initialSettings.imageQuality);
     setUploadQuality(initialSettings.uploadQuality);
     setThumbnailResolution(initialSettings.thumbnailResolution);
+    setTrashEnabled(initialSettings.trashEnabled);
+    setTrashRetentionDays(initialSettings.trashRetentionDays);
     setHasUnsavedChanges(false);
     setSaveMessage({ type: 'info', text: 'Settings reset to saved values' });
     setTimeout(() => setSaveMessage(null), 3000);
@@ -142,6 +146,8 @@ export default function Settings({ onClose, onViewModeChange, onSortByChange, on
           setImageQuality(settings.imageQuality);
           setUploadQuality(settings.uploadQuality);
           setThumbnailResolution(settings.thumbnailResolution);
+          setTrashEnabled(settings.trashEnabled !== false);
+          setTrashRetentionDays(settings.trashRetentionDays || 30);
           setInitialSettings(settings);
         }
       } catch (error) {
@@ -159,7 +165,7 @@ export default function Settings({ onClose, onViewModeChange, onSortByChange, on
           setImageQuality(savedImageQuality);
           setUploadQuality(savedUploadQuality);
           setThumbnailResolution(savedThumbnailResolution);
-          setInitialSettings({ theme: savedTheme, defaultView: savedView, defaultSort: savedSort, imageQuality: savedImageQuality, uploadQuality: savedUploadQuality, thumbnailResolution: savedThumbnailResolution });
+          setInitialSettings({ theme: savedTheme, defaultView: savedView, defaultSort: savedSort, imageQuality: savedImageQuality, uploadQuality: savedUploadQuality, thumbnailResolution: savedThumbnailResolution, trashEnabled: true, trashRetentionDays: 30 });
         }
       } finally {
         setSettingsLoaded(true);
@@ -178,9 +184,11 @@ export default function Settings({ onClose, onViewModeChange, onSortByChange, on
       defaultSort !== initialSettings.defaultSort ||
       imageQuality !== initialSettings.imageQuality ||
       uploadQuality !== initialSettings.uploadQuality ||
-      thumbnailResolution !== initialSettings.thumbnailResolution
+      thumbnailResolution !== initialSettings.thumbnailResolution ||
+      trashEnabled !== initialSettings.trashEnabled ||
+      Number(trashRetentionDays) !== Number(initialSettings.trashRetentionDays)
     setHasUnsavedChanges(changed);
-  }, [theme, defaultView, defaultSort, imageQuality, uploadQuality, thumbnailResolution, initialSettings, settingsLoaded, user]);
+  }, [theme, defaultView, defaultSort, imageQuality, uploadQuality, thumbnailResolution, trashEnabled, trashRetentionDays, initialSettings, settingsLoaded, user]);
 
   useEffect(() => {
     if (typeof window !== 'undefined' && settingsLoaded && theme) {
@@ -783,6 +791,28 @@ export default function Settings({ onClose, onViewModeChange, onSortByChange, on
                       />
                     ))}
                   </div>
+                </SettingCard>
+
+                <SettingCard
+                  title="Bin"
+                  description="Move deleted files to the hidden bin before permanent deletion"
+                >
+                  <label className={style.shareCheckboxRow}>
+                    <input type="checkbox" checked={trashEnabled} onChange={(event) => setTrashEnabled(event.target.checked)} />
+                    <span>Move deleted files to bin</span>
+                  </label>
+                  <label className={style.fieldLabel}>
+                    Keep deleted files for
+                    <input
+                      type="number"
+                      min="1"
+                      max="3650"
+                      value={trashRetentionDays}
+                      disabled={!trashEnabled}
+                      onChange={(event) => setTrashRetentionDays(event.target.value)}
+                    />
+                    days
+                  </label>
                 </SettingCard>
               </>
             )}

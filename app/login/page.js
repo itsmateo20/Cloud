@@ -4,6 +4,7 @@
 import style from "@/public/styles/login.module.css";
 
 import { useAuth } from "@/context/AuthProvider";
+import { api } from "@/utils/api";
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
@@ -23,8 +24,15 @@ export default function Page() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [error, setError] = useState("");
+    const [signupEnabled, setSignupEnabled] = useState(true);
 
     const [isVisible, setIsVisible] = useState(false);
+
+    useEffect(() => {
+        api.get("/api/auth/bootstrap-status").then((response) => {
+            if (response?.success) setSignupEnabled(response.signupEnabled);
+        });
+    }, []);
 
     useEffect(() => {
         if (error) {
@@ -126,7 +134,7 @@ export default function Page() {
 
                 <button type="submit" className={style.loginButton} disabled={softLoading}>{softLoading ? <SoftLoading /> : "Log In"}</button>
             </form>
-            <Link href="/signup" className={style.signupLink}>Don't have an account yet? Sign Up</Link>
+            {signupEnabled && <Link href="/signup" className={style.signupLink}>Don't have an account yet? Sign Up</Link>}
 
             {error && <p className="error">{error}</p>}
         </Layout>

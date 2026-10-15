@@ -49,12 +49,12 @@ export async function GET(req) {
         if (!pathExists) return NextResponse.json({ folders: [], files: [] }, { status: 200 });
 
         const items = (await fs.readdir(targetPath))
-            .filter(name => name !== '.thumbnails');
+            .filter(name => name !== '.thumbnails' && name !== '.trash');
         const folders = [];
         const files = [];
 
         const itemStats = await Promise.all(
-            items.filter(item => !item.endsWith(".INF") && item !== '.thumbnails').map(async item => {
+            items.filter(item => !item.endsWith(".INF") && item !== '.thumbnails' && item !== '.trash').map(async item => {
                 const itemPath = path.join(targetPath, item);
                 const stat = await fs.stat(itemPath);
                 const relativePath = path.relative(userFolder, itemPath).replace(/\\/g, "/");
