@@ -290,6 +290,7 @@
     gap: 2px;
     padding: 12px 16px;
     flex: 1;
+    min-width: 0;
     border-radius: 8px;
 }
 
@@ -309,6 +310,10 @@
 
 .shareRowTitle {
     font-weight: 600;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .shareRowMeta {

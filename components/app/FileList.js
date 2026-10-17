@@ -366,6 +366,7 @@ const FileList = forwardRef(({
     sharesOnly = false,
     thumbnailResolution = 'medium',
     trashEnabled = true,
+    privateMode = false,
 }, ref) => {
     const toast = (() => { try { return useToast(); } catch { return null; } })();
     const thumbnailSize = useMemo(() => getThumbnailSizeParam(thumbnailResolution), [thumbnailResolution]);
@@ -398,7 +399,7 @@ const FileList = forwardRef(({
             const fullPath = normalizedPath || (path === '/' ? `/${file.name}` : `${path || ''}/${file.name}`);
             const mod = file.modified || file.modifiedAt || file.updatedAt || file.createdAt || '';
             const v = mod ? new Date(mod).getTime() : '';
-            return `/api/files/thumbnail?path=${encodeURIComponent(fullPath)}${v ? `&v=${v}` : ''}&size=${thumbnailSize}`;
+            return `${file.privateMode ? '/api/user/private/stream' : '/api/files/thumbnail'}?path=${encodeURIComponent(fullPath)}${file.privateMode ? '' : `${v ? `&v=${v}` : ''}&size=${thumbnailSize}`}`;
         }
         return null;
     }, [thumbnailSize]);
@@ -408,7 +409,7 @@ const FileList = forwardRef(({
             const fullPath = normalizedPath || (path === '/' ? `/${file.name}` : `${path || ''}/${file.name}`);
             const mod = file.modified || file.modifiedAt || file.updatedAt || file.createdAt || '';
             const v = mod ? new Date(mod).getTime() : '';
-            return `/api/files/video-thumbnail?path=${encodeURIComponent(fullPath)}${v ? `&v=${v}` : ''}&size=${thumbnailSize}`;
+            return `${file.privateMode ? '/api/user/private/stream' : '/api/files/video-thumbnail'}?path=${encodeURIComponent(fullPath)}${file.privateMode ? '' : `${v ? `&v=${v}` : ''}&size=${thumbnailSize}`}`;
         }
         return null;
     }, [thumbnailSize]);
@@ -1133,7 +1134,8 @@ const FileList = forwardRef(({
         try {
 
             const cacheParam = process.env.NODE_ENV === 'development' ? `&_t=${Date.now()}` : '';
-            const data = await api.get(`/api/files?path=${encodeURIComponent(currentPath)}${cacheParam}`);
+            const endpoint = privateMode ? "/api/user/private/files" : "/api/files";
+            const data = await api.get(`${endpoint}?path=${encodeURIComponent(currentPath)}${cacheParam}`);
 
             if (!data?.success) {
                 if (currentPath === '' && data?.code !== 'unauthorized') {
@@ -1157,6 +1159,7 @@ const FileList = forwardRef(({
             setFolders(data.folders || []);
             setFiles((data.files || []).map(f => ({
                 ...f,
+                privateMode,
                 size: f.size && typeof f.size !== 'number' ? Number(f.size) : f.size
             })));
             setSelectedItems(new Set());
@@ -1175,7 +1178,7 @@ const FileList = forwardRef(({
         } finally {
             setLoading(false);
         }
-    }, [currentPath, onRootLoadError]);
+    }, [currentPath, onRootLoadError, privateMode]);
 
     const refreshContent = useCallback(() => {
         if (currentPath === "favorites") {

@@ -389,12 +389,14 @@ export function FileViewer({
     const currentFile = files[currentFileIndex];
     const getStreamUrl = (file) => {
         if (file.trashId) return `/api/user/trash/preview?id=${encodeURIComponent(file.trashId)}`;
+        if (file.privateMode) return `/api/user/private/stream?path=${encodeURIComponent(file.path)}`;
         const params = new URLSearchParams();
         params.set('path', file.path);
         return `/api/files/stream?${params.toString()}`;
     };
     const getDownloadUrl = (file) => {
         if (file.trashId) return `/api/user/trash/preview?id=${encodeURIComponent(file.trashId)}`;
+        if (file.privateMode) return `/api/user/private/stream?download=1&path=${encodeURIComponent(file.path)}`;
         const params = new URLSearchParams();
         params.set('path', file.path);
         return `/api/files/download?${params.toString()}`;

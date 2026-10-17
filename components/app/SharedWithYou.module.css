@@ -67,6 +67,7 @@
     gap: 2px;
     padding: 12px 14px;
     flex: 1;
+    min-width: 0;
 }
 
 .shareRowMain:hover {
@@ -86,6 +87,10 @@
 
 .shareRowTitle {
     font-weight: 600;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .shareRowMeta {

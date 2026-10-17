@@ -29,13 +29,13 @@ function LoggedOutContent() {
 
     return (
         <main className={style.main} style={{ justifyContent: "center", alignItems: "center", textAlign: "center", gap: 16 }}>
-            <h1 className={style.title}>This device was logged out</h1>
-            <p className={style.subtitle}>
+            <h1 className={`${style.title} ${style.wide}`}>This device was logged out</h1>
+            <p className={`${style.subtitle} ${style.wide}`}>
                 {reason === "remote"
                     ? "Your session was removed remotely from another device."
                     : "Your session is no longer active on this device."}
             </p>
-            <div style={{ display: "flex", gap: 12 }}>
+            <div style={{ display: "flex", flexDirection: "column" }}>
                 <button onClick={handleLogout} className={style.loginButton} disabled={submitting}>
                     {submitting ? "Logging out..." : "Logout"}
                 </button>

@@ -43,6 +43,8 @@ model UserSettings {
   thumbnailResolution String  @default("medium")
   trashEnabled        Boolean @default(true)
   trashRetentionDays  Int     @default(30)
+  privateUnlockType   String?
+  privateUnlockHash   String?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

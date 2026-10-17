@@ -5,15 +5,17 @@ import { useEffect, useState } from "react";
 import styles from "./FolderTree.module.css";
 import { api } from "@/utils/api";
 import SoftLoading from "../SoftLoading";
-import { Star, FolderClosed, FolderOpen, Save, Share2, Trash2 } from 'lucide-react';
+import { Star, FolderClosed, FolderOpen, Save, Share2, Trash2, LockKeyhole } from 'lucide-react';
 
 export default function FolderTree({
     socket,
     onFolderSelect,
     onOpenSharedWithYou,
     onOpenTrash,
+    onOpenPrivate,
     selectedPath,
     mobile = false,
+    privateMode = false,
 }) {
     const [rootFolders, setRootFolders] = useState([]);
     const [expandedFolders, setExpandedFolders] = useState(new Set());
@@ -108,7 +110,7 @@ export default function FolderTree({
     useEffect(() => {
         loadFolderContents("");
         checkTabVisibility();
-    }, []);
+    }, [privateMode]);
 
     useEffect(() => {
         if (selectedPath && selectedPath !== "" && selectedPath !== 'favorites') {
@@ -206,7 +208,8 @@ export default function FolderTree({
 
     const loadFolderContents = async (folderPath) => {
         try {
-            const data = await api.get(`/api/files?path=${encodeURIComponent(folderPath)}`);
+            const endpoint = privateMode ? "/api/user/private/files" : "/api/files";
+            const data = await api.get(`${endpoint}?path=${encodeURIComponent(folderPath)}`);
 
             if (folderPath === "") {
                 setRootFolders(data.folders || []);
@@ -325,13 +328,18 @@ export default function FolderTree({
             {showLoadingOverlay && <SoftLoading active={loading} />}
             <div className={styles.header}>
                 <div
-                    className={`${styles.rootFolder} ${selectedPath === "" ? styles.selected : ""}`}
+                    className={`${styles.rootFolder} ${!privateMode && selectedPath === "" ? styles.selected : ""}`}
                     onClick={() => onFolderSelect("")}
                 >
                     <div className={styles.folderIcon}>
                         <Save size={20} />
                     </div>
                     <span>This Disk</span>
+                </div>
+
+                <div className={`${styles.specialItem} ${selectedPath === 'private' || (privateMode && selectedPath === '') ? styles.selected : ''}`} onClick={() => onOpenPrivate?.()}>
+                    <span className={styles.folderIcon}><LockKeyhole size={18} /></span>
+                    <span>Private Disk</span>
                 </div>
 
                 {tabVisibility.favorites && (
@@ -346,7 +354,7 @@ export default function FolderTree({
 
                 {tabVisibility.sharedWithYou && (
                     <div
-                        className={styles.specialItem}
+                        className={`${styles.specialItem} ${selectedPath === 'shared' ? styles.selected : ''}`}
                         onClick={() => onOpenSharedWithYou ? onOpenSharedWithYou() : onFolderSelect('')}
                     >
                         <span className={styles.folderIcon}><Share2 size={18} /></span>
@@ -356,7 +364,7 @@ export default function FolderTree({
 
                 {tabVisibility.trash && (
                     <div
-                        className={styles.specialItem}
+                        className={`${styles.specialItem} ${selectedPath === 'trash' ? styles.selected : ''}`}
                         onClick={() => onOpenTrash?.()}
                     >
                         <span className={styles.folderIcon}><Trash2 size={18} /></span>

@@ -18,6 +18,11 @@
     width: 100%;
 }
 
+.title.wide {
+    width: clamp(280px, 70vw, 900px);
+    line-height: clamp(60px, 8vw, 90px);
+}
+
 .subtitle {
     font-size: clamp(20px, 3vw, 26px);
     font-weight: 600;
@@ -25,6 +30,16 @@
     text-align: center;
     max-width: clamp(250px, 50vw, 300px);
     margin: 0 auto clamp(30px, 5vw, 50px) auto;
+    width: 100%;
+}
+
+.subtitle.wide {
+    font-size: clamp(25px, 4vw, 30px);
+    font-weight: 600;
+    color: var(--alt-text-2);
+    text-align: center;
+    max-width: clamp(400px, 50vw, 500px);
+    margin: clamp(25px, 5vw, 40px) auto;
     width: 100%;
 }
 

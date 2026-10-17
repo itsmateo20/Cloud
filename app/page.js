@@ -19,6 +19,7 @@ import Controls from "@/components/app/Controls";
 import Settings from "@/components/app/Settings";
 import SharedWithYou from "@/components/app/SharedWithYou";
 import TrashView from "@/components/app/TrashView";
+import PrivateDisk from "@/components/app/PrivateDisk";
 import AdminUsersPanel from "@/components/app/AdminUsersPanel";
 import StorageRootErrorScreen from "@/components/app/StorageRootErrorScreen";
 import SoftLoading from "@/components/SoftLoading";
@@ -108,6 +109,7 @@ let socket;
 export default function Page() {
   const { user, loading } = useAuth();
   const fileListRef = useRef(null);
+  const privateDiskRef = useRef(null);
   const toast = useToast();
 
   const [currentPath, setCurrentPath] = useState(undefined);
@@ -137,6 +139,24 @@ export default function Page() {
   const [showShares, setShowShares] = useState(false);
   const [showSharedWithYou, setShowSharedWithYou] = useState(false);
   const [showTrash, setShowTrash] = useState(false);
+  const [showPrivate, setShowPrivate] = useState(false);
+  const [privateUnlocked, setPrivateUnlocked] = useState(false);
+  const [privatePath, setPrivatePath] = useState('');
+
+  useEffect(() => {
+    if (!showPrivate) return;
+
+    const lockPrivateDiskOnExit = () => {
+      fetch('/api/user/private', {
+        method: 'DELETE',
+        credentials: 'same-origin',
+        keepalive: true
+      }).catch(() => { });
+    };
+
+    window.addEventListener('pagehide', lockPrivateDiskOnExit);
+    return () => window.removeEventListener('pagehide', lockPrivateDiskOnExit);
+  }, [showPrivate]);
   const [trashEnabled, setTrashEnabled] = useState(true);
   const [showAdminUsers, setShowAdminUsers] = useState(false);
   const [settingsLoaded, setSettingsLoaded] = useState(false);
@@ -167,7 +187,7 @@ export default function Page() {
   const selectedUnfavoritedCount = Math.max(0, (selectedItems?.length || 0) - selectedFavoritedCount);
   const mobileShouldUnfavorite = selectedItems.length > 0 && selectedUnfavoritedCount === 0;
   const mobileFavoriteActionLabel = mobileShouldUnfavorite ? 'Unfavourite' : 'Favourite';
-  const mobileInSpecialPage = Boolean(showSettings || showShares || showSharedWithYou || showAdminUsers || showTrash);
+  const mobileInSpecialPage = Boolean(showSettings || showShares || showSharedWithYou || showAdminUsers || showTrash || showPrivate);
   const mobileHidePath = Boolean(mobileInSpecialPage || currentPath === 'favorites');
   const mobilePageTitle = showSettings
     ? 'Settings'
@@ -177,9 +197,11 @@ export default function Page() {
         ? 'Shared With You'
         : showTrash
           ? 'Bin'
-          : showAdminUsers
-            ? 'Admin Panel'
-            : (currentPath === '' ? 'Main Storage' : currentPath === 'favorites' ? 'Favourites' : currentPath?.split('/').pop() || 'Files');
+          : showPrivate
+            ? 'Private Disk'
+            : showAdminUsers
+              ? 'Admin Panel'
+              : (currentPath === '' ? 'Main Storage' : currentPath === 'favorites' ? 'Favourites' : currentPath?.split('/').pop() || 'Files');
 
   const handleStorageRootError = useCallback((error) => {
     if (!error) {
@@ -668,12 +690,18 @@ export default function Page() {
   };
 
   const handleFolderSelect = (folderPath) => {
+    if (showPrivate) {
+      fetch('/api/user/private', { method: 'DELETE', credentials: 'same-origin' }).catch(() => { });
+      setPrivateUnlocked(false);
+      setPrivatePath('');
+    }
     setCurrentPath(folderPath || '');
     setShowSettings(false);
     setShowShares(false);
     setShowSharedWithYou(false);
     setShowAdminUsers(false);
     setShowTrash(false);
+    setShowPrivate(false);
     setShowSortMenu(false);
     setShowSortOptionsMenu(false);
     setSelectedItems([]);
@@ -696,7 +724,7 @@ export default function Page() {
     setShowShares(false);
     setShowSharedWithYou(true);
     setShowAdminUsers(false);
-    setCurrentPath('');
+    setCurrentPath('shared');
     fileListRef.current?.closeShareManager?.();
   }, []);
 
@@ -706,7 +734,20 @@ export default function Page() {
     setShowSharedWithYou(false);
     setShowAdminUsers(false);
     setShowTrash(true);
-    setCurrentPath('');
+    setCurrentPath('trash');
+    fileListRef.current?.closeShareManager?.();
+  }, []);
+
+  const handleOpenPrivate = useCallback(() => {
+    setShowSettings(false);
+    setShowShares(false);
+    setShowSharedWithYou(false);
+    setShowAdminUsers(false);
+    setShowTrash(false);
+    setShowPrivate(false);
+    setShowPrivate(true);
+    setPrivateUnlocked(false);
+    setCurrentPath('private');
     fileListRef.current?.closeShareManager?.();
   }, []);
 
@@ -925,6 +966,33 @@ export default function Page() {
   };
 
   const handleUpload = (files = null) => {
+    if (showPrivate) {
+      if (privateUnlocked) {
+        const selected = normalizeUploadSelection(files);
+        if (selected.length) {
+          const formData = new FormData();
+          formData.append('path', privatePath);
+          selected.forEach((file) => formData.append('files', file));
+          api.upload('/api/user/private/files', formData).then((response) => {
+            if (response?.success) fileListRef.current?.refresh?.();
+            else toast?.addError(response?.message || 'Private upload failed');
+          });
+        } else {
+          const input = document.createElement('input');
+          input.type = 'file';
+          input.multiple = true;
+          input.onchange = (event) => handleUpload(Array.from(event.target.files || []));
+          input.click();
+        }
+        return;
+      }
+      if (files) {
+        privateDiskRef.current?.uploadFiles?.(normalizeUploadSelection(files));
+      } else {
+        privateDiskRef.current?.openUpload?.();
+      }
+      return;
+    }
     const uploadSelection = normalizeUploadSelection(files);
 
     if (uploadSelection.length > 0) {
@@ -1463,6 +1531,11 @@ export default function Page() {
   };
 
   const handleRefresh = async () => {
+    if (showPrivate) {
+      privateDiskRef.current?.refresh?.();
+      toast?.addSuccess('Refreshed');
+      return;
+    }
     if (fileListRef.current) {
       try {
         const folderExists = await checkFolderExists(currentPath);
@@ -1526,6 +1599,7 @@ export default function Page() {
     setShowSharedWithYou(false);
     setShowAdminUsers(false);
     setShowTrash(false);
+    setShowPrivate(false);
     setCurrentPath(undefined);
   };
 
@@ -1593,6 +1667,26 @@ export default function Page() {
   const existingNames = (fileListRef.current?.getItems?.() || []).map(i => i.name);
 
   const handleCreateItem = async ({ type, name }) => {
+    if (showPrivate) {
+      if (privateUnlocked) {
+        const formData = new FormData();
+        formData.append('action', type === 'folder' ? 'create_folder' : 'create_file');
+        formData.append('path', privatePath);
+        formData.append('name', name);
+        const response = await api.upload('/api/user/private/files', formData);
+        if (response?.success) {
+          fileListRef.current?.refresh?.();
+          toast.addSuccess(`${type === 'folder' ? 'Folder' : 'File'} "${name}" created`);
+          return { success: true };
+        }
+        toast.addError(response?.message || 'Failed to create private item');
+        return { success: false, error: response?.message };
+      }
+      const result = await privateDiskRef.current?.createItem?.({ type, name });
+      if (result?.success) toast.addSuccess(`${type === 'folder' ? 'Folder' : 'File'} "${name}" created`);
+      else toast.addError(result?.error || "Failed to create private item");
+      return result || { success: false, error: "Private Disk is not ready" };
+    }
     try {
       const data = await api.post('/api/files/create', { name, type, currentPath });
       if (!data.success) {
@@ -1728,7 +1822,7 @@ export default function Page() {
               onRefresh={handleRefresh}
               onShare={(items) => fileListRef.current?.openShareCreate?.(items)}
               trashEnabled={trashEnabled}
-              disabled={controlsDisabled || showSettings || showShares || showSharedWithYou || showAdminUsers || propertiesState.open}
+              disabled={controlsDisabled || showSettings || showShares || showSharedWithYou || showAdminUsers || showTrash || (showPrivate && !privateUnlocked) || propertiesState.open}
             />
             <div className={style.diskContainerRow}>
               <Resizable
@@ -1764,11 +1858,13 @@ export default function Page() {
                   />
                   <FolderTree
                     socket={socket}
-                    onFolderSelect={handleFolderSelect}
+                    onFolderSelect={showPrivate ? (path) => path ? setPrivatePath(path) : handleFolderSelect('') : handleFolderSelect}
                     onOpenSharedWithYou={handleOpenSharedWithYou}
                     onOpenTrash={handleOpenTrash}
-                    selectedPath={currentPath}
+                    onOpenPrivate={handleOpenPrivate}
+                    selectedPath={showPrivate ? (privateUnlocked ? privatePath : 'private') : currentPath}
                     mobile={isMobile}
+                    privateMode={showPrivate && privateUnlocked}
                   />
                 </div>
               </Resizable>
@@ -1787,6 +1883,26 @@ export default function Page() {
                   <SharedWithYou toast={toast} />
                 ) : showTrash ? (
                   <TrashView toast={toast} />
+                ) : showPrivate ? (
+                  privateUnlocked ? (
+                    <FileList
+                      key="private-explorer-desktop"
+                      ref={fileListRef}
+                      socket={socket}
+                      currentPath={privatePath}
+                      onFolderDoubleClick={setPrivatePath}
+                      onRootLoadError={handleStorageRootError}
+                      onSelectionChange={handleSelectionChange}
+                      onFilesUpload={handleFilesUpload}
+                      onNavigateToFile={setPrivatePath}
+                      onProperties={handleProperties}
+                      sortBy={sortBy}
+                      viewMode={viewMode}
+                      user={user}
+                      mobile={isMobile}
+                      privateMode
+                    />
+                  ) : <PrivateDisk ref={privateDiskRef} toast={toast} onUnlocked={() => setPrivateUnlocked(true)} />
                 ) : showShares ? (
                   <FileList
                     key="desktop-shares"
@@ -2042,6 +2158,26 @@ export default function Page() {
                     <SharedWithYou toast={toast} />
                   ) : showTrash ? (
                     <TrashView toast={toast} />
+                  ) : showPrivate ? (
+                    privateUnlocked ? (
+                      <FileList
+                        key="private-explorer-mobile"
+                        ref={fileListRef}
+                        socket={socket}
+                        currentPath={privatePath}
+                        onFolderDoubleClick={setPrivatePath}
+                        onRootLoadError={handleStorageRootError}
+                        onSelectionChange={handleSelectionChange}
+                        onFilesUpload={handleFilesUpload}
+                        onNavigateToFile={setPrivatePath}
+                        onProperties={handleProperties}
+                        sortBy={sortBy}
+                        viewMode={viewMode}
+                        user={user}
+                        mobile={isMobile}
+                        privateMode
+                      />
+                    ) : <PrivateDisk ref={privateDiskRef} toast={toast} onUnlocked={() => setPrivateUnlocked(true)} />
                   ) : showShares ? (
                     <FileList
                       key="mobile-shares"
