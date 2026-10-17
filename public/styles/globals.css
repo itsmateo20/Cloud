@@ -1,26 +1,4 @@
-select {
-  background-color: var(--surface, var(--background, #ffffff));
-  color: var(--text, #181818);
-  color-scheme: light dark;
-}
-
-select option {
-  background-color: var(--surface, var(--background, #ffffff));
-  color: var(--text, #181818);
-}
-
-[data-color-scheme="dark"] select,
-[data-theme="high-contrast"] select {
-  background-color: var(--surface, #1f1f1f);
-  color: var(--text, #f5f5f5);
-  color-scheme: dark;
-}
-
-[data-color-scheme="dark"] select option,
-[data-theme="high-contrast"] select option {
-  background-color: var(--surface, #1f1f1f);
-  color: var(--text, #f5f5f5);
-}
+/* public/styles/globals.css */
 
 :root {
   --background: #ffffff;
@@ -287,6 +265,30 @@ select option {
   --file-input-button-bg: #333333;
   --file-input-button-hover: #666666;
   --file-input-button-text: #ffffff;
+}
+
+select {
+  background-color: var(--surface, var(--background, #ffffff));
+  color: var(--text, #181818);
+  color-scheme: light dark;
+}
+
+select option {
+  background-color: var(--surface, var(--background, #ffffff));
+  color: var(--text, #181818);
+}
+
+[data-color-scheme="dark"] select,
+[data-theme="high-contrast"] select {
+  background-color: var(--surface, #1f1f1f);
+  color: var(--text, #f5f5f5);
+  color-scheme: dark;
+}
+
+[data-color-scheme="dark"] select option,
+[data-theme="high-contrast"] select option {
+  background-color: var(--surface, #1f1f1f);
+  color: var(--text, #f5f5f5);
 }
 
 input:-webkit-autofill,
