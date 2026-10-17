@@ -80,7 +80,7 @@ const PrivateDisk = forwardRef(function PrivateDisk({ toast, onUnlocked }, ref) 
                         : "Choose how you want to protect your private folder."}
                 </p>
 
-                {/* Allow changing type during setup, or show label if already configured */}
+                {}
                 {!status?.configured ? (
                     <select className={styles.select} value={unlockType} onChange={(event) => setUnlockType(event.target.value)}>
                         <option value="pin">PIN</option>
