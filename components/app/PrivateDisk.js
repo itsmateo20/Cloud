@@ -1,6 +1,6 @@
 "use client";
 
-import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
+import { forwardRef, useEffect, useRef, useState } from "react";
 import { KeyRound, LockKeyhole, LockOpen, FolderClosed, FileText } from "lucide-react";
 import { api } from "@/utils/api";
 import SoftLoading from "@/components/SoftLoading";
@@ -19,8 +19,14 @@ const PrivateDisk = forwardRef(function PrivateDisk({ toast, onUnlocked }, ref) 
     const loadStatus = async () => {
         setLoading(true);
         const response = await api.get("/api/user/private");
-        if (response?.success) setStatus(response);
-        else setError(response?.message || "Failed to load Private Disk");
+        if (response?.success) {
+            setStatus(response);
+            if (response.type) {
+                setUnlockType(response.type);
+            }
+        } else {
+            setError(response?.message || "Failed to load Private Disk");
+        }
         setLoading(false);
     };
 
@@ -47,54 +53,6 @@ const PrivateDisk = forwardRef(function PrivateDisk({ toast, onUnlocked }, ref) 
         return () => window.removeEventListener("pagehide", lockOnPageExit);
     }, []);
 
-    const createFolder = async () => {
-        const name = window.prompt("Folder name");
-        if (!name?.trim()) return;
-        const formData = new FormData();
-        formData.append("action", "create_folder");
-        formData.append("path", currentPath);
-        formData.append("name", name.trim());
-        const response = await api.upload("/api/user/private/files", formData);
-        if (response?.success) loadFiles();
-        else setError(response?.message || "Failed to create folder");
-    };
-
-    const createItem = async ({ type, name }) => {
-        const formData = new FormData();
-        formData.append("action", type === "folder" ? "create_folder" : "create_file");
-        formData.append("path", currentPath);
-        formData.append("name", name);
-        const response = await api.upload("/api/user/private/files", formData);
-        if (response?.success) {
-            loadFiles();
-            return { success: true };
-        }
-        return { success: false, error: response?.message || "Failed to create item" };
-    };
-
-    useImperativeHandle(ref, () => ({
-        refresh: () => loadFiles(),
-        openUpload: () => uploadInputRef.current?.click(),
-        uploadFiles: uploadSelectedFiles,
-        createItem
-    }), [currentPath]);
-
-    const uploadFiles = async (event) => {
-        const selected = Array.from(event.target.files || []);
-        if (!selected.length) return;
-        await uploadSelectedFiles(selected);
-        event.target.value = "";
-    };
-
-    const uploadSelectedFiles = async (selected) => {
-        const formData = new FormData();
-        formData.append("path", currentPath);
-        selected.forEach((file) => formData.append("files", file));
-        const response = await api.upload("/api/user/private/files", formData);
-        if (response?.success) loadFiles();
-        else setError(response?.message || "Failed to upload files");
-    };
-
     const unlock = async (action) => {
         setError("");
         const response = await api.post("/api/user/private", { action, type: unlockType, secret });
@@ -102,8 +60,9 @@ const PrivateDisk = forwardRef(function PrivateDisk({ toast, onUnlocked }, ref) 
             setError(response?.message || "Unable to unlock Private Disk");
             return;
         }
+
         setSecret("");
-        setStatus({ configured: true, unlocked: true });
+        setStatus({ configured: true, unlocked: true, type: unlockType });
         toast?.addSuccess(action === "setup" ? "Private Disk created" : "Private Disk unlocked");
     };
 
@@ -115,13 +74,22 @@ const PrivateDisk = forwardRef(function PrivateDisk({ toast, onUnlocked }, ref) 
             <div className={styles.setupCard}>
                 <LockKeyhole size={28} />
                 <h4>{status?.configured ? "Unlock Private Disk" : "Set up Private Disk"}</h4>
-                <p className={styles.description}>{status?.configured ? "Enter your unlock value to view this private folder." : "Choose how you want to protect your private folder."}</p>
-                {!status?.configured && (
+                <p className={styles.description}>
+                    {status?.configured
+                        ? `Enter your unlock ${unlockType} to view this private folder.`
+                        : "Choose how you want to protect your private folder."}
+                </p>
+
+                {/* Allow changing type during setup, or show label if already configured */}
+                {!status?.configured ? (
                     <select className={styles.select} value={unlockType} onChange={(event) => setUnlockType(event.target.value)}>
                         <option value="pin">PIN</option>
                         <option value="password">Password</option>
                     </select>
+                ) : (
+                    <p className={styles.typeIndicator}>Method: <strong>{unlockType.toUpperCase()}</strong></p>
                 )}
+
                 <input
                     className={styles.input}
                     type="password"

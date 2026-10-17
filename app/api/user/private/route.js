@@ -35,7 +35,7 @@ export async function GET() {
     const user = await currentUser();
     if (!user) return NextResponse.json({ success: false, code: "unauthorized" }, { status: 401 });
     const settings = await prisma.userSettings.findUnique({ where: { userId: user.id }, select: { privateUnlockType: true } });
-    return NextResponse.json({ success: true, configured: Boolean(settings?.privateUnlockType), unlocked: await hasPrivateAccess(user.id) });
+    return NextResponse.json({ success: true, configured: Boolean(settings?.privateUnlockType), unlocked: await hasPrivateAccess(user.id), type: settings?.privateUnlockType || null });
 }
 
 export async function POST(req) {
