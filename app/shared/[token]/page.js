@@ -72,8 +72,8 @@ export default function SharedPage() {
     const items = useMemo(() => (share?.items || []), [share]);
     const passcodeQuery = passcode ? `&passcode=${encodeURIComponent(passcode)}` : "";
 
-    const getThumbUrl = (item) => `/api/shares/access/${share?.token}/thumbnail?path=${encodeURIComponent(item.path)}&size=medium${passcodeQuery}`;
-    const getStreamUrl = (item) => `/api/shares/access/${share?.token}/stream?path=${encodeURIComponent(item.path)}${passcodeQuery}`;
+    const getThumbUrl = (item) => withBasePath(`/api/shares/access/${share?.token}/thumbnail?path=${encodeURIComponent(item.path)}&size=medium${passcodeQuery}`);
+    const getStreamUrl = (item) => withBasePath(`/api/shares/access/${share?.token}/stream?path=${encodeURIComponent(item.path)}${passcodeQuery}`);
 
     const openViewer = async (item) => {
         if (!share?.token || item.type !== "file") return;
