@@ -3,6 +3,7 @@
 
 import React, { useRef, useState, useEffect, forwardRef, useImperativeHandle, useCallback, useMemo } from "react";
 import { api } from "@/utils/api";
+import { withBasePath } from "@/lib/basePath";
 import { downloadFile, downloadFolder } from "@/utils/downloadUtils";
 import styles from "./FileList.module.css";
 import ShareManager from "./ShareManager";
@@ -399,7 +400,7 @@ const FileList = forwardRef(({
             const fullPath = normalizedPath || (path === '/' ? `/${file.name}` : `${path || ''}/${file.name}`);
             const mod = file.modified || file.modifiedAt || file.updatedAt || file.createdAt || '';
             const v = mod ? new Date(mod).getTime() : '';
-            return `${file.privateMode ? '/api/user/private/stream' : '/api/files/thumbnail'}?path=${encodeURIComponent(fullPath)}${file.privateMode ? '' : `${v ? `&v=${v}` : ''}&size=${thumbnailSize}`}`;
+            return withBasePath(`${file.privateMode ? '/api/user/private/stream' : '/api/files/thumbnail'}?path=${encodeURIComponent(fullPath)}${file.privateMode ? '' : `${v ? `&v=${v}` : ''}&size=${thumbnailSize}`}`);
         }
         return null;
     }, [thumbnailSize]);
@@ -409,7 +410,7 @@ const FileList = forwardRef(({
             const fullPath = normalizedPath || (path === '/' ? `/${file.name}` : `${path || ''}/${file.name}`);
             const mod = file.modified || file.modifiedAt || file.updatedAt || file.createdAt || '';
             const v = mod ? new Date(mod).getTime() : '';
-            return `${file.privateMode ? '/api/user/private/stream' : '/api/files/video-thumbnail'}?path=${encodeURIComponent(fullPath)}${file.privateMode ? '' : `${v ? `&v=${v}` : ''}&size=${thumbnailSize}`}`;
+            return withBasePath(`${file.privateMode ? '/api/user/private/stream' : '/api/files/video-thumbnail'}?path=${encodeURIComponent(fullPath)}${file.privateMode ? '' : `${v ? `&v=${v}` : ''}&size=${thumbnailSize}`}`);
         }
         return null;
     }, [thumbnailSize]);
@@ -699,7 +700,7 @@ const FileList = forwardRef(({
                 await openShareDetails(targetId);
             }
 
-            const appendUrl = targetShare?.token ? `${window.location.origin}/shared/${targetShare.token}` : null;
+            const appendUrl = targetShare?.token ? `${window.location.origin}${withBasePath(`/shared/${targetShare.token}`)}` : null;
             if (appendUrl) {
                 try {
                     await navigator.clipboard.writeText(appendUrl);
@@ -739,7 +740,7 @@ const FileList = forwardRef(({
             return;
         }
 
-        const sharedUrl = `${window.location.origin}/shared/${res.share.token}`;
+        const sharedUrl = `${window.location.origin}${withBasePath(`/shared/${res.share.token}`)}`;
         try {
             await navigator.clipboard.writeText(sharedUrl);
             toast?.addSuccess('Shared successfully. Link copied to clipboard');
@@ -866,7 +867,7 @@ const FileList = forwardRef(({
     };
 
     const copyShareLink = async (token) => {
-        const url = `${window.location.origin}/shared/${token}`;
+        const url = `${window.location.origin}${withBasePath(`/shared/${token}`)}`;
         try {
             await navigator.clipboard.writeText(url);
             toast?.addSuccess('Share link copied');
@@ -2620,7 +2621,7 @@ const FileList = forwardRef(({
                                                         <ThumbnailWithLoader queue={thumbnailQueueRef.current} cacheRef={thumbnailCacheRef} src={getPreviewUrl(file, currentPath)} alt={file.name} currentPath={currentPath} />
                                                     ) : (
                                                         <video
-                                                            src={`/api/files/download?path=${encodeURIComponent(currentPath === '/' ? `/${file.name}` : `${currentPath}/${file.name}`)}`}
+                                                            src={withBasePath(`/api/files/download?path=${encodeURIComponent(currentPath === '/' ? `/${file.name}` : `${currentPath}/${file.name}`)}`)}
                                                             className={styles.previewVideo}
                                                             muted
                                                             playsInline
@@ -2825,4 +2826,3 @@ const FileList = forwardRef(({
 });
 
 export default FileList;
-

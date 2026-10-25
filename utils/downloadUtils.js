@@ -2,6 +2,7 @@
 
 import JSZip from 'jszip';
 import { api } from '@/utils/api';
+import { withBasePath } from '@/lib/basePath';
 
 export class DownloadManager {
     static instance = null;
@@ -46,9 +47,9 @@ export class DownloadManager {
             };
             window.addEventListener('downloadCancel', handleCancel);
 
-            const url = type === 'folder'
+            const url = withBasePath(type === 'folder'
                 ? `/api/files/folder-zip?path=${encodeURIComponent(filePath)}`
-                : `/api/files/download?path=${encodeURIComponent(filePath)}`;
+                : `/api/files/download?path=${encodeURIComponent(filePath)}`);
 
             const startProgressTimeout = () => {
                 clearTimeout(progressTimeout);
@@ -308,7 +309,7 @@ export class DownloadManager {
                 }
             }));
 
-            const url = `/api/files/download?path=${encodeURIComponent(filePath)}`;
+            const url = withBasePath(`/api/files/download?path=${encodeURIComponent(filePath)}`);
 
             if (fileSize < this.chunkSize) {
                 const response = await api.raw('GET', url, null, { signal: abortController.signal });

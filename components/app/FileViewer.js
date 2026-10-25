@@ -9,6 +9,7 @@ import SoftLoading from '@/components/SoftLoading';
 import { CodeEditor } from './CodeEditor';
 import { downloadFile } from '@/utils/downloadUtils';
 import { api } from '@/utils/api';
+import { withBasePath } from '@/lib/basePath';
 import { useIsMobile } from '@/utils/useIsMobile';
 import { getMimeType } from '@/lib/mimeTypes';
 import Prism from 'prismjs';
@@ -388,25 +389,25 @@ export function FileViewer({
 
     const currentFile = files[currentFileIndex];
     const getStreamUrl = (file) => {
-        if (file.trashId) return `/api/user/trash/preview?id=${encodeURIComponent(file.trashId)}`;
-        if (file.privateMode) return `/api/user/private/stream?path=${encodeURIComponent(file.path)}`;
+        if (file.trashId) return withBasePath(`/api/user/trash/preview?id=${encodeURIComponent(file.trashId)}`);
+        if (file.privateMode) return withBasePath(`/api/user/private/stream?path=${encodeURIComponent(file.path)}`);
         const params = new URLSearchParams();
         params.set('path', file.path);
-        return `/api/files/stream?${params.toString()}`;
+        return withBasePath(`/api/files/stream?${params.toString()}`);
     };
     const getDownloadUrl = (file) => {
-        if (file.trashId) return `/api/user/trash/preview?id=${encodeURIComponent(file.trashId)}`;
-        if (file.privateMode) return `/api/user/private/stream?download=1&path=${encodeURIComponent(file.path)}`;
+        if (file.trashId) return withBasePath(`/api/user/trash/preview?id=${encodeURIComponent(file.trashId)}`);
+        if (file.privateMode) return withBasePath(`/api/user/private/stream?download=1&path=${encodeURIComponent(file.path)}`);
         const params = new URLSearchParams();
         params.set('path', file.path);
-        return `/api/files/download?${params.toString()}`;
+        return withBasePath(`/api/files/download?${params.toString()}`);
     };
     const getThumbnailUrl = (file, size = 'large') => {
-        if (file.trashId) return `/api/user/trash/preview?id=${encodeURIComponent(file.trashId)}`;
+        if (file.trashId) return withBasePath(`/api/user/trash/preview?id=${encodeURIComponent(file.trashId)}`);
         const params = new URLSearchParams();
         params.set('path', file.path);
         params.set('size', size);
-        return `/api/files/thumbnail?${params.toString()}`;
+        return withBasePath(`/api/files/thumbnail?${params.toString()}`);
     };
     const getVideoMimeType = (filename) => {
         const ext = (filename || '').split('.').pop()?.toLowerCase();

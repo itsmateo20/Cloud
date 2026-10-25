@@ -649,12 +649,12 @@ export default function Page() {
     const isVideo = ['mp4', 'avi', 'mov', 'webm', 'mkv', 'wmv'].includes(ext);
 
     if (isImage) {
-      const thumbnailUrl = `/api/files/thumbnail?path=${encodeURIComponent(normalizedPath)}&size=${thumbnailSize}`;
+      const thumbnailUrl = withBasePath(`/api/files/thumbnail?path=${encodeURIComponent(normalizedPath)}&size=${thumbnailSize}`);
       return thumbnailUrl;
     }
 
     if (isVideo) {
-      const thumbnailUrl = `/api/files/video-thumbnail?path=${encodeURIComponent(normalizedPath)}&size=${thumbnailSize}`;
+      const thumbnailUrl = withBasePath(`/api/files/video-thumbnail?path=${encodeURIComponent(normalizedPath)}&size=${thumbnailSize}`);
       return thumbnailUrl;
     }
 
