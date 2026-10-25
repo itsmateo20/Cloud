@@ -7,6 +7,7 @@ import { api } from "@/utils/api";
 import { Download, Eye, X } from "lucide-react";
 import SoftLoading from "@/components/SoftLoading";
 import { getMimeType } from "@/lib/mimeTypes";
+import { withBasePath } from "@/lib/basePath";
 import loadingStyles from "@/public/styles/loading.module.css";
 import styles from "./page.module.css";
 
@@ -151,7 +152,7 @@ export default function SharedPage() {
                         {items.length} item{items.length === 1 ? "" : "s"}
                     </span>
                     <a
-                        href={`/api/shares/access/${share.token}/download-all${passcode ? `?passcode=${encodeURIComponent(passcode)}` : ""}`}
+                        href={withBasePath(`/api/shares/access/${share.token}/download-all${passcode ? `?passcode=${encodeURIComponent(passcode)}` : ""}`)}
                         download
                         className={styles.primaryButton}
                     >
@@ -183,7 +184,7 @@ export default function SharedPage() {
                                 </button>
                             )}
                             <a
-                                href={`/api/shares/access/${share.token}/download?path=${encodeURIComponent(item.path)}${passcode ? `&passcode=${encodeURIComponent(passcode)}` : ""}`}
+                                href={withBasePath(`/api/shares/access/${share.token}/download?path=${encodeURIComponent(item.path)}${passcode ? `&passcode=${encodeURIComponent(passcode)}` : ""}`)}
                                 download
                                 className={styles.secondaryButton}
                             >

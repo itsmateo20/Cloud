@@ -4,6 +4,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { api } from "@/utils/api";
+import { withBasePath } from "@/lib/basePath";
 import { useAuth } from "@/context/AuthProvider";
 import styles from "./AdminUsersPanel.module.css";
 import ConfirmModal from "./ConfirmModal";
@@ -151,7 +152,7 @@ export default function AdminUsersPanel({ onClose }) {
             setMessage(response?.message || "Failed to open user files");
             return;
         }
-        window.location.href = "/";
+        window.location.href = withBasePath("/");
     };
 
     const handleStopImpersonation = async () => {
@@ -163,7 +164,7 @@ export default function AdminUsersPanel({ onClose }) {
             setMessage(response?.message || "Failed to restore admin session");
             return;
         }
-        window.location.href = "/";
+        window.location.href = withBasePath("/");
     };
 
     return (

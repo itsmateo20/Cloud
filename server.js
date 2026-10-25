@@ -51,6 +51,10 @@ require('./lib/memoryMonitor.js');
 const { Server } = require("socket.io");
 const next = require("next");
 const port = process.env.PORT || 3000;
+const configuredBasePath = process.env.NEXT_PUBLIC_BASE_PATH || process.env.BASE_PATH || "";
+const basePath = !configuredBasePath || configuredBasePath === "/"
+    ? ""
+    : `/${configuredBasePath.replace(/^\/+|\/+$/g, "")}`;
 
 const dev = process.env.NODE_ENV !== "production";
 const app = next({ quiet: !dev, dev, turbo: false });
@@ -64,7 +68,7 @@ console.log(` ${chalk.bold("○")} Booting up ...\n     ${chalk.bold.cyan("Envir
 
 app.prepare().then(() => {
     const server = createServer((req, res) => handle(req, res));
-    const io = new Server(server);
+    const io = new Server(server, { path: `${basePath}/socket.io` });
 
     global.io = io;
 

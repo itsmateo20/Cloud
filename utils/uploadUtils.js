@@ -1,6 +1,7 @@
 // utils/uploadUtils.js
 
 import { api } from './api';
+import { withBasePath } from "@/lib/basePath";
 
 function createUploadId() {
     if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -236,7 +237,7 @@ export class Uploader {
 
         return new Promise((resolve, reject) => {
             const xhr = new XMLHttpRequest();
-            xhr.open('POST', '/api/files/upload/chunk', true);
+            xhr.open('POST', withBasePath('/api/files/upload/chunk'), true);
             xhr.withCredentials = true;
             xhr.responseType = 'text';
             xhr.setRequestHeader('X-Upload-Token', uploadToken);

@@ -3,6 +3,7 @@
 "use client";
 
 import { api } from "@/utils/api";
+import { withBasePath } from "@/lib/basePath";
 
 import { createContext, useContext, useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
@@ -215,7 +216,7 @@ export const AuthProvider = ({ children, locked = true }) => {
     };
 
     const authWithGoogle = (type) => {
-        window.location.href = `/api/auth/google/auth?type=${type}`;
+        window.location.href = withBasePath(`/api/auth/google/auth?type=${type}`);
     };
 
     return (

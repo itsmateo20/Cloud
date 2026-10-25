@@ -74,7 +74,7 @@ export async function GET(req) {
                         admin: loginResponse.user.admin
                     }, req);
 
-                    return new NextResponse(JSON.stringify({ success: true, code: "authentication_success" }), { status: 301, headers: { Location: "/" } });
+                    return new NextResponse(JSON.stringify({ success: true, code: "authentication_success" }), { status: 301, headers: { Location: siteUrl || "/" } });
                 } else if (response.code === "user_not_found") return NextResponse.redirect(`${siteUrl}/signup/google?email=${encodeURIComponent(googleUser.email)}&signature=${signEmail(googleUser.email)}`);
             }
 
@@ -92,7 +92,7 @@ export async function GET(req) {
         const finalCookieStore = await cookies();
         finalCookieStore.delete("oauth_state");
 
-        return new NextResponse(JSON.stringify({ success: true, code: "authentication_success" }), { status: 301, headers: { Location: "/" } });
+        return new NextResponse(JSON.stringify({ success: true, code: "authentication_success" }), { status: 301, headers: { Location: siteUrl || "/" } });
     } catch (error) {
         return NextResponse.redirect(`${await getSiteUrl()}/login?error=oauth_callback_failed`);
     }

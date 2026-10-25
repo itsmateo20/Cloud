@@ -3,6 +3,7 @@
 import { forwardRef, useEffect, useRef, useState } from "react";
 import { KeyRound, LockKeyhole, LockOpen, FolderClosed, FileText } from "lucide-react";
 import { api } from "@/utils/api";
+import { withBasePath } from "@/lib/basePath";
 import SoftLoading from "@/components/SoftLoading";
 import styles from "./PrivateDisk.module.css";
 
@@ -42,7 +43,7 @@ const PrivateDisk = forwardRef(function PrivateDisk({ toast, onUnlocked }, ref) 
 
     useEffect(() => {
         const lockOnPageExit = () => {
-            fetch("/api/user/private", {
+            fetch(withBasePath("/api/user/private"), {
                 method: "DELETE",
                 credentials: "same-origin",
                 keepalive: true

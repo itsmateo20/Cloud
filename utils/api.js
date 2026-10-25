@@ -1,6 +1,7 @@
 // utils/api.js
 
 import { getSiteUrl } from "@/lib/getSiteUrl";
+import { withBasePath } from "@/lib/basePath";
 
 async function getBaseUrl() {
     if (typeof window !== 'undefined') return window.location.origin;
@@ -89,7 +90,7 @@ async function handleBlobResponse(response) {
 async function makeRequest(method, url, body = null, customHeadersOrOptions = null) {
     try {
         const baseUrl = await getBaseUrl();
-        const fullUrl = url.startsWith('http') ? url : `${baseUrl}${url}`;
+        const fullUrl = url.startsWith('http') ? url : `${baseUrl}${typeof window !== 'undefined' ? withBasePath(url) : url}`;
         const requestOptions = resolveRequestOptions(customHeadersOrOptions);
 
         const isFormData = body instanceof FormData;

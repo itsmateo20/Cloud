@@ -31,6 +31,7 @@ import { appendMetadataToFormData } from "@/utils/fileMetadata.client";
 import { normalizeRelativeUploadPath } from "@/utils/uploadPath";
 import { uploadFile as uploadLargeFile } from "@/utils/uploadUtils";
 import { useIsMobile } from "@/utils/useIsMobile";
+import { withBasePath } from "@/lib/basePath";
 
 import { Resizable } from "re-resizable";
 import { ArrowLeft, Check, Download, EllipsisVertical, LayoutGrid, List, Plus, Share2, Star, Trash2, X } from "lucide-react";
@@ -147,7 +148,7 @@ export default function Page() {
     if (!showPrivate) return;
 
     const lockPrivateDiskOnExit = () => {
-      fetch('/api/user/private', {
+      fetch(withBasePath('/api/user/private'), {
         method: 'DELETE',
         credentials: 'same-origin',
         keepalive: true
@@ -331,7 +332,7 @@ export default function Page() {
   }, [user, loading]);
 
   useEffect(() => {
-    if (!socket) socket = io();
+    if (!socket) socket = io({ path: `${withBasePath('/socket.io')}/` });
 
     if (isMobile) setCurrentPath(undefined);
     else setCurrentPath('');
@@ -408,7 +409,7 @@ export default function Page() {
       try {
         const sessionCheck = await api.post('/api/auth/session');
         if (!sessionCheck?.success && sessionCheck?.code === 'token_revoked') {
-          window.location.href = '/logged-out?reason=remote';
+          window.location.href = withBasePath('/logged-out?reason=remote');
         }
       } catch { }
     };
@@ -691,7 +692,7 @@ export default function Page() {
 
   const handleFolderSelect = (folderPath) => {
     if (showPrivate) {
-      fetch('/api/user/private', { method: 'DELETE', credentials: 'same-origin' }).catch(() => { });
+      fetch(withBasePath('/api/user/private'), { method: 'DELETE', credentials: 'same-origin' }).catch(() => { });
       setPrivateUnlocked(false);
       setPrivatePath('');
     }

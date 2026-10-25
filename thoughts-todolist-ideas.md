@@ -10,3 +10,5 @@
 - admin menu: view all share links, disable registration and set which 3rd party auth providers are allowed and maybe so he could add new auth providers via the dashboard
 
 - make custom nginx "/cloud" (for example) work with no problem because right now when going on /cloud/login it takes you to /login and fails [HIGH PRIORITY]
+
+- when in bin, and deleted filem cannot press on folders on folder list, only after pressing "this disk" and works without a problem

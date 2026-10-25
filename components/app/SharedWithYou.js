@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Download, Link2, LogOut } from "lucide-react";
 import SoftLoading from "@/components/SoftLoading";
 import { api } from "@/utils/api";
+import { withBasePath } from "@/lib/basePath";
 import styles from "./SharedWithYou.module.css";
 
 function encodePasscodeForQuery(passcode) {
@@ -229,7 +230,7 @@ export default function SharedWithYou({ toast }) {
                                     </p>
                                 </div>
                                 <a
-                                    href={`/api/shares/access/${selectedShareData.token}/download-all${createPasscodeQuery(selectedPasscode)}`}
+                                    href={withBasePath(`/api/shares/access/${selectedShareData.token}/download-all${createPasscodeQuery(selectedPasscode)}`)}
                                     className={styles.secondaryButton}
                                 >
                                     <Download size={15} /> Download all
@@ -247,7 +248,7 @@ export default function SharedWithYou({ toast }) {
                                                 <div className={styles.itemMeta}>{item.type} • {item.path}</div>
                                             </div>
                                             <a
-                                                href={`/api/shares/access/${selectedShareData.token}/download?path=${encodeURIComponent(item.path)}${selectedPasscode ? `&pc=${encodeURIComponent(encodePasscodeForQuery(selectedPasscode))}` : ""}`}
+                                                href={withBasePath(`/api/shares/access/${selectedShareData.token}/download?path=${encodeURIComponent(item.path)}${selectedPasscode ? `&pc=${encodeURIComponent(encodePasscodeForQuery(selectedPasscode))}` : ""}`)}
                                                 className={styles.secondaryButton}
                                             >
                                                 <Link2 size={15} /> Download

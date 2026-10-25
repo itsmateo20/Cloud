@@ -1,6 +1,12 @@
 // next.config.mjs
 
+const configuredBasePath = process.env.NEXT_PUBLIC_BASE_PATH || process.env.BASE_PATH || "";
+const basePath = !configuredBasePath || configuredBasePath === "/"
+    ? ""
+    : `/${configuredBasePath.replace(/^\/+|\/+$/g, "")}`;
+
 const nextConfig = {
+    basePath: basePath === "/" ? "" : basePath.replace(/\/+$/, ""),
     htmlLimitedBots: /.*/,
 
     outputFileTracingExcludes: {
