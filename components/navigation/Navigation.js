@@ -6,6 +6,7 @@ import style from "./Navigation.module.css";
 import { Suspense, useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import Image from "next/image";
+import { withBasePath } from "@/lib/basePath";
 import Link from "next/link";
 import { useIsMobile } from "@/utils/useIsMobile";
 
@@ -344,7 +345,7 @@ export function Navigation({ user, sideNav = false, currentPath, onOpenSettings,
                 <div className={style.titleContainer}>
                     <Link className={style.logo} href="/">
                         <Suspense fallback={null}>
-                            <Image src="/assets/logo/logo.png" alt="Cloud Storage Icon" width={54} height={33} quality={100} loading="eager" priority />
+                            <Image src={withBasePath("/assets/logo/logo.png")} alt="Cloud Storage Icon" width={54} height={33} quality={100} loading="eager" priority />
                         </Suspense>
                     </Link>
                     <h1 className={style.title}>Cloud</h1>

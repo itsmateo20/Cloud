@@ -1850,7 +1850,7 @@ export default function Page() {
               >
                 <div className={style.folderStructureSidebar}>
                   <Image
-                    src="/assets/app/corner.svg"
+                    src={withBasePath("/assets/app/corner.svg")}
                     alt="corner"
                     width={30}
                     height={30}

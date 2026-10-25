@@ -5,6 +5,7 @@ import style from "@/public/styles/googleAuth.module.css";
 
 import { useAuth } from "@/context/AuthProvider";
 import { api } from "@/utils/api";
+import { withBasePath } from "@/lib/basePath";
 
 import { use, useEffect, useState } from "react";
 import Image from "next/image";
@@ -136,8 +137,8 @@ export default function Page({ searchParams }) {
                         <Image
                             src={
                                 isVisible
-                                    ? "/assets/authentication/VisibilityOn.svg"
-                                    : "/assets/authentication/VisibilityOff.svg"
+                                    ? withBasePath("/assets/authentication/VisibilityOn.svg")
+                                    : withBasePath("/assets/authentication/VisibilityOff.svg")
                             }
                             width={30}
                             height={30}
@@ -166,8 +167,8 @@ export default function Page({ searchParams }) {
                         <Image
                             src={
                                 isVisible
-                                    ? "/assets/authentication/VisibilityOn.svg"
-                                    : "/assets/authentication/VisibilityOff.svg"
+                                    ? withBasePath("/assets/authentication/VisibilityOn.svg")
+                                    : withBasePath("/assets/authentication/VisibilityOff.svg")
                             }
                             width={30}
                             height={30}

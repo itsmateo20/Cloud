@@ -5,6 +5,7 @@ import "@/public/styles/globals.css";
 import { AuthProvider } from "@/context/AuthProvider";
 import { ToastProvider } from "@/components/app/ToastProvider";
 import { getSiteUrl } from "@/lib/getSiteUrl";
+import { withBasePath } from "@/lib/basePath";
 import { DownloadManager } from "@/components/app/DownloadManager";
 import { UploadManager } from "@/components/app/UploadManager";
 
@@ -27,9 +28,9 @@ export async function generateMetadata() {
       },
     },
     icons: {
-      icon: "/assets/logo/rounded-512x512.png",
-      apple: "/assets/logo/rounded-512x512.png",
-      shortcut: "/assets/logo/512x512.png",
+      icon: withBasePath("/assets/logo/rounded-512x512.png"),
+      apple: withBasePath("/assets/logo/rounded-512x512.png"),
+      shortcut: withBasePath("/assets/logo/512x512.png"),
     },
     title: "Home | Cloud Storage App",
     description: "The Cloud Storage App is a web-based application designed for users to store and manage their files and folders in the cloud. It offers a convenient way to organize, upload, download, and delete files and folders, making it easy to access your data from anywhere.",

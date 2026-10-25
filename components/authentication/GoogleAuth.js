@@ -4,6 +4,7 @@
 import style from "./GoogleAuth.module.css";
 
 import Image from "next/image";
+import { withBasePath } from "@/lib/basePath";
 
 export function GoogleAuth({ auth, type }) {
     const googleAuth = process.env.NEXT_PUBLIC_GOOGLE_AUTH === "true";
@@ -15,7 +16,7 @@ export function GoogleAuth({ auth, type }) {
                 <div className={style.gsiMaterialButtonState}></div>
                 <div className={style.gsiMaterialButtonContentWrapper}>
                     <div className={style.gsiMaterialButtonIcon}>
-                        <Image src="/assets/authentication/GoogleAuth.svg" width={20} height={20} alt="Google" />
+                        <Image src={withBasePath("/assets/authentication/GoogleAuth.svg")} width={20} height={20} alt="Google" />
                     </div>
                     <span style={{ display: "none" }}>Sign in with Google</span>
                 </div>
@@ -26,4 +27,3 @@ export function GoogleAuth({ auth, type }) {
         <div style={{ marginTop: "80px" }} />
     )
 }
-

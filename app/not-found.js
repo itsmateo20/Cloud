@@ -5,6 +5,7 @@ import error from "@/public/styles/error.module.css";
 import Link from "next/link"
 
 import { getSiteUrl } from "@/lib/getSiteUrl";
+import { withBasePath } from "@/lib/basePath";
 
 export async function generateMetadata() {
     const siteUrl = await getSiteUrl();
@@ -12,9 +13,9 @@ export async function generateMetadata() {
     return {
         metadataBase: new URL(siteUrl),
         icons: {
-            icon: "/assets/logo/rounded-512x512.png",
-            apple: "/assets/logo/rounded-512x512.png",
-            shortcut: "/assets/logo/512x512.png",
+            icon: withBasePath("/assets/logo/rounded-512x512.png"),
+            apple: withBasePath("/assets/logo/rounded-512x512.png"),
+            shortcut: withBasePath("/assets/logo/512x512.png"),
         },
         title: "404 | Cloud Storage App",
         description: "The Cloud Storage App is a web-based application designed for users to store and manage their files and folders in the cloud. It offers a convenient way to organize, upload, download, and delete files and folders, making it easy to access your data from anywhere.",

@@ -60,6 +60,18 @@ const dev = process.env.NODE_ENV !== "production";
 const app = next({ quiet: !dev, dev, turbo: false });
 const handle = app.getRequestHandler();
 
+function redirectToBasePath(req, res) {
+    if (!basePath) return false;
+
+    const requestUrl = new URL(req.url || "/", "http://localhost");
+    if (requestUrl.pathname !== "/") return false;
+
+    const location = `${basePath}${requestUrl.search}`;
+    res.writeHead(308, { Location: location });
+    res.end();
+    return true;
+}
+
 const chalk = require("chalk");
 const os = require('os');
 
@@ -67,7 +79,10 @@ console.clear();
 console.log(` ${chalk.bold("○")} Booting up ...\n     ${chalk.bold.cyan("Environment:")} ${dev ? "Development" : "Production"}\n     ${chalk.bold.magenta("Turbo mode:")} ${!dev ? "No" : "Yes"}\n     ${chalk.bold.gray("Process version:")} ${process.version}\n     ${chalk.bold.gray("Platform:")} ${os.platform()} ${os.arch()} ${os.release()}\n     ${chalk.bold.gray("Time:")} ${new Date().toLocaleString()}\n`);
 
 app.prepare().then(() => {
-    const server = createServer((req, res) => handle(req, res));
+    const server = createServer((req, res) => {
+        if (redirectToBasePath(req, res)) return;
+        return handle(req, res);
+    });
     const io = new Server(server, { path: `${basePath}/socket.io` });
 
     global.io = io;

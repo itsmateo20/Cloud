@@ -5,6 +5,7 @@ import style from "@/public/styles/signup.module.css";
 
 import { useAuth } from "@/context/AuthProvider";
 import { api } from "@/utils/api";
+import { withBasePath } from "@/lib/basePath";
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
@@ -127,8 +128,8 @@ export default function Page() {
                             <Image
                                 src={
                                     isVisible
-                                        ? "/assets/authentication/VisibilityOn.svg"
-                                        : "/assets/authentication/VisibilityOff.svg"
+                                        ? withBasePath("/assets/authentication/VisibilityOn.svg")
+                                        : withBasePath("/assets/authentication/VisibilityOff.svg")
                                 }
                                 id="visibilityIcon"
                                 width={30}
@@ -156,8 +157,8 @@ export default function Page() {
                             <Image
                                 src={
                                     isVisible
-                                        ? "/assets/authentication/VisibilityOn.svg"
-                                        : "/assets/authentication/VisibilityOff.svg"
+                                        ? withBasePath("/assets/authentication/VisibilityOn.svg")
+                                        : withBasePath("/assets/authentication/VisibilityOff.svg")
                                 }
                                 width={30}
                                 height={30}
