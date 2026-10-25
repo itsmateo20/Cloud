@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import fs from "fs/promises";
 import path from "path";
 import { createReadStream } from "fs";
+import { Readable } from "stream";
 import { getSession } from "@/lib/session";
 import { canAccessShare, ensureShareTables, getShareByToken } from "@/lib/shares";
 import { getUserUploadPath, resolvePathWithinBase } from "@/lib/paths";
