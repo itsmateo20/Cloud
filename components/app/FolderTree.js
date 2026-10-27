@@ -7,6 +7,8 @@ import { api } from "@/utils/api";
 import SoftLoading from "../SoftLoading";
 import { Star, FolderClosed, FolderOpen, Save, Share2, Trash2, LockKeyhole } from 'lucide-react';
 
+const SPECIAL_PATHS = new Set(["favorites", "shared", "trash", "private"]);
+
 export default function FolderTree({
     socket,
     onFolderSelect,
@@ -113,7 +115,7 @@ export default function FolderTree({
     }, [privateMode]);
 
     useEffect(() => {
-        if (selectedPath && selectedPath !== "" && selectedPath !== 'favorites') {
+        if (selectedPath && selectedPath !== "" && !SPECIAL_PATHS.has(selectedPath)) {
             const pathParts = selectedPath.split('/').filter(Boolean);
             const newExpanded = new Set(expandedFolders);
 

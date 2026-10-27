@@ -14,6 +14,7 @@
     align-items: center;
     justify-content: space-between;
     padding: 16px 20px;
+    border-bottom: 1px solid var(--border-color);
 }
 
 .header h2 {
@@ -38,12 +39,17 @@
 
 .overview {
     width: 100%;
-    max-width: 760px;
+    max-width: 1000px;
     margin: 0;
     padding: 24px;
     display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     align-content: start;
     gap: 14px;
+}
+
+.overview>.card {
+    grid-column: 1 / -1;
 }
 
 .cardDescription {
@@ -101,6 +107,20 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+}
+
+.userRow span:first-child {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+}
+
+.rowMeta {
+    color: var(--alt-text-2);
+    font-size: 11px;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .dangerButton {

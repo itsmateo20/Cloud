@@ -34,7 +34,7 @@ import { useIsMobile } from "@/utils/useIsMobile";
 import { withBasePath } from "@/lib/basePath";
 
 import { Resizable } from "re-resizable";
-import { ArrowLeft, Check, Download, EllipsisVertical, LayoutGrid, List, LockKeyhole, Plus, Share2, Star, Trash2, X } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Check, CheckCircle2, Download, EllipsisVertical, Info, LayoutGrid, List, LockKeyhole, Plus, Share2, Star, Trash2, X, XCircle } from "lucide-react";
 import ConfirmModal from '@/components/app/ConfirmModal';
 
 const normalizeUploadSelection = (files) => {
@@ -112,6 +112,7 @@ export default function Page() {
   const fileListRef = useRef(null);
   const privateDiskRef = useRef(null);
   const toast = useToast();
+  const [mobileNotificationOpen, setMobileNotificationOpen] = useState(false);
 
   const [currentPath, setCurrentPath] = useState(undefined);
   const [selectedItems, setSelectedItems] = useState([]);
@@ -165,6 +166,7 @@ export default function Page() {
   }, [showPrivate, lockPrivateDisk]);
   const [trashEnabled, setTrashEnabled] = useState(true);
   const [showAdminUsers, setShowAdminUsers] = useState(false);
+  const [adminPanelOpenToken, setAdminPanelOpenToken] = useState(0);
   const [settingsLoaded, setSettingsLoaded] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -185,6 +187,19 @@ export default function Page() {
   const [storageRootError, setStorageRootError] = useState(null);
 
   const isMobile = useIsMobile();
+  const latestNotification = toast.toasts[toast.toasts.length - 1];
+
+  useEffect(() => {
+    if (!latestNotification) setMobileNotificationOpen(false);
+  }, [latestNotification]);
+
+  const NotificationIcon = latestNotification?.type === 'success'
+    ? CheckCircle2
+    : latestNotification?.type === 'error'
+      ? XCircle
+      : latestNotification?.type === 'warning'
+        ? AlertTriangle
+        : Info;
 
   const viewMode = isMobile ? mobileViewMode : desktopViewMode;
   const mobileSelectionActive = Boolean(isMobile && selectedItems && selectedItems.length > 0);
@@ -782,6 +797,7 @@ export default function Page() {
     setShowShares(false);
     setShowSharedWithYou(false);
     setShowAdminUsers(true);
+    setAdminPanelOpenToken((value) => value + 1);
     setCurrentPath('');
     fileListRef.current?.closeShareManager?.();
   }, [lockPrivateDisk]);
@@ -881,7 +897,7 @@ export default function Page() {
     const viewportPadding = 12;
     const left = Math.max(
       viewportPadding,
-      Math.min(rect.right - menuWidth, window.innerWidth - menuWidth - viewportPadding)
+      Math.min(rect.right - menuWidth - 8, window.innerWidth - menuWidth - viewportPadding)
     );
 
     setSortMenuPosition({
@@ -2010,6 +2026,7 @@ export default function Page() {
                   />
                 ) : showAdminUsers ? (
                   <AdminUsersPanel
+                    openToken={adminPanelOpenToken}
                     onClose={() => setShowAdminUsers(false)}
                   />
                 ) : (
@@ -2202,6 +2219,36 @@ export default function Page() {
                       </div>
                     )}
                     <div className={style.explorerControls}>
+                      {latestNotification && (
+                        <div className={style.mobileNotification}>
+                          <button
+                            className={`${style.notificationButton} ${style[`notification${latestNotification.type[0].toUpperCase()}${latestNotification.type.slice(1)}`]}`}
+                            onClick={() => setMobileNotificationOpen((open) => !open)}
+                            aria-label="Show notification"
+                            aria-expanded={mobileNotificationOpen}
+                          >
+                            {NotificationIcon && <NotificationIcon size={18} aria-hidden="true" />}
+                          </button>
+                          {mobileNotificationOpen && (
+                            <div className={`${style.notificationPanel} ${style[`notification${latestNotification.type[0].toUpperCase()}${latestNotification.type.slice(1)}`]}`} role="status">
+                              <div className={style.notificationPanelIcon}>
+                                {NotificationIcon && <NotificationIcon size={18} aria-hidden="true" />}
+                              </div>
+                              <div className={style.notificationMessage}>{latestNotification.message}</div>
+                              <button
+                                className={style.notificationClose}
+                                onClick={() => {
+                                  toast.remove(latestNotification.id);
+                                  setMobileNotificationOpen(false);
+                                }}
+                                aria-label="Close notification"
+                              >
+                                <X size={16} />
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
                       {!mobileSelectionActive && !mobileInSpecialPage && (
                         <button className={style.viewToggleButton} onClick={toggleViewMode}>
                           {viewMode === 'list' ? <LayoutGrid /> : <List />}
@@ -2227,6 +2274,7 @@ export default function Page() {
                         <button
                           className={style.menuButton}
                           onClick={handleOpenSortMenu}
+                          aria-label="Open menu"
                         >
                           <EllipsisVertical size={18} />
                         </button>
@@ -2316,7 +2364,7 @@ export default function Page() {
                       sharesOnly={true}
                     />
                   ) : showAdminUsers ? (
-                    <AdminUsersPanel onClose={() => setShowAdminUsers(false)} />
+                    <AdminUsersPanel openToken={adminPanelOpenToken} onClose={() => setShowAdminUsers(false)} />
                   ) : (
                     <FileList
                       key="mobile-explorer"
@@ -2363,16 +2411,25 @@ export default function Page() {
                     <button onClick={() => {
                       setShowSortMenu(false);
                       handleSelectAll();
-                    }}>{(Number(fileListRef.current?.getSelectableCount?.() || 0) > 0 && selectedItems.length >= Number(fileListRef.current?.getSelectableCount?.() || 0)) ? 'Unselect All' : 'Select All'}</button>
+                    }}>
+                      <span className={style.sortMenuOptionIcon}><Check size={17} /></span>
+                      <span>{(Number(fileListRef.current?.getSelectableCount?.() || 0) > 0 && selectedItems.length >= Number(fileListRef.current?.getSelectableCount?.() || 0)) ? 'Unselect All' : 'Select All'}</span>
+                    </button>
                     <button onClick={() => {
                       setShowSortMenu(false);
                       setShowSortOptionsMenu(true);
-                    }}>Sort By</button>
+                    }}>
+                      <span className={style.sortMenuOptionIcon}><List size={17} /></span>
+                      <span>Sort By</span>
+                    </button>
                     {currentPath !== 'favorites' && !mobileInSpecialPage && (
                       <button onClick={() => {
                         setShowSortMenu(false);
                         handleNewFolder();
-                      }}>Add New Folder</button>
+                      }}>
+                        <span className={style.sortMenuOptionIcon}><Plus size={17} /></span>
+                        <span>Add New Folder</span>
+                      </button>
                     )}
                   </div>
                 </div>

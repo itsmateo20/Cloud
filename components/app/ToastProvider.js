@@ -3,6 +3,7 @@
 "use client";
 
 import React, { createContext, useContext, useCallback, useState, useRef, useEffect } from 'react';
+import { useIsMobile } from '@/utils/useIsMobile';
 import styles from './ToastProvider.module.css';
 
 const ToastContext = createContext(null);
@@ -10,6 +11,7 @@ let idCounter = 0;
 
 export function ToastProvider({ children, max = 5, duration = 4000 }) {
     const [toasts, setToasts] = useState([]);
+    const isMobile = useIsMobile();
     const queueRef = useRef([]);
     const [dmState, setDmState] = useState({ visible: false, expanded: false });
     const [umState, setUmState] = useState({ visible: false, expanded: false });
@@ -31,9 +33,10 @@ export function ToastProvider({ children, max = 5, duration = 4000 }) {
 
     useEffect(() => {
         if (!toasts.length) return;
-        const timers = toasts.map(t => setTimeout(() => remove(t.id), duration));
+        const toastDuration = isMobile ? Math.max(duration, 10000) : duration;
+        const timers = toasts.map(t => setTimeout(() => remove(t.id), toastDuration));
         return () => timers.forEach(clearTimeout);
-    }, [toasts, duration, remove]);
+    }, [toasts, duration, isMobile, remove]);
 
     useEffect(() => {
         const downloadHandler = (e) => {
@@ -70,6 +73,8 @@ export function ToastProvider({ children, max = 5, duration = 4000 }) {
         addError: (message, opts) => add({ message, type: 'error', ...opts }),
         addInfo: (message, opts) => add({ message, type: 'info', ...opts }),
         addWarning: (message, opts) => add({ message, type: 'warning', ...opts }),
+        toasts,
+        remove,
     };
 
     return (
