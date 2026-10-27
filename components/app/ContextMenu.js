@@ -29,7 +29,8 @@ export function ContextMenu({
     onAction,
     currentPath,
     mobile = false,
-    trashEnabled = true
+    trashEnabled = true,
+    privateMode = false
 }) {
     const menuRef = useRef(null);
     const [showFavoriteSubmenu, setShowFavoriteSubmenu] = useState(false);
@@ -110,17 +111,17 @@ export function ContextMenu({
                         Download{isMultipleSelected ? ` (${selectedItems.length})` : ""}
                     </div>
 
-                    {!mobile && (
+                    {!mobile && !privateMode && (
                         <div className={styles.menuItem} onClick={() => handleSubmenuAction("download-qr")}>
                             <span className={styles.icon}><Smartphone size={16} /></span>
                             Download file{isMultipleSelected ? `s` : ""} via QR Code {isMultipleSelected ? ` (${selectedItems.length})` : ""}
                         </div>
                     )}
 
-                    <div className={styles.menuItem} onClick={() => handleAction("share")}>
+                    {!privateMode && <div className={styles.menuItem} onClick={() => handleAction("share")}>
                         <span className={styles.icon}><Share2 size={16} /></span>
                         Share{isMultipleSelected ? ` (${selectedItems.length})` : ""}
-                    </div>
+                    </div>}
 
                     <div className={styles.separator}></div>
 
@@ -154,7 +155,7 @@ export function ContextMenu({
                         {isFolder ? "Download as ZIP" : "Download"}{isMultipleSelected ? ` (${selectedItems.length})` : ""}
                     </div>
 
-                    {!mobile && (
+                    {!mobile && !privateMode && (
                         <div
                             className={`${styles.menuItem} ${styles.hasSubmenu}`}
                             onMouseEnter={() => setShowQrSubmenu(true)}

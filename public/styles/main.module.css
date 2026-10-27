@@ -344,6 +344,7 @@
 .storageList {
     display: flex;
     flex-direction: row;
+    flex-wrap: wrap;
     gap: 8px;
 }
 
@@ -352,7 +353,9 @@
     align-items: center;
     gap: 16px;
     padding: 16px;
-    width: 50%;
+    flex: 1 1 calc((100% - 8px) / 2);
+    width: auto;
+    min-width: 140px;
     height: 64px;
     min-height: 64px;
     background-color: var(--btn-background);
@@ -385,16 +388,6 @@
 
     .explorerControls {
         gap: 4px;
-    }
-}
-
-@media (max-width: 425px) {
-    .storageList {
-        flex-direction: column;
-    }
-
-    .storageItem {
-        width: 100%;
     }
 }
 

@@ -25,7 +25,7 @@ import StorageRootErrorScreen from "@/components/app/StorageRootErrorScreen";
 import SoftLoading from "@/components/SoftLoading";
 import Loading from "@/components/Loading";
 
-import { downloadFile, downloadFolder, downloadMultipleFiles } from "@/utils/downloadUtils";
+import { downloadFile, downloadFolder, downloadMultipleFiles, downloadPrivateFile } from "@/utils/downloadUtils";
 import { api } from "@/utils/api";
 import { appendMetadataToFormData } from "@/utils/fileMetadata.client";
 import { normalizeRelativeUploadPath } from "@/utils/uploadPath";
@@ -34,7 +34,7 @@ import { useIsMobile } from "@/utils/useIsMobile";
 import { withBasePath } from "@/lib/basePath";
 
 import { Resizable } from "re-resizable";
-import { ArrowLeft, Check, Download, EllipsisVertical, LayoutGrid, List, Plus, Share2, Star, Trash2, X } from "lucide-react";
+import { ArrowLeft, Check, Download, EllipsisVertical, LayoutGrid, List, LockKeyhole, Plus, Share2, Star, Trash2, X } from "lucide-react";
 import ConfirmModal from '@/components/app/ConfirmModal';
 
 const normalizeUploadSelection = (files) => {
@@ -120,6 +120,7 @@ export default function Page() {
   const [mobileViewMode, setMobileViewMode] = useState("list");
   const [thumbnailResolution, setThumbnailResolution] = useState("medium");
   const [favorites, setFavorites] = useState({ files: [], folders: [] });
+  const [trashItemCount, setTrashItemCount] = useState(0);
   const [storageInfo, setStorageInfo] = useState({ totalSize: 0, totalFiles: 0 });
   const [storageLoading, setStorageLoading] = useState(false);
   const [showSortMenu, setShowSortMenu] = useState(false);
@@ -144,20 +145,24 @@ export default function Page() {
   const [privateUnlocked, setPrivateUnlocked] = useState(false);
   const [privatePath, setPrivatePath] = useState('');
 
+  const lockPrivateDisk = useCallback(() => {
+    fetch(withBasePath('/api/user/private'), {
+      method: 'DELETE',
+      credentials: 'same-origin',
+      keepalive: true
+    }).catch(() => { });
+    setShowPrivate(false);
+    setPrivateUnlocked(false);
+    setPrivatePath('');
+  }, []);
+
   useEffect(() => {
     if (!showPrivate) return;
 
-    const lockPrivateDiskOnExit = () => {
-      fetch(withBasePath('/api/user/private'), {
-        method: 'DELETE',
-        credentials: 'same-origin',
-        keepalive: true
-      }).catch(() => { });
-    };
-
+    const lockPrivateDiskOnExit = () => lockPrivateDisk();
     window.addEventListener('pagehide', lockPrivateDiskOnExit);
     return () => window.removeEventListener('pagehide', lockPrivateDiskOnExit);
-  }, [showPrivate]);
+  }, [showPrivate, lockPrivateDisk]);
   const [trashEnabled, setTrashEnabled] = useState(true);
   const [showAdminUsers, setShowAdminUsers] = useState(false);
   const [settingsLoaded, setSettingsLoaded] = useState(false);
@@ -188,7 +193,7 @@ export default function Page() {
   const selectedUnfavoritedCount = Math.max(0, (selectedItems?.length || 0) - selectedFavoritedCount);
   const mobileShouldUnfavorite = selectedItems.length > 0 && selectedUnfavoritedCount === 0;
   const mobileFavoriteActionLabel = mobileShouldUnfavorite ? 'Unfavourite' : 'Favourite';
-  const mobileInSpecialPage = Boolean(showSettings || showShares || showSharedWithYou || showAdminUsers || showTrash || showPrivate);
+  const mobileInSpecialPage = Boolean(showSettings || showShares || showSharedWithYou || showAdminUsers || showTrash || (showPrivate && !privateUnlocked));
   const mobileHidePath = Boolean(mobileInSpecialPage || currentPath === 'favorites');
   const mobilePageTitle = showSettings
     ? 'Settings'
@@ -199,7 +204,7 @@ export default function Page() {
         : showTrash
           ? 'Bin'
           : showPrivate
-            ? 'Private Disk'
+            ? 'Private Storage'
             : showAdminUsers
               ? 'Admin Panel'
               : (currentPath === '' ? 'Main Storage' : currentPath === 'favorites' ? 'Favourites' : currentPath?.split('/').pop() || 'Files');
@@ -340,6 +345,7 @@ export default function Page() {
     if (isMobile && user) {
       loadFavorites();
       loadStorageInfo();
+      loadTrashVisibility();
     }
   }, [isMobile, user]);
 
@@ -404,6 +410,8 @@ export default function Page() {
         }
       } catch { }
     });
+    const handleTrashUpdated = () => loadTrashVisibility();
+    socket.on('trash-updated', handleTrashUpdated);
 
     const handleAuthTokenRecheck = async () => {
       try {
@@ -418,6 +426,7 @@ export default function Page() {
     return () => {
       socket.off('folder-structure-updated', handleFolderStructure);
       socket.off('favorites-updated');
+      socket.off('trash-updated', handleTrashUpdated);
       socket.off('file-updated', handleFileUpdated);
       socket.off('auth-token-recheck', handleAuthTokenRecheck);
       socket.off('connect', handleConnect);
@@ -457,6 +466,15 @@ export default function Page() {
         });
       }
     } catch (error) {
+    }
+  };
+
+  const loadTrashVisibility = async () => {
+    try {
+      const response = await api.get('/api/user/trash');
+      setTrashItemCount(response?.success ? (response.items || []).length : 0);
+    } catch {
+      setTrashItemCount(0);
     }
   };
 
@@ -662,11 +680,13 @@ export default function Page() {
   };
 
   const getBreadcrumbs = () => {
-    if (currentPath === 'favorites') return [{ name: 'Favourites', path: 'favorites' }];
-    if (currentPath === '' || currentPath === undefined) return [{ name: 'Main Storage', path: '' }];
+    const activePath = showPrivate ? privatePath : currentPath;
+    const rootName = showPrivate ? 'Private Storage' : 'Main Storage';
+    if (activePath === 'favorites') return [{ name: 'Favourites', path: 'favorites' }];
+    if (activePath === '' || activePath === undefined) return [{ name: rootName, path: '' }];
 
-    const parts = currentPath.split('/').filter(Boolean);
-    const breadcrumbs = [{ name: 'Main Storage', path: '' }];
+    const parts = activePath.split('/').filter(Boolean);
+    const breadcrumbs = [{ name: rootName, path: '' }];
 
     let currentBreadcrumbPath = '';
     for (const part of parts) {
@@ -682,7 +702,8 @@ export default function Page() {
   };
 
   const navigateToBreadcrumb = (breadcrumbPath) => {
-    setCurrentPath(breadcrumbPath);
+    if (showPrivate) setPrivatePath(breadcrumbPath);
+    else setCurrentPath(breadcrumbPath);
   };
 
   const navigateToFolder = (folderPath) => {
@@ -692,9 +713,7 @@ export default function Page() {
 
   const handleFolderSelect = (folderPath) => {
     if (showPrivate) {
-      fetch(withBasePath('/api/user/private'), { method: 'DELETE', credentials: 'same-origin' }).catch(() => { });
-      setPrivateUnlocked(false);
-      setPrivatePath('');
+      lockPrivateDisk();
     }
     setCurrentPath(folderPath || '');
     setShowSettings(false);
@@ -713,23 +732,26 @@ export default function Page() {
   };
 
   const handleOpenShares = useCallback(() => {
+    lockPrivateDisk();
     setShowSettings(false);
     setShowShares(true);
     setShowSharedWithYou(false);
     setShowAdminUsers(false);
     setCurrentPath('');
-  }, []);
+  }, [lockPrivateDisk]);
 
   const handleOpenSharedWithYou = useCallback(() => {
+    lockPrivateDisk();
     setShowSettings(false);
     setShowShares(false);
     setShowSharedWithYou(true);
     setShowAdminUsers(false);
     setCurrentPath('shared');
     fileListRef.current?.closeShareManager?.();
-  }, []);
+  }, [lockPrivateDisk]);
 
   const handleOpenTrash = useCallback(() => {
+    lockPrivateDisk();
     setShowSettings(false);
     setShowShares(false);
     setShowSharedWithYou(false);
@@ -737,9 +759,10 @@ export default function Page() {
     setShowTrash(true);
     setCurrentPath('trash');
     fileListRef.current?.closeShareManager?.();
-  }, []);
+  }, [lockPrivateDisk]);
 
   const handleOpenPrivate = useCallback(() => {
+    lockPrivateDisk();
     setShowSettings(false);
     setShowShares(false);
     setShowSharedWithYou(false);
@@ -748,18 +771,20 @@ export default function Page() {
     setShowPrivate(false);
     setShowPrivate(true);
     setPrivateUnlocked(false);
+    setPrivatePath('');
     setCurrentPath('private');
     fileListRef.current?.closeShareManager?.();
-  }, []);
+  }, [lockPrivateDisk]);
 
   const handleOpenAdminUsers = useCallback(() => {
+    lockPrivateDisk();
     setShowSettings(false);
     setShowShares(false);
     setShowSharedWithYou(false);
     setShowAdminUsers(true);
     setCurrentPath('');
     fileListRef.current?.closeShareManager?.();
-  }, []);
+  }, [lockPrivateDisk]);
 
   const handleThemeChange = (newTheme) => {
 
@@ -974,7 +999,8 @@ export default function Page() {
           const formData = new FormData();
           formData.append('path', privatePath);
           selected.forEach((file) => formData.append('files', file));
-          api.upload('/api/user/private/files', formData).then((response) => {
+          formData.append('storage', 'private');
+          api.upload('/api/files/upload', formData).then((response) => {
             if (response?.success) fileListRef.current?.refresh?.();
             else toast?.addError(response?.message || 'Private upload failed');
           });
@@ -1439,7 +1465,7 @@ export default function Page() {
     try {
       const files = await extractDroppedFiles(e.dataTransfer);
       if (files.length > 0) {
-        await uploadFiles(files);
+        await handleFilesUpload(files);
       } else {
         toast?.addError('No files were found in the dropped item');
       }
@@ -1462,8 +1488,8 @@ export default function Page() {
     }
 
     selectedItems.forEach(item => {
-      if (item.type === 'file') downloadFile(item.path, item.name);
-      else if (item.type === 'folder') downloadFolder(item.path, item.name);
+      if (item.type === 'file') (showPrivate ? downloadPrivateFile : downloadFile)(item.path, item.name);
+      else if (item.type === 'folder') downloadFolder(item.path, item.name, showPrivate);
       else return
     });
     toast.addInfo(`Started download of ${selectedItems.length} item${selectedItems.length > 1 ? 's' : ''}`);
@@ -1493,7 +1519,10 @@ export default function Page() {
     if (confirmState.action === 'bulk-delete') {
       try {
         const paths = selectedItems.map(item => item.path);
-        const result = await api.post('/api/files/delete', { paths });
+        const result = await api.post('/api/files/delete', {
+          paths,
+          storage: showPrivate ? 'private' : 'main'
+        });
         if (result.success) {
           toast.addSuccess(`${trashEnabled ? 'Moved to bin' : 'Deleted'} ${paths.length} item${paths.length > 1 ? 's' : ''}`);
           setSelectedItems([]);
@@ -1595,6 +1624,7 @@ export default function Page() {
   }, []);
 
   const handleCloseMobileSpecialPage = () => {
+    lockPrivateDisk();
     setShowSettings(false);
     setShowShares(false);
     setShowSharedWithYou(false);
@@ -1618,6 +1648,40 @@ export default function Page() {
     const selectedFiles = normalizeUploadSelection(files);
 
     if (selectedFiles.length > 0) {
+      if (showPrivate && privateUnlocked) {
+        const uploadPrivateFiles = async () => {
+          const groups = new Map();
+          for (const file of selectedFiles) {
+            const relativePath = normalizeRelativeUploadPath(file.webkitRelativePath || file.__relativePath || file.relativePath || '');
+            const parts = relativePath ? relativePath.split('/') : [];
+            parts.pop();
+            const targetPath = parts.length
+              ? `${privatePath ? `${privatePath}/` : ''}${parts.join('/')}`
+              : privatePath;
+            if (!groups.has(targetPath)) groups.set(targetPath, []);
+            groups.get(targetPath).push(file);
+          }
+
+          for (const [targetPath, groupedFiles] of groups) {
+            const formData = new FormData();
+            formData.append('path', targetPath || '');
+            formData.append('storage', 'private');
+            groupedFiles.forEach((file) => formData.append('files', file));
+            const response = await api.upload('/api/files/upload', formData);
+            if (!response?.success) {
+              throw new Error(response?.message || 'Private upload failed');
+            }
+          }
+
+          fileListRef.current?.refresh?.();
+        };
+
+        uploadPrivateFiles().catch((error) => {
+          toast?.addError(error.message || 'Private upload failed');
+        });
+        return;
+      }
+
       uploadFiles(selectedFiles);
       return;
     }
@@ -1632,7 +1696,7 @@ export default function Page() {
     input.onchange = (event) => {
       const pickedFiles = normalizeUploadSelection(event.target.files);
       if (pickedFiles.length > 0) {
-        uploadFiles(pickedFiles);
+        handleFilesUpload(pickedFiles);
       }
       input.remove();
     };
@@ -1640,6 +1704,16 @@ export default function Page() {
   };
 
   const handleBackNavigation = () => {
+    if (showPrivate && privateUnlocked) {
+      if (!privatePath) {
+        handleCloseMobileSpecialPage();
+      } else {
+        const pathParts = privatePath.split('/');
+        setPrivatePath(pathParts.length === 1 ? '' : pathParts.slice(0, -1).join('/'));
+      }
+      return;
+    }
+
     if (currentPath === undefined || currentPath === '' || currentPath === 'favorites') {
 
       setCurrentPath(undefined);
@@ -1782,6 +1856,7 @@ export default function Page() {
 
       <Layout styleStyle={style.main} loading={loading} user={user} sideNav={true} currentPath={currentPath} onOpenSettings={() => {
         setSettingsInitialSection('profile');
+        lockPrivateDisk();
         setShowSettings(true);
         setShowShares(false);
         setShowSharedWithYou(false);
@@ -1822,6 +1897,7 @@ export default function Page() {
               onViewChange={handleViewChange}
               onRefresh={handleRefresh}
               onShare={(items) => fileListRef.current?.openShareCreate?.(items)}
+              privateMode={showPrivate && privateUnlocked}
               trashEnabled={trashEnabled}
               disabled={controlsDisabled || showSettings || showShares || showSharedWithYou || showAdminUsers || showTrash || (showPrivate && !privateUnlocked) || propertiesState.open}
             />
@@ -1872,7 +1948,10 @@ export default function Page() {
               <div className={style.fileListContainer}>
                 {showSettings ? (
                   <Settings
-                    onClose={() => setShowSettings(false)}
+                    onClose={() => {
+                      lockPrivateDisk();
+                      setShowSettings(false);
+                    }}
                     onThemeChange={handleThemeChange}
                     onViewModeChange={setDesktopViewMode}
                     onSortByChange={setSortBy}
@@ -1943,7 +2022,7 @@ export default function Page() {
                     onRootLoadError={handleStorageRootError}
                     onSelectionChange={handleSelectionChange}
                     onFilesUpload={handleFilesUpload}
-                    onNavigateToFile={setCurrentPath}
+                    onNavigateToFile={showPrivate ? setPrivatePath : setCurrentPath}
                     onProperties={handleProperties}
                     sortBy={sortBy}
                     viewMode={viewMode}
@@ -2043,6 +2122,36 @@ export default function Page() {
                     </span>
                   </div>
                 </div>
+
+                <div
+                  className={style.storageItem}
+                  onClick={handleOpenPrivate}
+                >
+                  <div className={style.storageIcon}>
+                    <LockKeyhole size={25} />
+                  </div>
+                  <div className={style.storageInfo}>
+                    <span className={style.storageName}>Private Storage</span>
+                    <span className={style.storageSize}>Secure folder</span>
+                  </div>
+                </div>
+
+                {trashItemCount > 0 && (
+                  <div
+                    className={style.storageItem}
+                    onClick={handleOpenTrash}
+                  >
+                    <div className={style.storageIcon}>
+                      <Trash2 size={25} />
+                    </div>
+                    <div className={style.storageInfo}>
+                      <span className={style.storageName}>Bin</span>
+                      <span className={style.storageSize}>
+                        {trashItemCount} {trashItemCount === 1 ? 'item' : 'items'} inside
+                      </span>
+                    </div>
+                  </div>
+                )}
 
                 {(favorites.files.length > 0 || favorites.folders.length > 0) && (
                   <div
@@ -2148,7 +2257,10 @@ export default function Page() {
                 <div className={style.mobileFileListContainer}>
                   {showSettings ? (
                     <Settings
-                      onClose={() => setShowSettings(false)}
+                      onClose={() => {
+                        lockPrivateDisk();
+                        setShowSettings(false);
+                      }}
                       onThemeChange={handleThemeChange}
                       onViewModeChange={null}
                       onSortByChange={setSortBy}
@@ -2178,7 +2290,7 @@ export default function Page() {
                         mobile={isMobile}
                         privateMode
                       />
-                    ) : <PrivateDisk ref={privateDiskRef} toast={toast} onUnlocked={() => setPrivateUnlocked(true)} />
+                    ) : <PrivateDisk ref={privateDiskRef} toast={toast} mobile onUnlocked={() => setPrivateUnlocked(true)} />
                   ) : showShares ? (
                     <FileList
                       key="mobile-shares"
@@ -2210,17 +2322,18 @@ export default function Page() {
                       key="mobile-explorer"
                       ref={fileListRef}
                       socket={socket}
-                      currentPath={currentPath}
-                      onFolderDoubleClick={handleFolderDoubleClick}
+                      currentPath={showPrivate ? privatePath : currentPath}
+                      onFolderDoubleClick={showPrivate ? setPrivatePath : handleFolderDoubleClick}
                       onRootLoadError={handleStorageRootError}
                       onSelectionChange={handleSelectionChange}
                       onFilesUpload={handleFilesUpload}
-                      onNavigateToFile={setCurrentPath}
+                      onNavigateToFile={showPrivate ? setPrivatePath : setCurrentPath}
                       onProperties={handleProperties}
                       sortBy={sortBy}
                       viewMode={viewMode}
                       user={user}
                       mobile={isMobile}
+                      privateMode={showPrivate}
                       trashEnabled={trashEnabled}
                     />
                   )}

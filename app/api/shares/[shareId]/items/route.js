@@ -3,6 +3,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import prisma from "@/lib/db";
+import { isPrivateStoragePath } from "@/lib/paths";
 import {
     appendItemsToShareByOwner,
     ensureShareTables,
@@ -23,6 +24,10 @@ function normalizeItems(items = []) {
 async function validateOwnerItems(ownerId, items) {
     const valid = [];
     for (const item of items) {
+        if (isPrivateStoragePath(ownerId, item.path)) {
+            throw new Error("share_private_item_forbidden");
+        }
+
         if (item.type === "folder") {
             const folder = await prisma.folder.findFirst({ where: { ownerId, path: item.path } });
             if (folder) valid.push(item);
@@ -54,7 +59,19 @@ export async function POST(req, { params }) {
             return NextResponse.json({ success: false, code: "share_not_found", message: "Share not found" }, { status: 404 });
         }
 
-        const validatedItems = await validateOwnerItems(session.user.id, items);
+        let validatedItems;
+        try {
+            validatedItems = await validateOwnerItems(session.user.id, items);
+        } catch (error) {
+            if (error.message === "share_private_item_forbidden") {
+                return NextResponse.json({
+                    success: false,
+                    code: "share_private_item_forbidden",
+                    message: "Files and folders in private storage cannot be shared"
+                }, { status: 403 });
+            }
+            throw error;
+        }
         if (!validatedItems.length) {
             return NextResponse.json({ success: false, code: "share_invalid_items", message: "None of the items are valid" }, { status: 400 });
         }

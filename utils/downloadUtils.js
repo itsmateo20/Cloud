@@ -21,7 +21,7 @@ export class DownloadManager {
         return Math.random().toString(36).substr(2, 9) + Date.now().toString(36);
     }
 
-    async downloadFile(filePath, fileName, type = 'file') {
+    async downloadFile(filePath, fileName, type = 'file', privateMode = false) {
         const downloadId = this.generateId();
         let progressTimeout;
         let hasReceivedProgress = false;
@@ -47,7 +47,9 @@ export class DownloadManager {
             };
             window.addEventListener('downloadCancel', handleCancel);
 
-            const url = withBasePath(type === 'folder'
+            const url = withBasePath(privateMode
+                ? `/api/files/download?storage=private&path=${encodeURIComponent(filePath)}`
+                : type === 'folder'
                 ? `/api/files/folder-zip?path=${encodeURIComponent(filePath)}`
                 : `/api/files/download?path=${encodeURIComponent(filePath)}`);
 
@@ -62,7 +64,7 @@ export class DownloadManager {
                 }, 10000);
             };
 
-            if (type === 'folder') {
+            if (type === 'folder' && !privateMode) {
                 startProgressTimeout();
                 const response = await api.raw('GET', url, null, { signal: abortController.signal });
 
@@ -137,7 +139,7 @@ export class DownloadManager {
                 URL.revokeObjectURL(downloadUrl);
 
             } else {
-                const metadataResponse = await api.get(`/api/files/metadata?path=${encodeURIComponent(filePath)}`, {
+                const metadataResponse = privateMode ? null : await api.get(`/api/files/metadata?path=${encodeURIComponent(filePath)}`, {
                     signal: abortController.signal
                 }).catch(() => null);
 
@@ -529,7 +531,7 @@ export class DownloadManager {
         }
     }
 
-    async downloadFolder(folderPath, folderName) {
+    async downloadFolder(folderPath, folderName, privateMode = false) {
         const downloadId = this.generateId();
         let isCompleted = false;
 
@@ -550,7 +552,8 @@ export class DownloadManager {
 
             const response = await api.raw('POST', '/api/files/folder-zip', {
                 folderPath: folderPath,
-                zipName: folderName
+                zipName: folderName,
+                storage: privateMode ? 'private' : 'main'
             }, { signal: abortController.signal });
 
             if (!response.ok) {
@@ -664,10 +667,14 @@ export const downloadFile = (filePath, fileName, chunked = false, preserveDate =
         : downloadManager.downloadFile(filePath, fileName);
 };
 
+export const downloadPrivateFile = (filePath, fileName) => {
+    return downloadManager.downloadFile(filePath, fileName, 'file', true);
+};
+
 export const downloadMultipleFiles = (files, zipName = 'files.zip', preserveDates = true) => {
     return downloadManager.downloadMultipleFilesAsZip(files, zipName, preserveDates);
 };
 
-export const downloadFolder = (folderPath, folderName) => {
-    return downloadManager.downloadFolder(folderPath, folderName);
+export const downloadFolder = (folderPath, folderName, privateMode = false) => {
+    return downloadManager.downloadFolder(folderPath, folderName, privateMode);
 };

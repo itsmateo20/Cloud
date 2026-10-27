@@ -7,7 +7,7 @@ import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
 import NextImage from 'next/image';
 import SoftLoading from '@/components/SoftLoading';
 import { CodeEditor } from './CodeEditor';
-import { downloadFile } from '@/utils/downloadUtils';
+import { downloadFile, downloadPrivateFile } from '@/utils/downloadUtils';
 import { api } from '@/utils/api';
 import { withBasePath } from '@/lib/basePath';
 import { useIsMobile } from '@/utils/useIsMobile';
@@ -1092,7 +1092,9 @@ export function FileViewer({
     }, [imageScale]);
 
     const handleDownload = () => {
-        if (currentFile) downloadFile(currentFile.path, currentFile.name);
+        if (currentFile) {
+            (currentFile.privateMode ? downloadPrivateFile : downloadFile)(currentFile.path, currentFile.name);
+        }
     };
 
     const handlePrint = () => {

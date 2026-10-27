@@ -146,6 +146,38 @@ button.item:hover {
     justify-content: center;
 }
 
+.mobileContent {
+    padding: 20px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.mobileSetupCard {
+    width: 100%;
+    max-width: 380px;
+    padding: 22px 18px;
+    border-radius: 16px;
+    gap: 14px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+
+.mobileSetupCard h4 {
+    font-size: 19px;
+}
+
+.mobileSetupCard .input,
+.mobileSetupCard .select,
+.mobileSetupCard .primaryButton {
+    width: 100%;
+    min-height: 44px;
+    box-sizing: border-box;
+}
+
+.mobileSetupCard .primaryButton {
+    justify-content: center;
+}
+
 @media (max-width: 900px) {
     .header {
         padding: 16px 20px;

@@ -6,7 +6,8 @@ import path from "path";
 import { getSession } from "@/lib/session";
 import { verifyFolderOwnership } from "@/lib/folderAuth";
 import prisma from "@/lib/db";
-import { resolveUserUploadPath } from "@/lib/paths";
+import { getUserStoragePath, resolvePathWithinBase, resolveUserUploadPath } from "@/lib/paths";
+import { isPrivateAccess } from "@/lib/privateAccess";
 import { moveToTrash } from "@/lib/trash";
 
 export async function POST(req) {
@@ -14,10 +15,12 @@ export async function POST(req) {
         const session = await getSession();
         if (!session || !session.success) return NextResponse.json({ success: false, code: "unauthorized" }, { status: 401 });
 
-        const { paths } = await req.json();
+        const { paths, storage = "main" } = await req.json();
         if (!paths || !Array.isArray(paths) || paths.length === 0) return NextResponse.json({ success: false, code: "missing_parameters", message: "paths array is required" }, { status: 400 });
+        if (storage !== "main" && storage !== "private") return NextResponse.json({ success: false, code: "invalid_storage" }, { status: 400 });
 
         const { id } = session.user;
+        if (storage === "private" && !await isPrivateAccess(id)) return NextResponse.json({ success: false, code: "private_locked" }, { status: 403 });
         const settings = await prisma.userSettings.findUnique({ where: { userId: id }, select: { trashEnabled: true } });
 
         const folderVerification = await verifyFolderOwnership(id);
@@ -26,7 +29,9 @@ export async function POST(req) {
         const deletedItems = [];
 
         for (const itemPath of paths) {
-            const resolvedPath = resolveUserUploadPath(id, itemPath);
+            const resolvedPath = storage === "private"
+                ? resolvePathWithinBase(getUserStoragePath(id, storage), itemPath)
+                : resolveUserUploadPath(id, itemPath);
             if (!resolvedPath.isInside) return NextResponse.json({ success: false, code: "explorer_invalid_path" }, { status: 400 });
 
             const fullPath = resolvedPath.resolvedPath;
@@ -35,7 +40,7 @@ export async function POST(req) {
             const stats = await fs.stat(fullPath);
 
             if (settings?.trashEnabled !== false) {
-                await moveToTrash(id, safeItemPath);
+                await moveToTrash(id, safeItemPath, storage);
                 deletedItems.push({ name: path.basename(safeItemPath), path: safeItemPath, type: stats.isDirectory() ? 'folder' : 'file' });
                 try {
                     global.io?.to(`user:${id}`).emit("trash-updated", { userId: id, action: "move", path: safeItemPath });

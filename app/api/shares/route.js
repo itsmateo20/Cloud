@@ -3,6 +3,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import prisma from "@/lib/db";
+import { isPrivateStoragePath } from "@/lib/paths";
 import {
     createShare,
     ensureShareTables,
@@ -53,6 +54,14 @@ export async function POST(req) {
 
         const validatedItems = [];
         for (const item of items) {
+            if (isPrivateStoragePath(session.user.id, item.path)) {
+                return NextResponse.json({
+                    success: false,
+                    code: "share_private_item_forbidden",
+                    message: "Files and folders in private storage cannot be shared"
+                }, { status: 403 });
+            }
+
             if (item.type === "folder") {
                 const folder = await prisma.folder.findFirst({ where: { ownerId: session.user.id, path: item.path } });
                 if (!folder) {

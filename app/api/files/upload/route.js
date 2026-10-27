@@ -10,6 +10,8 @@ import { verifyFolderOwnership } from "@/lib/folderAuth";
 import { preserveFileMetadata } from "@/utils/fileMetadata.server";
 import { normalizeRelativeUploadPath } from "@/utils/uploadPath";
 import { ensureUserUploadPath, resolvePathWithinBase } from "@/lib/paths";
+import { getUserStoragePath } from "@/lib/paths";
+import { isPrivateAccess } from "@/lib/privateAccess";
 import { Readable } from "stream";
 import { pipeline } from "stream/promises";
 
@@ -27,6 +29,13 @@ export async function POST(req) {
 
     try {
         const formData = await req.formData();
+        const storage = String(formData.get("storage") || "main");
+        if (storage !== "main" && storage !== "private") {
+            return NextResponse.json({ success: false, code: "invalid_storage" }, { status: 400 });
+        }
+        if (storage === "private" && !await isPrivateAccess(id)) {
+            return NextResponse.json({ success: false, code: "private_locked" }, { status: 403 });
+        }
         const targetPath = normalizeRelativeUploadPath(String(formData.get("path") || ""));
         const files = formData.getAll("files");
         const metadataString = formData.get("metadata");
@@ -51,7 +60,7 @@ export async function POST(req) {
             }, { status: 500 });
         }
 
-        const userFolder = path.resolve(pathResult.path);
+        const userFolder = path.resolve(getUserStoragePath(id, storage));
         const targetFolderResult = resolvePathWithinBase(userFolder, targetPath);
         if (!targetFolderResult.isInside) {
             return NextResponse.json({ success: false, code: "explorer_invalid_path" }, { status: 400 });

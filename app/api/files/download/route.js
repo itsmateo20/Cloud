@@ -5,6 +5,8 @@ import prisma from "@/lib/db";
 import { verifyFolderOwnership } from "@/lib/folderAuth";
 import { getMimeType, shouldForceDownload } from "@/lib/mimeTypes";
 import { resolveUserUploadPath } from "@/lib/paths";
+import { getUserStoragePath, normalizeStorageRelativePath, resolvePathWithinBase } from "@/lib/paths";
+import { isPrivateAccess } from "@/lib/privateAccess";
 import { NextResponse } from "next/server";
 import fs from "fs/promises";
 import { createReadStream } from "fs";
@@ -17,6 +19,7 @@ export async function GET(req) {
         const url = new URL(req.url);
         const fileId = url.searchParams.get('fileId');
         const filePath = url.searchParams.get('path') || '';
+        const storage = url.searchParams.get('storage') || 'main';
 
         const session = await getSession();
         if (!session) {
@@ -28,6 +31,12 @@ export async function GET(req) {
         }
 
         const userId = session.user.id;
+        if (storage !== 'main' && storage !== 'private') {
+            return NextResponse.json({ success: false, code: 'invalid_storage', message: 'Invalid storage' }, { status: 400 });
+        }
+        if (storage === 'private' && !await isPrivateAccess(userId)) {
+            return NextResponse.json({ success: false, code: 'private_locked', message: 'Private storage is locked' }, { status: 403 });
+        }
         const folderVerification = await verifyFolderOwnership(userId);
         if (!folderVerification.isValid) {
             return NextResponse.json({
@@ -45,7 +54,10 @@ export async function GET(req) {
             }, { status: 400 });
         }
 
-        const resolvedPath = resolveUserUploadPath(userId, filePath);
+        const storageRelativePath = normalizeStorageRelativePath(filePath, storage);
+        const resolvedPath = storage === 'private'
+            ? resolvePathWithinBase(getUserStoragePath(userId, storage), storageRelativePath)
+            : resolveUserUploadPath(userId, filePath);
         if (!resolvedPath.isInside) {
             return NextResponse.json({
                 success: false,

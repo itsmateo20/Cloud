@@ -4,7 +4,7 @@
 import React, { useRef, useState, useEffect, forwardRef, useImperativeHandle, useCallback, useMemo } from "react";
 import { api } from "@/utils/api";
 import { withBasePath } from "@/lib/basePath";
-import { downloadFile, downloadFolder } from "@/utils/downloadUtils";
+import { downloadFile, downloadFolder, downloadPrivateFile } from "@/utils/downloadUtils";
 import styles from "./FileList.module.css";
 import ShareManager from "./ShareManager";
 import SoftLoading from "@/components/SoftLoading";
@@ -592,6 +592,10 @@ const FileList = forwardRef(({
     }, [toast]);
 
     const openShareCreate = async (items) => {
+        if (privateMode) {
+            toast?.addError('Sharing is disabled for private storage');
+            return;
+        }
         const selected = (items && items.length ? items : [...folders, ...files].filter((item) => selectedItems.has(item.path)))
             .map((item) => ({ name: item.name, path: item.path, type: item.type === 'folder' ? 'folder' : 'file' }));
 
@@ -1029,7 +1033,9 @@ const FileList = forwardRef(({
                     newName: newName
                 };
 
-                const response = await api.post('/api/files/rename', requestData);
+                const response = await api.post(privateMode ? '/api/user/private/files' : '/api/files/rename', privateMode
+                    ? { action: 'rename', ...requestData }
+                    : requestData);
 
                 if (response.success) {
                     if (item.isFavorited) {
@@ -1061,7 +1067,9 @@ const FileList = forwardRef(({
                         newName: finalName
                     };
 
-                    const response = await api.post('/api/files/rename', requestData);
+                    const response = await api.post(privateMode ? '/api/user/private/files' : '/api/files/rename', privateMode
+                        ? { action: 'rename', ...requestData }
+                        : requestData);
                     if (response.success && item.isFavorited) {
                         const newPath = item.path.replace(item.name, finalName);
                         await api.post('/api/user/favorites', {
@@ -1091,6 +1099,10 @@ const FileList = forwardRef(({
     };
 
     const generateQRCode = async (type, items) => {
+        if (privateMode) {
+            toast?.addError('Sharing is disabled for private storage');
+            return;
+        }
         setQrModal({
             visible: true,
             type,
@@ -1456,7 +1468,7 @@ const FileList = forwardRef(({
             if (isViewableFile(item.name)) {
                 openFileViewer(item);
             } else {
-                downloadFile(item.path, item.name);
+                (privateMode ? downloadPrivateFile : downloadFile)(item.path, item.name);
             }
             return;
         }
@@ -1804,7 +1816,10 @@ const FileList = forwardRef(({
                 case 'fileViewer-delete': {
                     const file = context;
                     const requestData = { paths: [file.path] };
-                    const response = await api.post('/api/files/delete', requestData);
+                    const response = await api.post('/api/files/delete', {
+                        ...requestData,
+                        storage: privateMode ? 'private' : 'main'
+                    });
                     if (response.success) {
                         setFileViewer(prev => ({ ...prev, isOpen: false }));
                         refreshContent();
@@ -1817,7 +1832,10 @@ const FileList = forwardRef(({
                 case 'context-delete': {
                     const items = context;
                     const requestData = { paths: items.map(i => i.path) };
-                    const response = await api.post('/api/files/delete', requestData);
+                    const response = await api.post('/api/files/delete', {
+                        ...requestData,
+                        storage: privateMode ? 'private' : 'main'
+                    });
                     if (response.success) {
                         setSelectedItems(new Set());
                         setLastSelectedItem(null);
@@ -1829,8 +1847,8 @@ const FileList = forwardRef(({
                 case 'context-download-mode': {
                     const items = context;
                     items.forEach(item => {
-                        if (item.type === 'file') downloadFile(item.path, item.name);
-                        else if (item.type === 'folder') downloadFolder(item.path, item.name);
+                        if (item.type === 'file') (privateMode ? downloadPrivateFile : downloadFile)(item.path, item.name);
+                        else if (item.type === 'folder') downloadFolder(item.path, item.name, privateMode);
                     });
                     break;
                 }
@@ -1967,7 +1985,7 @@ const FileList = forwardRef(({
         if (isViewableFile(file.name)) {
             openFileViewer(file);
         } else {
-            downloadFile(file.path, file.name);
+            (privateMode ? downloadPrivateFile : downloadFile)(file.path, file.name);
         }
     };
 
@@ -1976,13 +1994,13 @@ const FileList = forwardRef(({
             case 'open':
                 if (items[0].type === 'folder') handleFolderDoubleClick(items[0]);
                 else if (isViewableFile(items[0].name)) openFileViewer(items[0]);
-                else downloadFile(items[0].path, items[0].name);
+                else (privateMode ? downloadPrivateFile : downloadFile)(items[0].path, items[0].name);
                 break;
 
             case 'download': {
                 items.forEach(item => {
-                    if (item.type === 'file') downloadFile(item.path, item.name);
-                    else if (item.type === 'folder') downloadFolder(item.path, item.name);
+                    if (item.type === 'file') (privateMode ? downloadPrivateFile : downloadFile)(item.path, item.name);
+                    else if (item.type === 'folder') downloadFolder(item.path, item.name, privateMode);
                 });
                 break;
             }
@@ -2731,6 +2749,7 @@ const FileList = forwardRef(({
                     currentPath={currentPath}
                     mobile={mobile}
                     trashEnabled={trashEnabled}
+                    privateMode={privateMode}
                     onClose={() => setContextMenu(prev => ({ ...prev, visible: false }))}
                 />
             )}

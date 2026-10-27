@@ -50,6 +50,7 @@ const Controls = ({
     onViewChange,
     onRefresh,
     onShare,
+    privateMode = false,
     trashEnabled = true,
     disabled = false
 }) => {
@@ -140,7 +141,7 @@ const Controls = ({
         <div className={styles.controls}>
             <div className={styles.section}>
                 <div className={styles.dropdown} ref={newDropdownRef}>
-                    <button
+                    {!privateMode && <button
                         className={`${styles.button} ${styles.newButton}`}
                         onClick={() => setShowNewDropdown(!showNewDropdown)}
                         disabled={isSpecialPath || disabled}
@@ -149,10 +150,10 @@ const Controls = ({
                         <span className={styles.icon}><Plus size={16} /></span>
                         <span className={styles.label}>New</span>
                         <span className={styles.arrow}><ChevronDown size={12} /></span>
-                    </button>
+                    </button>}
                     {showNewDropdown && !isSpecialPath && !disabled && (
                         <div className={styles.dropdownMenu}>
-                            <button
+                            {!privateMode && <button
                                 className={styles.dropdownItem}
                                 onClick={() => {
                                     onOpenNewItemModal?.('folder');
@@ -161,8 +162,8 @@ const Controls = ({
                             >
                                 <span className={styles.dropdownIcon}><FolderPlus size={16} /></span>
                                 Folder
-                            </button>
-                            <button
+                            </button>}
+                            {!privateMode && <button
                                 className={styles.dropdownItem}
                                 onClick={() => {
                                     onOpenNewItemModal?.('file');
@@ -171,7 +172,7 @@ const Controls = ({
                             >
                                 <span className={styles.dropdownIcon}><FileIcon size={16} /></span>
                                 File
-                            </button>
+                            </button>}
                             <button
                                 className={styles.dropdownItem}
                                 onClick={() => {

@@ -8,7 +8,8 @@ import { createReadStream } from "fs";
 import path from "path";
 import { ZipArchive } from "archiver";
 import sanitizeFilename from "sanitize-filename";
-import { resolveUserUploadPath } from "@/lib/paths";
+import { getUserStoragePath, resolvePathWithinBase, resolveUserUploadPath } from "@/lib/paths";
+import { isPrivateAccess } from "@/lib/privateAccess";
 
 async function getAllFilesInDirectory(dirPath, basePath = '') {
     const files = [];
@@ -63,7 +64,13 @@ export async function POST(req) {
         }
 
         const body = await req.json();
-        const { folderPath, zipName } = body;
+        const { folderPath, zipName, storage = 'main' } = body;
+        if (storage !== 'main' && storage !== 'private') {
+            return NextResponse.json({ success: false, code: 'invalid_storage' }, { status: 400 });
+        }
+        if (storage === 'private' && !await isPrivateAccess(userId)) {
+            return NextResponse.json({ success: false, code: 'private_locked' }, { status: 403 });
+        }
 
         if (!folderPath) {
             return NextResponse.json({
@@ -73,7 +80,9 @@ export async function POST(req) {
             }, { status: 400 });
         }
 
-        const targetFolderResult = resolveUserUploadPath(userId, folderPath);
+        const targetFolderResult = storage === 'private'
+            ? resolvePathWithinBase(getUserStoragePath(userId, storage), folderPath)
+            : resolveUserUploadPath(userId, folderPath);
         if (!targetFolderResult.isInside) {
             return NextResponse.json({
                 success: false,

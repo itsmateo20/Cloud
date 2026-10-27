@@ -7,7 +7,8 @@ import { withBasePath } from "@/lib/basePath";
 import SoftLoading from "@/components/SoftLoading";
 import styles from "./PrivateDisk.module.css";
 
-const PrivateDisk = forwardRef(function PrivateDisk({ toast, onUnlocked }, ref) {
+const PrivateDisk = forwardRef(function PrivateDisk({ toast, onUnlocked, mobile = false }, ref) {
+    const diskName = mobile ? "Private Storage" : "Private Disk";
     const [status, setStatus] = useState(null);
     const [unlockType, setUnlockType] = useState("pin");
     const [secret, setSecret] = useState("");
@@ -26,7 +27,7 @@ const PrivateDisk = forwardRef(function PrivateDisk({ toast, onUnlocked }, ref) 
                 setUnlockType(response.type);
             }
         } else {
-            setError(response?.message || "Failed to load Private Disk");
+            setError(response?.message || `Failed to load ${diskName}`);
         }
         setLoading(false);
     };
@@ -34,7 +35,7 @@ const PrivateDisk = forwardRef(function PrivateDisk({ toast, onUnlocked }, ref) 
     const loadFiles = async (folderPath = currentPath) => {
         const response = await api.get(`/api/user/private/files?path=${encodeURIComponent(folderPath)}`);
         if (response?.success) setItems(response);
-        else setError(response?.message || "Private Disk is locked");
+        else setError(response?.message || `${diskName} is locked`);
     };
 
     useEffect(() => { loadStatus(); }, []);
@@ -58,23 +59,29 @@ const PrivateDisk = forwardRef(function PrivateDisk({ toast, onUnlocked }, ref) 
         setError("");
         const response = await api.post("/api/user/private", { action, type: unlockType, secret });
         if (!response?.success) {
-            setError(response?.message || "Unable to unlock Private Disk");
+            setError(response?.message || `Unable to unlock ${diskName}`);
             return;
         }
 
         setSecret("");
         setStatus({ configured: true, unlocked: true, type: unlockType });
-        toast?.addSuccess(action === "setup" ? "Private Disk created" : "Private Disk unlocked");
+        toast?.addSuccess(action === "setup" ? `${diskName} created` : `${diskName} unlocked`);
     };
 
     if (loading) return <div className={styles.loading}><SoftLoading /></div>;
     if (status?.unlocked) return null;
 
     if (!status?.unlocked) return (
-        <div className={styles.content}>
-            <div className={styles.setupCard}>
+        <div className={`${styles.content} ${mobile ? styles.mobileContent : ""}`}>
+            <form
+                className={`${styles.setupCard} ${mobile ? styles.mobileSetupCard : ""}`}
+                onSubmit={(event) => {
+                    event.preventDefault();
+                    unlock(status?.configured ? "unlock" : "setup");
+                }}
+            >
                 <LockKeyhole size={28} />
-                <h4>{status?.configured ? "Unlock Private Disk" : "Set up Private Disk"}</h4>
+                <h4>{status?.configured ? `Unlock ${diskName}` : `Set up ${diskName}`}</h4>
                 <p className={styles.description}>
                     {status?.configured
                         ? `Enter your unlock ${unlockType} to view this private folder.`
@@ -101,24 +108,24 @@ const PrivateDisk = forwardRef(function PrivateDisk({ toast, onUnlocked }, ref) 
                     placeholder={unlockType === "pin" ? "PIN" : "Password"}
                 />
                 {error && <p className={styles.error}>{error}</p>}
-                <button type="button" className={styles.primaryButton} onClick={() => unlock(status?.configured ? "unlock" : "setup")}>
-                    <KeyRound size={15} /> {status?.configured ? "Unlock" : "Create Private Disk"}
+                <button type="submit" className={styles.primaryButton}>
+                    <KeyRound size={15} /> {status?.configured ? "Unlock" : `Create ${diskName}`}
                 </button>
-            </div>
+            </form>
         </div>
     );
 
     return (
         <div className={styles.privateDisk}>
             <div className={styles.header}>
-                <h3><LockOpen size={20} /> Private Disk{currentPath ? ` / ${currentPath}` : ""}</h3>
+                <h3><LockOpen size={20} /> {diskName}{currentPath ? ` / ${currentPath}` : ""}</h3>
             </div>
             <div className={styles.content}>
                 <input ref={uploadInputRef} type="file" multiple hidden onChange={uploadFiles} />
                 {error && <p className={styles.error}>{error}</p>}
                 {(items?.folders || []).map((item) => <button type="button" key={item.path} className={styles.item} onClick={() => setCurrentPath(item.path)}><FolderClosed size={18} /><span className={styles.itemName}>{item.name}</span></button>)}
                 {(items?.files || []).map((item) => <div key={item.path} className={styles.item}><FileText size={18} /><span className={styles.itemName}>{item.name}</span><span className={styles.itemMeta}>{item.size} bytes</span></div>)}
-                {!items?.folders?.length && !items?.files?.length && <p className={styles.empty}>Private Disk is empty.</p>}
+                {!items?.folders?.length && !items?.files?.length && <p className={styles.empty}>{diskName} is empty.</p>}
             </div>
         </div>
     );
