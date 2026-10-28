@@ -18,7 +18,9 @@ export async function POST(req) {
 
         let session;
         if (type === "google" && response.user?.googleEmail) {
-            session = await createSession({ id: response.user.id, email: response.user.email, googleEmail: response.user?.googleEmail, provider: response.user.provider }, req);
+            session = await createSession({ id: response.user.id, email: response.user.email, googleEmail: response.user.googleEmail, provider: response.user.provider }, req);
+        } else if (type === "github" && response.user?.githubEmail) {
+            session = await createSession({ id: response.user.id, email: response.user.email, githubEmail: response.user.githubEmail, provider: response.user.provider }, req);
         } else {
             session = await createSession({ id: response.user.id, email: response.user.email, provider: response.user.provider }, req);
         }

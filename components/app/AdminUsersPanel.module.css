@@ -195,6 +195,37 @@
     accent-color: var(--accent-color);
 }
 
+.providerSection {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 14px 0;
+    border-top: 1px solid var(--border-color);
+}
+
+.providerHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.providerHeader h5 {
+    margin: 0;
+    font-size: 15px;
+}
+
+.providerFields {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.disabledInput {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
 .card select,
 .card input {
     background: var(--background);
@@ -256,6 +287,10 @@
         flex-direction: column;
         align-items: flex-start;
         gap: 10px;
+    }
+
+    .providerFields {
+        grid-template-columns: 1fr;
     }
 
     .headerActions {

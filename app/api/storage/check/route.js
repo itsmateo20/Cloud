@@ -14,23 +14,20 @@ export async function GET() {
             return NextResponse.json({
                 success: false,
                 code: 'storage_root_not_directory',
-                message: `The upload folder configured in .env is not a directory: ${uploadBasePath}`,
-                uploadBasePath
+                message: `The upload folder configured in .env is not a directory`
             }, { status: 500 });
         }
 
         await fs.access(uploadBasePath);
 
         return NextResponse.json({
-            success: true,
-            uploadBasePath
+            success: true
         }, { status: 200 });
     } catch (error) {
         return NextResponse.json({
             success: false,
             code: 'storage_root_missing',
-            message: `The upload folder configured in .env could not be found or accessed: ${uploadBasePath}`,
-            uploadBasePath,
+            message: `The upload folder configured in .env could not be found or accessed`,
             error: error.message
         }, { status: 500 });
     }

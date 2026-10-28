@@ -3,9 +3,14 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { getSiteUrl } from "@/lib/getSiteUrl";
+import { getOAuthProviderConfig } from "@/lib/oauthProviders";
 import crypto from "crypto";
 
 export async function GET(req) {
+    const config = await getOAuthProviderConfig("google");
+    if (!config?.enabled) return NextResponse.redirect(`${await getSiteUrl()}/login?error=provider_disabled`);
+    if (!config.clientId || !config.clientSecret) return NextResponse.redirect(`${await getSiteUrl()}/login?error=provider_not_configured`);
+
     const { searchParams } = new URL(req.url);
     const type = searchParams.get("type");
 
@@ -13,8 +18,8 @@ export async function GET(req) {
 
     const { google } = await import("googleapis");
     const oauth2Client = new google.auth.OAuth2(
-        process.env.GOOGLE_CLIENT_ID,
-        process.env.GOOGLE_CLIENT_SECRET,
+        config.clientId,
+        config.clientSecret,
         siteUrl + "/api/auth/google/callback"
     );
 

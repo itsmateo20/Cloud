@@ -1,17 +1,15 @@
 // components/authentication/GoogleAuth.js
 "use client";
 
-import style from "./GoogleAuth.module.css";
+import style from "./ThirdPartyAuthStyle.module.css";
 
 import Image from "next/image";
 import { withBasePath } from "@/lib/basePath";
 
-export function GoogleAuth({ auth, type }) {
-    const googleAuth = process.env.NEXT_PUBLIC_GOOGLE_AUTH === "true";
+export function GoogleAuth({ auth, type, enabled = true }) {
 
-    if (googleAuth) return (
+    if (enabled) return (
         <div className={style.googleAuth}>
-            <h2 className={style.or}>or</h2>
             <button type="button" className={style.gsiMaterialButton} onClick={() => auth(type)}>
                 <div className={style.gsiMaterialButtonState}></div>
                 <div className={style.gsiMaterialButtonContentWrapper}>
@@ -22,8 +20,5 @@ export function GoogleAuth({ auth, type }) {
                 </div>
             </button>
         </div>
-    )
-    else return (
-        <div style={{ marginTop: "80px" }} />
     )
 }

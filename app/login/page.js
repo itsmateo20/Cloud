@@ -13,25 +13,30 @@ import Link from "next/link";
 
 import Layout from "@/components/Layout";
 import { GoogleAuth } from "@/components/authentication/GoogleAuth";
+import { GithubAuth } from "@/components/authentication/GithubAuth";
 import SoftLoading from "@/components/SoftLoading";
 import { useIsMobile } from "@/utils/useIsMobile";
 
 import { getError } from "@/public/error/errors";
 
 export default function Page() {
-    const { loading, softLoading, user, login, authWithGoogle } = useAuth();
+    const { loading, softLoading, user, login, authWithGoogle, authWithGithub } = useAuth();
     const isMobile = useIsMobile();
 
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [error, setError] = useState("");
     const [signupEnabled, setSignupEnabled] = useState(true);
+    const [authProviders, setAuthProviders] = useState({ google: true, github: true });
 
     const [isVisible, setIsVisible] = useState(false);
 
     useEffect(() => {
         api.get("/api/auth/bootstrap-status").then((response) => {
-            if (response?.success) setSignupEnabled(response.signupEnabled);
+            if (response?.success) {
+                setSignupEnabled(response.signupEnabled);
+                setAuthProviders({ google: response.googleAuthEnabled !== false, github: response.githubAuthEnabled !== false });
+            }
         });
     }, []);
 
@@ -131,7 +136,17 @@ export default function Page() {
                     </button>
                 </fieldset>
 
-                <GoogleAuth auth={authWithGoogle} type="login" />
+                {authProviders.google || authProviders.github ? (
+                    <>
+                        <h2 className={style.or}>or</h2>
+                        <div className={style.thirdPartyAuth}>
+                            <GoogleAuth auth={authWithGoogle} type="login" enabled={authProviders.google} />
+                            <GithubAuth auth={authWithGithub} type="login" enabled={authProviders.github} />
+                        </div>
+                    </>
+                ) : (
+                    <div style={{ marginTop: "80px" }} />
+                )}
 
                 <button type="submit" className={style.loginButton} disabled={softLoading}>{softLoading ? <SoftLoading /> : "Log In"}</button>
             </form>

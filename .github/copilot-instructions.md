@@ -80,7 +80,7 @@ npx prisma studio                          # Database GUI
 bun install  # or npm install
 
 # Environment setup
-# Create .env file with DATABASE_URL, NEXTAUTH_SECRET, GOOGLE_CLIENT_ID/SECRET
+# Create .env file with DATABASE_URL, AUTH_SECRET, and the retained runtime settings
 
 # Start development
 bun dev    # Full stack with Socket.IO

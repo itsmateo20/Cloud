@@ -160,6 +160,22 @@
     background-color: tr;
 }
 
+.or {
+    color: var(--alt-text-2);
+    font-weight: 800;
+    font-size: clamp(14px, 2vw, 16px);
+    margin: clamp(5px, 2vw, 15px) 0;
+    text-align: center;
+    user-select: none;
+}
+
+.thirdPartyAuth {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(10px, 3vw, 15px);
+}
+
 .loginButton {
     background-color: var(--btn-background);
     border: none;

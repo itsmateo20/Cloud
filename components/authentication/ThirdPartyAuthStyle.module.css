@@ -1,19 +1,9 @@
 /* components/authentication/googleAuthButton.module.css */
 
 .googleAuth {
-    width: 100%;
     display: flex;
     flex-direction: column;
     align-items: center;
-}
-
-.or {
-    color: var(--alt-text-2);
-    font-weight: 800;
-    font-size: clamp(14px, 2vw, 16px);
-    margin: clamp(5px, 2vw, 15px) 0;
-    text-align: center;
-    user-select: none;
 }
 
 .gsiMaterialButton {
@@ -57,6 +47,14 @@
     width: 100%;
     margin: 0;
     padding: 9.5px;
+}
+
+.gsiMaterialButton .gsiMaterialButtonIconGithub {
+    height: 100%;
+    min-width: 20px;
+    width: 100%;
+    margin: 0;
+    padding: 9px;
 }
 
 .gsiMaterialButton .gsiMaterialButtonContentWrapper {
@@ -360,6 +358,10 @@
     .gsiMaterialButton .gsiMaterialButtonIcon {
         padding: 10.5px;
     }
+
+    .gsiMaterialButton .gsiMaterialButtonIconGithub {
+        padding: 10px;
+    }
 }
 
 @media (max-height: 720px) {
@@ -371,5 +373,9 @@
 
     .gsiMaterialButton .gsiMaterialButtonIcon {
         padding: 8px;
+    }
+
+    .gsiMaterialButton .gsiMaterialButtonIconGithub {
+        padding: 7.5px;
     }
 }

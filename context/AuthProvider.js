@@ -21,8 +21,10 @@ export const AuthProvider = ({ children, locked = true }) => {
     const staticPublicRoutes = [
         "/login",
         "/login/google",
+        "/login/github",
         "/signup",
         "/signup/google",
+        "/signup/github",
         "/logged-out",
         "/account-disabled",
     ];
@@ -195,11 +197,12 @@ export const AuthProvider = ({ children, locked = true }) => {
         }
     };
 
-    const linkAccount = async (googleEmail, email, password, type) => {
+    const linkAccount = async (providerEmail, email, password, type) => {
         setSoftLoading(true);
         try {
             const data = await api.post("/api/auth/link", {
-                googleEmail,
+                providerEmail,
+                googleEmail: type === "google" ? providerEmail : undefined,
                 email,
                 password,
                 type,
@@ -219,6 +222,10 @@ export const AuthProvider = ({ children, locked = true }) => {
         window.location.href = withBasePath(`/api/auth/google/auth?type=${type}`);
     };
 
+    const authWithGithub = (type) => {
+        window.location.href = withBasePath(`/api/auth/github/auth?type=${type}`);
+    };
+
     return (
         <AuthContext.Provider
             value={{
@@ -230,7 +237,8 @@ export const AuthProvider = ({ children, locked = true }) => {
                 signupwiththirdparty,
                 signout,
                 linkAccount,
-                authWithGoogle
+                authWithGoogle,
+                authWithGithub
             }}
         >
             {children}

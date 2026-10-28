@@ -9,6 +9,7 @@ import { useAuth } from "@/context/AuthProvider";
 import styles from "./AdminUsersPanel.module.css";
 import shareStyles from "./ShareManager.module.css";
 import ConfirmModal from "./ConfirmModal";
+import { useToast } from "./ToastProvider";
 import { Shield, Users, KeyRound, FolderOpen, Save, RefreshCw, ArrowLeftRight, UserPlus, Trash2, Ban, Share2, Link2, Pencil, MoreVertical, Plus, Minus } from "lucide-react";
 
 const defaultSettings = {
@@ -23,6 +24,7 @@ const defaultSettings = {
 
 export default function AdminUsersPanel({ onClose, openToken }) {
     const { user } = useAuth();
+    const { addSuccess, addError } = useToast();
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
@@ -32,8 +34,17 @@ export default function AdminUsersPanel({ onClose, openToken }) {
     const [savingSettings, setSavingSettings] = useState(false);
     const [savingPassword, setSavingPassword] = useState(false);
     const [impersonating, setImpersonating] = useState(false);
-    const [message, setMessage] = useState("");
     const [signupEnabled, setSignupEnabled] = useState(true);
+    const [authProviders, setAuthProviders] = useState({ google: true, github: true });
+    const [oauthSettings, setOauthSettings] = useState({
+        googleClientId: "",
+        googleClientSecret: "",
+        githubClientId: "",
+        githubClientSecret: "",
+        googleClientSecretConfigured: false,
+        githubClientSecretConfigured: false
+    });
+    const [savingOAuth, setSavingOAuth] = useState(false);
     const [newUserEmail, setNewUserEmail] = useState("");
     const [newUserPassword, setNewUserPassword] = useState("");
     const [showCreateUser, setShowCreateUser] = useState(false);
@@ -63,6 +74,8 @@ export default function AdminUsersPanel({ onClose, openToken }) {
         setShowCreateUser(false);
         setShowRemoveConfirm(false);
         setShowRemoveShareConfirm(false);
+        setAuthProviders({ google: true, github: true });
+        setOauthSettings((current) => ({ ...current, googleClientSecret: "", githubClientSecret: "" }));
     }, [openToken]);
 
     const loadUsers = async () => {
@@ -99,7 +112,21 @@ export default function AdminUsersPanel({ onClose, openToken }) {
     useEffect(() => {
         loadUsers();
         api.get("/api/admin/settings").then((response) => {
-            if (response?.success) setSignupEnabled(response.settings.signupEnabled);
+            if (response?.success) {
+                setSignupEnabled(response.settings.signupEnabled);
+                setAuthProviders({
+                    google: response.settings.googleAuthEnabled !== false,
+                    github: response.settings.githubAuthEnabled !== false
+                });
+                setOauthSettings({
+                    googleClientId: response.settings.googleClientId || "",
+                    googleClientSecret: "",
+                    githubClientId: response.settings.githubClientId || "",
+                    githubClientSecret: "",
+                    googleClientSecretConfigured: response.settings.googleClientSecretConfigured,
+                    githubClientSecretConfigured: response.settings.githubClientSecretConfigured
+                });
+            }
         });
     }, []);
 
@@ -109,8 +136,8 @@ export default function AdminUsersPanel({ onClose, openToken }) {
 
     const createUser = async () => {
         const response = await api.post("/api/admin/users", { email: newUserEmail, password: newUserPassword });
-        if (!response?.success) return setMessage(response?.message || "Failed to create user");
-        setMessage("User created");
+        if (!response?.success) return addError(response?.message || "Failed to create user");
+        addSuccess("User created");
         setNewUserEmail("");
         setNewUserPassword("");
         setShowCreateUser(false);
@@ -120,25 +147,47 @@ export default function AdminUsersPanel({ onClose, openToken }) {
     const updateUser = async (changes) => {
         if (!selectedUser) return;
         const response = await api.patch(`/api/admin/users/${selectedUser.id}`, changes);
-        if (!response?.success) return setMessage(response?.message || "Failed to update user");
-        setMessage("User updated");
+        if (!response?.success) return addError(response?.message || "Failed to update user");
+        addSuccess("User updated");
         loadUsers();
     };
 
     const removeUser = async () => {
         if (!selectedUser) return;
         const response = await api.delete(`/api/admin/users/${selectedUser.id}`);
-        if (!response?.success) return setMessage(response?.message || "Failed to remove user");
+        if (!response?.success) return addError(response?.message || "Failed to remove user");
         setSelectedUserId(null);
         setShowRemoveConfirm(false);
-        setMessage("User removed");
+        addSuccess("User removed");
         loadUsers();
     };
 
     const updateSignupPolicy = async (enabled) => {
         const response = await api.post("/api/admin/settings", { signupEnabled: enabled });
         if (response?.success) setSignupEnabled(enabled);
-        else setMessage(response?.message || "Failed to update signup policy");
+        else addError(response?.message || "Failed to update signup policy");
+    };
+
+    const updateAuthProvider = async (provider, enabled) => {
+        const key = provider === "google" ? "googleAuthEnabled" : "githubAuthEnabled";
+        const response = await api.post("/api/admin/settings", { [key]: enabled });
+        if (response?.success) setAuthProviders((current) => ({ ...current, [provider]: enabled }));
+        else addError(response?.message || "Failed to update authentication provider");
+    };
+
+    const saveOAuthSettings = async () => {
+        setSavingOAuth(true);
+        const response = await api.post("/api/admin/settings", oauthSettings);
+        setSavingOAuth(false);
+        if (!response?.success) return addError(response?.message || "Failed to save OAuth settings");
+        setOauthSettings((current) => ({
+            ...current,
+            googleClientSecret: "",
+            githubClientSecret: "",
+            googleClientSecretConfigured: response.settings.googleClientSecretConfigured,
+            githubClientSecretConfigured: response.settings.githubClientSecretConfigured
+        }));
+        addSuccess("OAuth settings saved");
     };
 
     useEffect(() => {
@@ -153,7 +202,6 @@ export default function AdminUsersPanel({ onClose, openToken }) {
             thumbnailResolution: selectedUser.settings?.thumbnailResolution || defaultSettings.thumbnailResolution,
         });
         setNewPassword("");
-        setMessage("");
     }, [selectedUser?.id]);
 
     useEffect(() => {
@@ -190,18 +238,18 @@ export default function AdminUsersPanel({ onClose, openToken }) {
             durationValue: shareSettings.durationValue,
             durationUnit: shareSettings.durationUnit
         });
-        if (!response?.success) return setMessage(response?.message || "Failed to update share link");
-        setMessage("Share link updated");
+        if (!response?.success) return addError(response?.message || "Failed to update share link");
+        addSuccess("Share link updated");
         await loadShares();
     };
 
     const removeShare = async () => {
         if (!selectedShare) return;
         const response = await api.delete(`/api/admin/shares/${selectedShare.id}`);
-        if (!response?.success) return setMessage(response?.message || "Failed to remove share link");
+        if (!response?.success) return addError(response?.message || "Failed to remove share link");
         setSelectedShareId(null);
         setShowRemoveShareConfirm(false);
-        setMessage("Share link removed");
+        addSuccess("Share link removed");
         await loadShares();
     };
 
@@ -209,48 +257,45 @@ export default function AdminUsersPanel({ onClose, openToken }) {
         const link = `${window.location.origin}${withBasePath(`/shared/${token}`)}`;
         try {
             await navigator.clipboard.writeText(link);
-            setMessage("Share link copied");
+            addSuccess("Share link copied");
         } catch {
-            setMessage("Failed to copy share link");
+            addError("Failed to copy share link");
         }
     };
 
     const handleSaveSettings = async () => {
         if (!selectedUser) return;
         setSavingSettings(true);
-        setMessage("");
         const response = await api.post(`/api/admin/users/${selectedUser.id}/settings`, settings);
         setSavingSettings(false);
         if (!response?.success) {
-            setMessage(response?.message || "Failed to save settings");
+            addError(response?.message || "Failed to save settings");
             return;
         }
-        setMessage("Settings saved");
+        addSuccess("Settings saved");
         await loadUsers();
     };
 
     const handleUpdatePassword = async () => {
         if (!selectedUser || !newPassword.trim()) return;
         setSavingPassword(true);
-        setMessage("");
         const response = await api.post(`/api/admin/users/${selectedUser.id}/password`, { password: newPassword });
         setSavingPassword(false);
         if (!response?.success) {
-            setMessage(response?.message || "Failed to update password");
+            addError(response?.message || "Failed to update password");
             return;
         }
-        setMessage("Password updated");
+        addSuccess("Password updated");
         setNewPassword("");
     };
 
     const handleViewAsUser = async () => {
         if (!selectedUser) return;
         setImpersonating(true);
-        setMessage("");
         const response = await api.post("/api/admin/impersonate", { userId: selectedUser.id });
         setImpersonating(false);
         if (!response?.success) {
-            setMessage(response?.message || "Failed to open user files");
+            addError(response?.message || "Failed to open user files");
             return;
         }
         window.location.href = withBasePath("/");
@@ -258,11 +303,10 @@ export default function AdminUsersPanel({ onClose, openToken }) {
 
     const handleStopImpersonation = async () => {
         setImpersonating(true);
-        setMessage("");
         const response = await api.post("/api/admin/impersonate/stop", {});
         setImpersonating(false);
         if (!response?.success) {
-            setMessage(response?.message || "Failed to restore admin session");
+            addError(response?.message || "Failed to restore admin session");
             return;
         }
         window.location.href = withBasePath("/");
@@ -271,7 +315,7 @@ export default function AdminUsersPanel({ onClose, openToken }) {
     return (
         <div className={styles.panel}>
             <div className={styles.header}>
-                <h2>{activeView === "shares" ? <Share2 size={22} /> : <Users size={22} />} {activeView === "users" ? "Manage Users" : activeView === "shares" ? "Manage Share Links" : "Admin Panel"}</h2>
+                <h2>{activeView === "shares" ? <Share2 size={22} /> : activeView === "auth" ? <KeyRound size={22} /> : <Users size={22} />} {activeView === "users" ? "Manage Users" : activeView === "shares" ? "Manage Share Links" : activeView === "auth" ? "Authentication Providers" : "Admin Panel"}</h2>
                 <div className={styles.headerActions}>
                     {user?.impersonatorId && (
                         <button type="button" onClick={handleStopImpersonation} disabled={impersonating} className={styles.secondaryButton}>
@@ -286,7 +330,7 @@ export default function AdminUsersPanel({ onClose, openToken }) {
                             </button>
                             <button type="button" onClick={() => setShowCreateUser((value) => !value)} className={styles.secondaryButton}><UserPlus size={16} /> Create User</button>
                         </>
-                    ) : activeView === "shares" ? (
+                    ) : activeView === "shares" || activeView === "auth" ? (
                         <>
                             <button type="button" onClick={() => setActiveView("overview")} className={styles.secondaryButton}>Back</button>
                             <button type="button" onClick={loadShares} disabled={loading} className={styles.secondaryButton}><RefreshCw size={16} /> Refresh</button>
@@ -305,6 +349,10 @@ export default function AdminUsersPanel({ onClose, openToken }) {
                         <p className={styles.cardDescription}>Control whether anyone can create accounts on their own.</p>
                         <label><input type="checkbox" checked={signupEnabled} onChange={(event) => updateSignupPolicy(event.target.checked)} /> Allow public sign up</label>
                     </div>
+                    <button type="button" className={styles.manageUsersCard} onClick={() => setActiveView("auth")}>
+                        <KeyRound size={24} />
+                        <span><strong>Authentication Providers</strong><small>Choose which configured third-party sign-in providers are available.</small></span>
+                    </button>
                     <button type="button" className={styles.manageUsersCard} onClick={() => setActiveView("users")}>
                         <Users size={24} />
                         <span><strong>Manage Users</strong><small>View accounts, update access, manage settings, or remove users.</small></span>
@@ -313,6 +361,37 @@ export default function AdminUsersPanel({ onClose, openToken }) {
                         <Share2 size={24} />
                         <span><strong>Manage Share Links</strong><small>View active links, copy them, edit access settings, or remove them.</small></span>
                     </button>
+                </div>
+            )}
+
+            {activeView === "auth" && (
+                <div className={styles.overview}>
+                    <div className={styles.card}>
+                        <h4>Authentication Providers</h4>
+                        <p className={styles.cardDescription}>Disabled providers are removed from login and sign-up and blocked from starting OAuth.</p>
+                        <section className={styles.providerSection}>
+                            <div className={styles.providerHeader}>
+                                <h5>Google</h5>
+                                <label><input type="checkbox" checked={authProviders.google} onChange={(event) => updateAuthProvider("google", event.target.checked)} /> Enable auth</label>
+                            </div>
+                            <div className={styles.providerFields}>
+                                <label>Client ID<input disabled={!authProviders.google} className={!authProviders.google ? styles.disabledInput : ""} value={oauthSettings.googleClientId} onChange={(event) => setOauthSettings((current) => ({ ...current, googleClientId: event.target.value }))} /></label>
+                                <label>Client Secret<input disabled={!authProviders.google} className={!authProviders.google ? styles.disabledInput : ""} type="password" value={oauthSettings.googleClientSecret} onChange={(event) => setOauthSettings((current) => ({ ...current, googleClientSecret: event.target.value }))} placeholder={oauthSettings.googleClientSecretConfigured ? "Configured" : "Not configured"} /></label>
+                            </div>
+                        </section>
+                        <section className={styles.providerSection}>
+                            <div className={styles.providerHeader}>
+                                <h5>GitHub</h5>
+                                <label><input type="checkbox" checked={authProviders.github} onChange={(event) => updateAuthProvider("github", event.target.checked)} /> Enable auth</label>
+                            </div>
+                            <div className={styles.providerFields}>
+                                <label>Client ID<input disabled={!authProviders.github} className={!authProviders.github ? styles.disabledInput : ""} value={oauthSettings.githubClientId} onChange={(event) => setOauthSettings((current) => ({ ...current, githubClientId: event.target.value }))} /></label>
+                                <label>Client Secret<input disabled={!authProviders.github} className={!authProviders.github ? styles.disabledInput : ""} type="password" value={oauthSettings.githubClientSecret} onChange={(event) => setOauthSettings((current) => ({ ...current, githubClientSecret: event.target.value }))} placeholder={oauthSettings.githubClientSecretConfigured ? "Configured" : "Not configured"} /></label>
+                            </div>
+                        </section>
+                        <p className={styles.cardDescription}>Client secrets are write-only. Leave a secret blank to keep the current value.</p>
+                        <button type="button" onClick={saveOAuthSettings} disabled={savingOAuth} className={styles.primaryButton}><Save size={16} /> {savingOAuth ? "Saving..." : "Save OAuth Credentials"}</button>
+                    </div>
                 </div>
             )}
 
@@ -326,7 +405,6 @@ export default function AdminUsersPanel({ onClose, openToken }) {
             )}
 
             {error && <p className={styles.error}>{error}</p>}
-            {message && <p className={styles.message}>{message}</p>}
 
             {activeView === "users" && <div className={styles.grid}>
                 <aside className={styles.userList}>

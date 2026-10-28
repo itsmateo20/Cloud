@@ -7,4 +7,4 @@
 - checking newest version of project upon starting (if there is a new version then try to update, if its a safety and security update then block the app from starting and force the user to update or auto force update, if the app is running offline then notify that the user is running this project on there own risk for security purposes and that they should update when they are online if there is a new version)
 <!-- - <https://typesense.org/> (search bar + image searching by description using ai) -->
 
-- admin menu: set which 3rd party auth providers are allowed and maybe so he could add new auth providers via the dashboard
+- admin menu: set which 3rd party auth providers are allowed and maybe so he could add new auth providers via the dashboard\

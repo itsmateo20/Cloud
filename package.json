@@ -30,8 +30,8 @@
     },
     "dependencies": {
         "@monaco-editor/react": "^4.7.0",
-        "@prisma/adapter-libsql": "^7.10.0",
-        "@prisma/client": "^7.10.0",
+        "@prisma/adapter-libsql": "^7.10.1",
+        "@prisma/client": "^7.10.1",
         "archiver": "^8.0.0",
         "bcrypt": "^6.0.0",
         "chalk": "4.1.2",
@@ -40,22 +40,22 @@
         "gravatar": "^1.8.2",
         "jsonwebtoken": "^9.0.3",
         "jszip": "^3.10.2",
-        "lucide-react": "^1.46.0",
+        "lucide-react": "^1.63.0",
         "next": "16.2.11",
         "path": "^0.12.7",
-        "prisma": "^7.10.0",
+        "prisma": "^7.10.1",
         "prismjs": "^1.30.0",
         "qrcode": "^1.5.4",
         "re-resizable": "^6.11.2",
-        "react": "^19.3.0",
-        "react-dom": "^19.3.0",
+        "react": "^19.3.1",
+        "react-dom": "^19.3.1",
         "sanitize-filename": "^1.6.4",
         "sharp": "0.35.3",
-        "socket.io": "^4.8.3",
-        "socket.io-client": "^4.8.3"
+        "socket.io": "^4.8.4",
+        "socket.io-client": "^4.8.4"
     },
     "devDependencies": {
-        "@types/bun": "^1.4.2",
+        "@types/bun": "^1.4.4",
         "cross-env": "^10.1.0"
     },
     "peerDependencies": {

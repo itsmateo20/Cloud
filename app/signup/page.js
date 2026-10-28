@@ -11,8 +11,9 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 
-import { GoogleAuth } from "@/components/authentication/GoogleAuth";
 import Layout from "@/components/Layout";
+import { GoogleAuth } from "@/components/authentication/GoogleAuth";
+import { GithubAuth } from "@/components/authentication/GithubAuth";
 import SoftLoading from "@/components/SoftLoading";
 import { useIsMobile } from "@/utils/useIsMobile";
 
@@ -21,7 +22,7 @@ import { X, Check } from "lucide-react";
 import { getError } from "@/public/error/errors";
 
 export default function Page() {
-    const { loading, softLoading, user, signup, authWithGoogle } = useAuth();
+    const { loading, softLoading, user, signup, authWithGoogle, authWithGithub } = useAuth();
     const isMobile = useIsMobile();
 
     const [email, setEmail] = useState("");
@@ -30,6 +31,7 @@ export default function Page() {
     const [error, setError] = useState("");
     const [signupEnabled, setSignupEnabled] = useState(true);
     const [isFirstAdmin, setIsFirstAdmin] = useState(false);
+    const [authProviders, setAuthProviders] = useState({ google: true, github: true });
 
     const [isVisible, setIsVisible] = useState(false);
 
@@ -37,7 +39,10 @@ export default function Page() {
         const params = new URLSearchParams(window.location.search);
         setIsFirstAdmin(params.get("first") === "1");
         api.get("/api/auth/bootstrap-status").then((response) => {
-            if (response?.success) setSignupEnabled(response.signupEnabled || params.get("first") === "1");
+            if (response?.success) {
+                setSignupEnabled(response.signupEnabled || params.get("first") === "1");
+                setAuthProviders({ google: response.googleAuthEnabled !== false, github: response.githubAuthEnabled !== false });
+            }
         });
     }, []);
 
@@ -177,7 +182,17 @@ export default function Page() {
                         <h1>{passwordRequirements.matching ? <Check size={20} /> : <X size={20} />} Match passwords</h1>
                     </div>
 
-                    <GoogleAuth auth={authWithGoogle} type="signup" />
+                    {authProviders.google || authProviders.github ? (
+                        <>
+                            <h2 className={style.or}>or</h2>
+                            <div className={style.thirdPartyAuth}>
+                                <GoogleAuth auth={authWithGoogle} type="signup" enabled={authProviders.google} />
+                                <GithubAuth auth={authWithGithub} type="signup" enabled={authProviders.github} />
+                            </div>
+                        </>
+                    ) : (
+                        <div style={{ marginTop: "80px" }} />
+                    )}
 
                     <button type="submit" className={style.signupButton} disabled={softLoading}>{softLoading ? <SoftLoading /> : "Sign Up"}</button>
                 </form>

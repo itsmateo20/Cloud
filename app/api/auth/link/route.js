@@ -6,14 +6,15 @@ import { createSession } from "@/lib/session";
 
 export async function POST(req) {
     try {
-        const { googleEmail, email, password, type } = await req.json();
-        if (!googleEmail || !email || !password || !type) return NextResponse.json({ success: false, code: "googleEmail_email_password_type_missing" }, { status: 400 });
+        const { providerEmail, googleEmail, email, password, type } = await req.json();
+        const linkedEmail = providerEmail || googleEmail;
+        if (!linkedEmail || !email || !password || !type) return NextResponse.json({ success: false, code: "provider_email_password_type_missing" }, { status: 400 });
 
-        const response = await linkAccount(googleEmail, email, password, type);
+        const response = await linkAccount(linkedEmail, email, password, type);
 
         if (!response.success) return NextResponse.json(response, { status: 500 });
 
-        const session = await createSession({ id: response.user.id, email, googleEmail, provider: response.user.provider }, req);
+        const session = await createSession({ id: response.user.id, email, googleEmail: type === "google" ? linkedEmail : undefined, githubEmail: type === "github" ? linkedEmail : undefined, provider: response.user.provider }, req);
         if (!session.success) {
             return NextResponse.json({ success: false, code: session.code || "session_creation_failed" }, { status: 500 });
         }

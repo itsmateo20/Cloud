@@ -47,7 +47,6 @@
 })();
 
 const { createServer } = require("http");
-require('./lib/memoryMonitor.js');
 const { Server } = require("socket.io");
 const next = require("next");
 const port = process.env.PORT || 3000;

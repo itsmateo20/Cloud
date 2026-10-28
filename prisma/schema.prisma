@@ -11,6 +11,7 @@ model User {
   id          Int      @id @unique @default(autoincrement())
   email       String?  @unique
   googleEmail String?  @unique
+  githubEmail String?  @unique
   password    String
   provider    String   @default("credentials")
   admin       Boolean  @default(false)
@@ -50,9 +51,15 @@ model UserSettings {
 }
 
 model AppSettings {
-  id            Int      @id @default(1)
-  signupEnabled Boolean  @default(true)
-  updatedAt     DateTime @updatedAt
+  id                 Int      @id @default(1)
+  signupEnabled      Boolean  @default(true)
+  googleAuthEnabled  Boolean  @default(true)
+  githubAuthEnabled  Boolean  @default(true)
+  googleClientId     String?
+  googleClientSecret String?
+  githubClientId     String?
+  githubClientSecret String?
+  updatedAt          DateTime @updatedAt
 }
 
 model File {
