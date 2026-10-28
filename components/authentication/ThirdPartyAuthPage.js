@@ -68,7 +68,7 @@ export default function ThirdPartyAuthPage({ provider, mode, searchParams }) {
         <Layout mainStyle={style.main} loading={loading} user={user} showNavigation={isMobile === false}>
             <h1 className={style.title}>{title} {isLogin ? "Login Issue" : "Signup"}</h1>
             <h2 className={style.subtitle}>{isLogin ? `The ${title} account is not linked to a registered account. Enter your credentials to link it.` : `Create a password for your ${title} account.`}</h2>
-            <form onSubmit={handleSubmit}>
+            <form onSubmit={handleSubmit} className={style.form}>
                 <fieldset className={style.inputWithText}>
                     <legend>Email</legend>
                     <input type="email" value={isLogin ? emailLink : email || ""} disabled={isLogin === false} onChange={(event) => setEmailLink(event.target.value)} required />
