@@ -20,6 +20,6 @@ export function DiscordAuth({ auth, type, enabled = true }) {
                 </div>
             </button>
         </div>
-    ) 
+    )
     else return null;
 }
