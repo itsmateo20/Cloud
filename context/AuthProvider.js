@@ -4,6 +4,7 @@
 
 import { api } from "@/utils/api";
 import { withBasePath } from "@/lib/basePath";
+import { startAuthentication, startRegistration } from "@simplewebauthn/browser";
 
 import { createContext, useContext, useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
@@ -232,6 +233,40 @@ export const AuthProvider = ({ children, locked = true }) => {
         window.location.href = withBasePath(`/api/auth/discord/auth?type=${type}`);
     };
 
+    const linkProvider = (provider) => {
+        window.location.href = withBasePath(`/api/auth/${provider}/auth?type=link`);
+    };
+
+    const registerPasskey = async (name) => {
+        try {
+            const optionsResponse = await api.get("/api/auth/passkey/register/options");
+            if (!optionsResponse?.success) return optionsResponse;
+            const credential = await startRegistration({ optionsJSON: optionsResponse.options });
+            return await api.post("/api/auth/passkey/register/verify", { ...credential, name });
+        } catch (error) {
+            return { success: false, code: error?.name === "NotAllowedError" ? "passkey_cancelled" : "passkey_registration_failed" };
+        }
+    };
+
+    const loginWithPasskey = async () => {
+        setSoftLoading(true);
+        try {
+            const optionsResponse = await api.get("/api/auth/passkey/authenticate/options");
+            if (!optionsResponse?.success) return optionsResponse;
+            const credential = await startAuthentication({ optionsJSON: optionsResponse.options });
+            const response = await api.post("/api/auth/passkey/authenticate/verify", credential);
+            if (response?.success) {
+                setUser(response.user);
+                router.push("/");
+            }
+            return response;
+        } catch (error) {
+            return { success: false, code: error?.name === "NotAllowedError" ? "passkey_cancelled" : "passkey_authentication_failed" };
+        } finally {
+            setSoftLoading(false);
+        }
+    };
+
     return (
         <AuthContext.Provider
             value={{
@@ -245,7 +280,10 @@ export const AuthProvider = ({ children, locked = true }) => {
                 linkAccount,
                 authWithGoogle,
                 authWithGithub,
-                authWithDiscord
+                authWithDiscord,
+                linkProvider,
+                registerPasskey,
+                loginWithPasskey
             }}
         >
             {children}

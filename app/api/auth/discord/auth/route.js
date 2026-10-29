@@ -1,8 +1,11 @@
+// app/api/auth/discord/auth/route.js
+
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { getSiteUrl } from "@/lib/getSiteUrl";
 import { getOAuthProviderConfig } from "@/lib/oauthProviders";
 import crypto from "crypto";
+import { getSession } from "@/lib/session";
 
 export async function GET(req) {
     const config = await getOAuthProviderConfig("discord");
@@ -10,7 +13,8 @@ export async function GET(req) {
     if (!config.clientId || !config.clientSecret) return NextResponse.redirect(`${await getSiteUrl()}/login?error=provider_not_configured`);
 
     const { searchParams } = new URL(req.url);
-    const type = searchParams.get("type") === "signup" ? "signup" : "login";
+    const requestedType = searchParams.get("type");
+    const type = requestedType === "signup" ? "signup" : requestedType === "link" && (await getSession())?.success ? "link" : "login";
     const siteUrl = await getSiteUrl();
     const state = crypto.randomBytes(32).toString("hex");
     const authUrl = new URL("https://discord.com/oauth2/authorize");

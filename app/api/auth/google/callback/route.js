@@ -2,13 +2,14 @@
 
 import { NextResponse } from "next/server";
 import { createSession } from "@/lib/session";
-import { authenticationWithGoogle } from "@/lib/auth";
+import { authenticationWithGoogle, linkProviderToUser } from "@/lib/auth";
 import { buildAccountDisabledPath } from "@/lib/accountDeletion";
 
 import crypto from "crypto";
 import { cookies } from "next/headers";
 import { getSiteUrl } from "@/lib/getSiteUrl";
 import { getOAuthProviderConfig } from "@/lib/oauthProviders";
+import { getSession } from "@/lib/session";
 
 function signEmail(email) {
     const hmac = crypto.createHmac("sha256", process.env.AUTH_SECRET);
@@ -51,6 +52,15 @@ export async function GET(req) {
 
         const oauth2 = google.oauth2({ version: "v2", auth: oauth2Client });
         const { data: googleUser } = await oauth2.userinfo.get();
+
+        if (type === "link") {
+            const session = await getSession();
+            const linked = await linkProviderToUser(session?.user?.id, googleUser.email, "google");
+            if (!linked.success) return NextResponse.redirect(siteUrl);
+            cookieStore.delete("oauth_state");
+            cookieStore.delete("auth_type");
+            return NextResponse.redirect(siteUrl);
+        }
 
         const response = await authenticationWithGoogle(googleUser.email, type);
         if (!response.success) {

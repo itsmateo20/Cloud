@@ -31,6 +31,25 @@ model User {
   favoritedFiles   File[]        @relation("UserFileFavorites")
   favoritedFolders Folder[]      @relation("UserFolderFavorites")
   clientTokens     ClientToken[]
+  passkeys         Passkey[]
+}
+
+model Passkey {
+  id           Int      @id @unique @default(autoincrement())
+  name         String   @default("Passkey")
+  credentialId String   @unique
+  publicKey    Bytes
+  counter      Int      @default(0)
+  transports   String?
+  deviceType   String?
+  backedUp     Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  userId Int
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model UserSettings {

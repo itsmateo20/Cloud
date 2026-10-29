@@ -8,7 +8,6 @@ import Image from "next/image";
 import { withBasePath } from "@/lib/basePath";
 
 export function GithubAuth({ auth, type, enabled = true }) {
-
     if (enabled) return (
         <div className={style.googleAuth}>
             <button type="button" className={style.gsiMaterialButton} onClick={() => auth(type)} aria-label="Continue with GitHub">
@@ -21,5 +20,6 @@ export function GithubAuth({ auth, type, enabled = true }) {
                 </div>
             </button>
         </div>
-    )
+    ) 
+    else return null;
 }

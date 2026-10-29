@@ -665,6 +665,119 @@
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
+.passkeySetup {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  background: var(--hover-background);
+}
+
+.passkeySetupIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+  border-radius: 10px;
+  background: var(--background);
+  color: var(--button-primary);
+  border: 1px solid var(--border-color);
+}
+
+.passkeySetupBody {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.passkeySetupHeading {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.passkeySetupHeading strong {
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.passkeySetupHeading span {
+  color: var(--text-color-muted);
+  font-size: 12px;
+}
+
+.passkeySetupControls {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.passkeyNameInput {
+  min-width: 0;
+  flex: 1;
+  padding: 10px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--background);
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+}
+
+.passkeyNameInput::placeholder {
+  color: var(--text-color-muted);
+  opacity: 0.8;
+}
+
+.passkeyNameInput:focus {
+  outline: none;
+  border-color: var(--button-primary);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+}
+
+.passkeyAddButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex-shrink: 0;
+  padding: 10px 14px;
+  border: 1px solid var(--button-primary);
+  border-radius: 8px;
+  background: var(--button-primary);
+  color: white;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.passkeyAddButton:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.passkeyAddButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+@media (max-width: 560px) {
+  .passkeySetupControls {
+    flex-direction: column;
+  }
+
+  .passkeyAddButton {
+    width: 100%;
+  }
+}
+
 .profileSection {
   display: flex;
   gap: 32px;
@@ -755,6 +868,7 @@
   border: 1px solid var(--border-color);
   border-radius: 10px;
   padding: 12px;
+  margin: 5px 0;
 }
 
 .sessionTokenMeta {

@@ -1,3 +1,5 @@
+// app/api/auth/bootstrap-status/route.js
+
 import { NextResponse } from "next/server";
 import prisma from "@/lib/db";
 import { getOAuthProviderStatus } from "@/lib/oauthProviders";

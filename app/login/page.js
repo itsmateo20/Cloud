@@ -12,16 +12,19 @@ import Image from "next/image";
 import Link from "next/link";
 
 import Layout from "@/components/Layout";
+
 import { GoogleAuth } from "@/components/authentication/GoogleAuth";
 import { GithubAuth } from "@/components/authentication/GithubAuth";
 import { DiscordAuth } from "@/components/authentication/DiscordAuth";
+import { PasskeyAuth } from "@/components/authentication/PasskeyAuth";
+
 import SoftLoading from "@/components/SoftLoading";
 import { useIsMobile } from "@/utils/useIsMobile";
 
 import { getError } from "@/public/error/errors";
 
 export default function Page() {
-    const { loading, softLoading, user, login, authWithGoogle, authWithGithub, authWithDiscord } = useAuth();
+    const { loading, softLoading, user, login, authWithGoogle, authWithGithub, authWithDiscord, loginWithPasskey } = useAuth();
     const isMobile = useIsMobile();
 
     const [email, setEmail] = useState("");
@@ -137,18 +140,14 @@ export default function Page() {
                     </button>
                 </fieldset>
 
-                {authProviders.google || authProviders.github || authProviders.discord ? (
-                    <>
-                        <h2 className={style.or}>or</h2>
-                        <div className={style.thirdPartyAuth}>
-                            <GoogleAuth auth={authWithGoogle} type="login" enabled={authProviders.google} />
-                            <GithubAuth auth={authWithGithub} type="login" enabled={authProviders.github} />
-                            <DiscordAuth auth={authWithDiscord} type="login" enabled={authProviders.discord} />
-                        </div>
-                    </>
-                ) : (
-                    <div style={{ marginTop: "80px" }} />
-                )}
+                <h2 className={style.or}>or</h2>
+
+                <div className={style.thirdPartyAuth}>
+                    <GoogleAuth auth={authWithGoogle} type="login" enabled={authProviders.google} />
+                    <GithubAuth auth={authWithGithub} type="login" enabled={authProviders.github} />
+                    <DiscordAuth auth={authWithDiscord} type="login" enabled={authProviders.discord} />
+                    <PasskeyAuth auth={loginWithPasskey}/>
+                </div>
 
                 <button type="submit" className={style.loginButton} disabled={softLoading}>{softLoading ? <SoftLoading /> : "Log In"}</button>
             </form>

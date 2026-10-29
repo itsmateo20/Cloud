@@ -29,7 +29,7 @@ export async function POST(req) {
             );
         }
 
-        const session = await createSession({ id: response.user.id, email: response.user.email, googleEmail: response.user?.googleEmail, provider: response.user.provider, admin: response.user.admin }, req);
+        const session = await createSession({ id: response.user.id, email: response.user.email, googleEmail: response.user?.googleEmail, githubEmail: response.user?.githubEmail, discordEmail: response.user?.discordEmail, provider: response.user.provider, admin: response.user.admin }, req);
         if (!session.success) {
             return NextResponse.json({ success: false, code: session.code || "session_creation_failed" }, { status: 500 });
         }

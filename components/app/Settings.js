@@ -26,17 +26,35 @@ import {
   AlertTriangle,
   User as UserIcon,
   Shield,
-  Download
+  Download,
+  KeyRound,
+  Plus
 } from "lucide-react";
 import { useAuth } from "@/context/AuthProvider";
 import ConfirmModal from "./ConfirmModal";
+import { useToast } from "./ToastProvider";
 import { api } from "@/utils/api";
 import style from "./Settings.module.css";
 import SoftLoading from "../SoftLoading";
 import gravatar from "gravatar";
 
+function SettingCard({ title, description, children }) {
+  return (
+    <div className={style.settingCard}>
+      <div className={style.settingCardHeader}>
+        <h3 className={style.settingCardTitle}>{title}</h3>
+        {description && <p className={style.settingCardDescription}>{description}</p>}
+      </div>
+      <div className={style.settingCardContent}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
 export default function Settings({ onClose, onViewModeChange, onSortByChange, onThemeChange, onThumbnailResolutionChange, isMobile = false, initialSection = "profile" }) {
-  const { user, signout } = useAuth();
+  const { user, signout, linkProvider, registerPasskey } = useAuth();
+  const { addSuccess, addError, addInfo } = useToast();
 
   const [theme, setTheme] = useState("device");
   const [defaultView, setDefaultView] = useState("details");
@@ -49,7 +67,6 @@ export default function Settings({ onClose, onViewModeChange, onSortByChange, on
   const [settingsLoaded, setSettingsLoaded] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [saveMessage, setSaveMessage] = useState(null);
 
   const [activeSection, setActiveSection] = useState(initialSection || "profile");
 
@@ -74,28 +91,28 @@ export default function Settings({ onClose, onViewModeChange, onSortByChange, on
   const [initialSettings, setInitialSettings] = useState(null);
   const [sessionTokens, setSessionTokens] = useState([]);
   const [tokensLoading, setTokensLoading] = useState(false);
-  const [tokensError, setTokensError] = useState("");
   const [revokingTokenId, setRevokingTokenId] = useState("");
   const [sessionActionLoading, setSessionActionLoading] = useState("");
+  const [linkedProviders, setLinkedProviders] = useState({ google: false, github: false, discord: false });
+  const [passkeys, setPasskeys] = useState([]);
+  const [passkeyName, setPasskeyName] = useState("");
+  const [securityLoading, setSecurityLoading] = useState(false);
 
   const saveSettings = async (settingsToUpdate, showNotification = true) => {
     setIsSaving(true);
-    setSaveMessage(null);
     try {
       const response = await api.post('/api/user/settings', settingsToUpdate);
 
       if (response.success) {
         if (showNotification) {
-          setSaveMessage({ type: 'success', text: 'Settings saved successfully' });
-          setTimeout(() => setSaveMessage(null), 3000);
+          addSuccess('Settings saved successfully');
         }
         setHasUnsavedChanges(false);
         const newSettings = { theme, defaultView, defaultSort, imageQuality, uploadQuality, thumbnailResolution, trashEnabled, trashRetentionDays, ...settingsToUpdate };
         setInitialSettings(newSettings);
       } else {
         if (showNotification) {
-          setSaveMessage({ type: 'error', text: 'Failed to save settings' });
-          setTimeout(() => setSaveMessage(null), 5000);
+          addError('Failed to save settings');
         }
         Object.entries(settingsToUpdate).forEach(([key, value]) => {
           localStorage.setItem(`cloud-${key.replace(/([A-Z])/g, '-$1').toLowerCase()}`, value);
@@ -103,8 +120,7 @@ export default function Settings({ onClose, onViewModeChange, onSortByChange, on
       }
     } catch (error) {
       if (showNotification) {
-        setSaveMessage({ type: 'error', text: 'Error saving settings' });
-        setTimeout(() => setSaveMessage(null), 5000);
+        addError('Error saving settings');
       }
       Object.entries(settingsToUpdate).forEach(([key, value]) => {
         localStorage.setItem(`cloud-${key.replace(/([A-Z])/g, '-$1').toLowerCase()}`, value);
@@ -130,8 +146,7 @@ export default function Settings({ onClose, onViewModeChange, onSortByChange, on
     setTrashEnabled(initialSettings.trashEnabled);
     setTrashRetentionDays(initialSettings.trashRetentionDays);
     setHasUnsavedChanges(false);
-    setSaveMessage({ type: 'info', text: 'Settings reset to saved values' });
-    setTimeout(() => setSaveMessage(null), 3000);
+    addInfo('Settings reset to saved values');
   };
 
   useEffect(() => {
@@ -244,16 +259,15 @@ export default function Settings({ onClose, onViewModeChange, onSortByChange, on
 
   const loadSessionTokens = async () => {
     setTokensLoading(true);
-    setTokensError("");
     try {
       const response = await api.get('/api/user/client-tokens');
       if (response?.success) {
         setSessionTokens(Array.isArray(response.tokens) ? response.tokens : []);
       } else {
-        setTokensError('Failed to load session tokens.');
+        addError('Failed to load session tokens.');
       }
     } catch {
-      setTokensError('Failed to load session tokens.');
+      addError('Failed to load session tokens.');
     } finally {
       setTokensLoading(false);
     }
@@ -263,6 +277,55 @@ export default function Settings({ onClose, onViewModeChange, onSortByChange, on
     if (!user) return;
     loadSessionTokens();
   }, [user]);
+
+  const loadSecurity = async () => {
+    setSecurityLoading(true);
+    try {
+      const [providerResponse, passkeyResponse] = await Promise.all([
+        api.get('/api/user/providers'),
+        api.get('/api/user/passkeys')
+      ]);
+      if (providerResponse?.success) setLinkedProviders(providerResponse.providers);
+      if (passkeyResponse?.success) setPasskeys(passkeyResponse.passkeys || []);
+    } finally {
+      setSecurityLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (user && activeSection === 'security') loadSecurity();
+  }, [user, activeSection]);
+
+  const handleRegisterPasskey = async () => {
+    const response = await registerPasskey(passkeyName);
+    if (!response?.success) {
+      addError('Passkey registration was not completed.');
+      return;
+    }
+    addSuccess('Passkey added.');
+    setPasskeyName("");
+    loadSecurity();
+  };
+
+  const handleUnlinkProvider = async (provider) => {
+    const response = await api.raw('DELETE', '/api/user/providers', { provider });
+    if (!response.ok) {
+      addError('Could not unlink this provider.');
+      return;
+    }
+    addSuccess(`${provider[0].toUpperCase() + provider.slice(1)} unlinked.`);
+    loadSecurity();
+  };
+
+  const handleDeletePasskey = async (id) => {
+    const response = await api.raw('DELETE', '/api/user/passkeys', { id });
+    if (!response.ok) {
+      addError('Could not remove this passkey.');
+      return;
+    }
+    addSuccess('Passkey removed.');
+    setPasskeys((current) => current.filter((passkey) => passkey.id !== id));
+  };
 
   const handleRevokeToken = async (tokenId) => {
     if (!tokenId) return;
@@ -275,7 +338,7 @@ export default function Settings({ onClose, onViewModeChange, onSortByChange, on
       const response = await api.post('/api/user/client-tokens', { action: 'revoke', tokenId });
       if (!response?.success) {
         setSessionTokens(previous);
-        setTokensError('Failed to revoke token.');
+        addError('Failed to revoke token.');
         return;
       }
 
@@ -284,7 +347,7 @@ export default function Settings({ onClose, onViewModeChange, onSortByChange, on
       }
     } catch {
       setSessionTokens(previous);
-      setTokensError('Failed to revoke token.');
+      addError('Failed to revoke token.');
     } finally {
       setRevokingTokenId('');
     }
@@ -292,11 +355,10 @@ export default function Settings({ onClose, onViewModeChange, onSortByChange, on
 
   const handleClearRevokedTokens = async () => {
     setSessionActionLoading('clear_revoked');
-    setTokensError('');
     try {
       const response = await api.post('/api/user/client-tokens', { action: 'clear_revoked' });
       if (!response?.success) {
-        setTokensError('Failed to clear revoked tokens.');
+        addError('Failed to clear revoked tokens.');
         return;
       }
 
@@ -306,7 +368,7 @@ export default function Settings({ onClose, onViewModeChange, onSortByChange, on
         await loadSessionTokens();
       }
     } catch {
-      setTokensError('Failed to clear revoked tokens.');
+      addError('Failed to clear revoked tokens.');
     } finally {
       setSessionActionLoading('');
     }
@@ -314,11 +376,10 @@ export default function Settings({ onClose, onViewModeChange, onSortByChange, on
 
   const handleRevokeAllOtherDevices = async () => {
     setSessionActionLoading('revoke_all_other');
-    setTokensError('');
     try {
       const response = await api.post('/api/user/client-tokens', { action: 'revoke_all_other' });
       if (!response?.success) {
-        setTokensError('Failed to revoke other devices.');
+        addError('Failed to revoke other devices.');
         return;
       }
 
@@ -328,7 +389,7 @@ export default function Settings({ onClose, onViewModeChange, onSortByChange, on
         await loadSessionTokens();
       }
     } catch {
-      setTokensError('Failed to revoke other devices.');
+      addError('Failed to revoke other devices.');
     } finally {
       setSessionActionLoading('');
     }
@@ -336,7 +397,7 @@ export default function Settings({ onClose, onViewModeChange, onSortByChange, on
 
   const handleDeleteAccount = async () => {
     if (!deletePassword.trim()) {
-      alert("Please enter your password");
+      addError("Please enter your password");
       return;
     }
 
@@ -347,13 +408,13 @@ export default function Settings({ onClose, onViewModeChange, onSortByChange, on
       });
 
       if (response.success) {
-        alert('Your account has been disabled and scheduled for deletion in 30 days. You have been logged out of all devices.');
+        addSuccess('Your account has been disabled and scheduled for deletion in 30 days.');
         await signout();
       } else {
-        alert(response.message || "Failed to delete account. Please check your password.");
+        addError(response.message || "Failed to delete account. Please check your password.");
       }
     } catch (error) {
-      alert("An error occurred while deleting your account. Please try again.");
+      addError("An error occurred while deleting your account. Please try again.");
     } finally {
       setIsDeleting(false);
       setShowDeleteConfirm(false);
@@ -380,7 +441,7 @@ export default function Settings({ onClose, onViewModeChange, onSortByChange, on
           errorMessage = errorJson?.message || errorMessage;
         } catch {
         }
-        alert(errorMessage);
+        addError(errorMessage);
         return;
       }
 
@@ -391,7 +452,7 @@ export default function Settings({ onClose, onViewModeChange, onSortByChange, on
 
       const reader = response.body?.getReader();
       if (!reader) {
-        alert('Export stream is not available in this browser.');
+        addError('Export stream is not available in this browser.');
         return;
       }
 
@@ -420,10 +481,10 @@ export default function Settings({ onClose, onViewModeChange, onSortByChange, on
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
 
-      alert('Your data has been exported and downloaded successfully!');
+      addSuccess('Your data has been exported and downloaded successfully!');
       setShowExportModal(false);
     } catch (error) {
-      alert(error?.message || "Failed to export data. Please try again.");
+      addError(error?.message || "Failed to export data. Please try again.");
     } finally {
       setIsExporting(false);
     }
@@ -491,24 +552,13 @@ export default function Settings({ onClose, onViewModeChange, onSortByChange, on
 
   const sections = [
     { id: "profile", label: "Profile", icon: <UserIcon size={20} /> },
+    { id: "security", label: "Security", icon: <Shield size={20} /> },
     { id: "sessions", label: "Sessions", icon: <Shield size={20} /> },
     { id: "appearance", label: "Appearance", icon: <Palette size={20} /> },
     { id: "view", label: "View & Display", icon: <Eye size={20} /> },
     { id: "performance", label: "Performance", icon: <SettingsIcon size={20} /> },
     { id: "danger", label: "Danger Zone", icon: <AlertTriangle size={20} /> }
   ];
-
-  const SettingCard = ({ title, description, children }) => (
-    <div className={style.settingCard}>
-      <div className={style.settingCardHeader}>
-        <h3 className={style.settingCardTitle}>{title}</h3>
-        {description && <p className={style.settingCardDescription}>{description}</p>}
-      </div>
-      <div className={style.settingCardContent}>
-        {children}
-      </div>
-    </div>
-  );
 
   const OptionButton = ({ option, selected, onChange }) => (
     <button
@@ -562,11 +612,6 @@ export default function Settings({ onClose, onViewModeChange, onSortByChange, on
                     )}
                   </button>
                 </div>
-              </div>
-            )}
-            {saveMessage && (
-              <div className={`${style.saveMessage} ${style[saveMessage.type]}`}>
-                {saveMessage.text}
               </div>
             )}
           </div>
@@ -642,6 +687,73 @@ export default function Settings({ onClose, onViewModeChange, onSortByChange, on
               </SettingCard>
             )}
 
+            {activeSection === "security" && (
+              <>
+                <SettingCard
+                  title="Passkeys"
+                  description="Use a device passkey to sign in without a password."
+                >
+                  <div className={style.passkeySetup}>
+                    <div className={style.passkeySetupIcon} aria-hidden="true">
+                      <KeyRound size={20} />
+                    </div>
+                    <div className={style.passkeySetupBody}>
+                      <div className={style.passkeySetupHeading}>
+                        <strong>Name this passkey</strong>
+                        <span>Choose a name you will recognize later.</span>
+                      </div>
+                      <div className={style.passkeySetupControls}>
+                        <input
+                          className={style.passkeyNameInput}
+                          value={passkeyName}
+                          onChange={(event) => setPasskeyName(event.target.value)}
+                          maxLength={100}
+                          placeholder="Laptop, phone, or security key"
+                          aria-label="Passkey name"
+                        />
+                        <button className={style.passkeyAddButton} onClick={handleRegisterPasskey} disabled={securityLoading}>
+                          <Plus size={16} />
+                          {securityLoading ? "Adding..." : "Add passkey"}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                  {passkeys.length > 0 && (
+                    <div className={style.sessionTokenList}>
+                      {passkeys.map((passkey) => (
+                        <div key={passkey.id} className={style.sessionTokenItem}>
+                          <div className={style.sessionTokenMeta}>
+                            <div className={style.sessionTokenTitle}>{passkey.name || 'Passkey'}</div>
+                            <div className={style.sessionTokenDetails}>Added {new Date(passkey.createdAt).toLocaleString()}</div>
+                          </div>
+                          <button className={style.dangerButton} onClick={() => handleDeletePasskey(passkey.id)}>Remove</button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </SettingCard>
+
+                <SettingCard
+                  title="Connected Providers"
+                  description="Link another provider so you have another way to sign in."
+                >
+                  {['google', 'github', 'discord'].map((provider) => (
+                    <div key={provider} className={style.sessionTokenItem}>
+                      <div className={style.sessionTokenMeta}>
+                        <div className={style.sessionTokenTitle}>{provider[0].toUpperCase() + provider.slice(1)}</div>
+                        <div className={style.sessionTokenDetails}>{linkedProviders[provider] ? 'Connected' : 'Not connected'}</div>
+                      </div>
+                      {linkedProviders[provider] ? (
+                        <button className={style.dangerButton} onClick={() => handleUnlinkProvider(provider)}>Unlink</button>
+                      ) : (
+                        <button className={style.secondaryButton} onClick={() => linkProvider(provider)}>Link</button>
+                      )}
+                    </div>
+                  ))}
+                </SettingCard>
+              </>
+            )}
+
             {activeSection === "sessions" && (
               <SettingCard
                 title="Session Tokens"
@@ -666,8 +778,6 @@ export default function Settings({ onClose, onViewModeChange, onSortByChange, on
                     {sessionActionLoading === 'revoke_all_other' ? 'Revoking...' : 'Revoke Every Device'}
                   </button>
                 </div>
-
-                {tokensError ? <p className={style.sessionError}>{tokensError}</p> : null}
 
                 {sessionTokens.length === 0 && !tokensLoading ? (
                   <p className={style.sessionEmpty}>No active session tokens found.</p>

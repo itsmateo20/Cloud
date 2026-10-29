@@ -2,12 +2,13 @@
 
 import { NextResponse } from "next/server";
 import { createSession } from "@/lib/session";
-import { authenticationWithProvider } from "@/lib/auth";
+import { authenticationWithProvider, linkProviderToUser } from "@/lib/auth";
 import { buildAccountDisabledPath } from "@/lib/accountDeletion";
 import crypto from "crypto";
 import { cookies } from "next/headers";
 import { getSiteUrl } from "@/lib/getSiteUrl";
 import { getOAuthProviderConfig } from "@/lib/oauthProviders";
+import { getSession } from "@/lib/session";
 
 function signEmail(email) {
     const hmac = crypto.createHmac("sha256", process.env.AUTH_SECRET);
@@ -52,6 +53,15 @@ export async function GET(req) {
         const emails = await githubRequest("https://api.github.com/user/emails", { headers });
         const email = emails.find((item) => item.primary && item.verified)?.email || emails.find((item) => item.verified)?.email;
         if (!email) return NextResponse.redirect(`${siteUrl}/login?error=oauth_email_missing`);
+
+        if (type === "link") {
+            const session = await getSession();
+            const linked = await linkProviderToUser(session?.user?.id, email, "github");
+            if (!linked.success) return NextResponse.redirect(siteUrl);
+            cookieStore.delete("oauth_state");
+            cookieStore.delete("auth_type");
+            return NextResponse.redirect(siteUrl);
+        }
 
         const response = await authenticationWithProvider(email, type, "github");
         if (!response.success) {

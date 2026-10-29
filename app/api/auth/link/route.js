@@ -14,7 +14,7 @@ export async function POST(req) {
 
         if (!response.success) return NextResponse.json(response, { status: 500 });
 
-        const session = await createSession({ id: response.user.id, email, googleEmail: type === "google" ? linkedEmail : undefined, githubEmail: type === "github" ? linkedEmail : undefined, provider: response.user.provider }, req);
+        const session = await createSession({ id: response.user.id, email, googleEmail: type === "google" ? linkedEmail : undefined, githubEmail: type === "github" ? linkedEmail : undefined, discordEmail: type === "discord" ? linkedEmail : undefined, provider: response.user.provider }, req);
         if (!session.success) {
             return NextResponse.json({ success: false, code: session.code || "session_creation_failed" }, { status: 500 });
         }
