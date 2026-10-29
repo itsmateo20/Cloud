@@ -22,9 +22,11 @@ export const AuthProvider = ({ children, locked = true }) => {
         "/login",
         "/login/google",
         "/login/github",
+        "/login/discord",
         "/signup",
         "/signup/google",
         "/signup/github",
+        "/signup/discord",
         "/logged-out",
         "/account-disabled",
     ];
@@ -226,6 +228,10 @@ export const AuthProvider = ({ children, locked = true }) => {
         window.location.href = withBasePath(`/api/auth/github/auth?type=${type}`);
     };
 
+    const authWithDiscord = (type) => {
+        window.location.href = withBasePath(`/api/auth/discord/auth?type=${type}`);
+    };
+
     return (
         <AuthContext.Provider
             value={{
@@ -238,7 +244,8 @@ export const AuthProvider = ({ children, locked = true }) => {
                 signout,
                 linkAccount,
                 authWithGoogle,
-                authWithGithub
+                authWithGithub,
+                authWithDiscord
             }}
         >
             {children}

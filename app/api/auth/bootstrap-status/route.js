@@ -14,7 +14,8 @@ export async function GET() {
             hasUsers: userCount > 0,
             signupEnabled: settings?.signupEnabled !== false,
             googleAuthEnabled: providers.google.enabled && providers.google.configured,
-            githubAuthEnabled: providers.github.enabled && providers.github.configured
+            githubAuthEnabled: providers.github.enabled && providers.github.configured,
+            discordAuthEnabled: providers.discord.enabled && providers.discord.configured
         });
     } catch {
         return NextResponse.json({ success: false, message: "Failed to load signup status" }, { status: 500 });

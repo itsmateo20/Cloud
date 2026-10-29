@@ -8,16 +8,17 @@ datasource db {
 }
 
 model User {
-  id          Int      @id @unique @default(autoincrement())
-  email       String?  @unique
-  googleEmail String?  @unique
-  githubEmail String?  @unique
-  password    String
-  provider    String   @default("credentials")
-  admin       Boolean  @default(false)
-  folderToken String?  @unique
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @default(now()) @updatedAt
+  id           Int      @id @unique @default(autoincrement())
+  email        String?  @unique
+  googleEmail  String?  @unique
+  githubEmail  String?  @unique
+  discordEmail String?  @unique
+  password     String
+  provider     String   @default("credentials")
+  admin        Boolean  @default(false)
+  folderToken  String?  @unique
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @default(now()) @updatedAt
 
   isDeleted           Boolean   @default(false)
   isDisabled          Boolean   @default(false)
@@ -51,15 +52,18 @@ model UserSettings {
 }
 
 model AppSettings {
-  id                 Int      @id @default(1)
-  signupEnabled      Boolean  @default(true)
-  googleAuthEnabled  Boolean  @default(true)
-  githubAuthEnabled  Boolean  @default(true)
-  googleClientId     String?
-  googleClientSecret String?
-  githubClientId     String?
-  githubClientSecret String?
-  updatedAt          DateTime @updatedAt
+  id                  Int      @id @default(1)
+  signupEnabled       Boolean  @default(true)
+  googleAuthEnabled   Boolean  @default(false)
+  githubAuthEnabled   Boolean  @default(false)
+  discordAuthEnabled  Boolean  @default(false)
+  googleClientId      String?
+  googleClientSecret  String?
+  githubClientId      String?
+  githubClientSecret  String?
+  discordClientId     String?
+  discordClientSecret String?
+  updatedAt           DateTime @updatedAt
 }
 
 model File {

@@ -1,4 +1,4 @@
-// app/login/github/page.js
+// app/login/[provider]/page.js
 
 import ThirdPartyAuthPage from "@/components/authentication/ThirdPartyAuthPage";
 import { notFound } from "next/navigation";
@@ -6,9 +6,7 @@ import { notFound } from "next/navigation";
 export default async function Page({ params, searchParams }) {
     const { provider } = await params;
 
-    if (!["google", "github"].includes(provider)) {
-        notFound();
-    }
+    if (!["google", "github", "discord"].includes(provider)) return notFound();
 
     return <ThirdPartyAuthPage provider={provider} mode="login" searchParams={searchParams} />;
 }

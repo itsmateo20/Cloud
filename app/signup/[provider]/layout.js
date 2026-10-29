@@ -1,4 +1,5 @@
-// app/signup/google/layout.js
+// app/signup/[provider]/layout.js
+
 import "@/public/styles/globals.css";
 
 import { AuthProvider } from "@/context/AuthProvider";
@@ -8,9 +9,9 @@ import { withBasePath } from "@/lib/basePath";
 export async function generateMetadata({ params }) {
     const siteUrl = await getSiteUrl();
     const { provider } = await params;
-    const isValidProvider = ["google", "github"].includes(provider);
+    const isValidProvider = ["google", "github", "discord"].includes(provider);
     const pageTitle = isValidProvider
-        ? `Signup ${provider === "github" ? "Github" : "Google"} | Cloud Storage App`
+        ? `Signup ${provider === "github" ? "Github" : provider === "discord" ? "Discord" : "Google"} | Cloud Storage App`
         : "404 | Cloud Storage App";
 
     return {

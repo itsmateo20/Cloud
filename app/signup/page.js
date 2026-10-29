@@ -14,6 +14,7 @@ import Link from "next/link";
 import Layout from "@/components/Layout";
 import { GoogleAuth } from "@/components/authentication/GoogleAuth";
 import { GithubAuth } from "@/components/authentication/GithubAuth";
+import { DiscordAuth } from "@/components/authentication/DiscordAuth";
 import SoftLoading from "@/components/SoftLoading";
 import { useIsMobile } from "@/utils/useIsMobile";
 
@@ -22,7 +23,7 @@ import { X, Check } from "lucide-react";
 import { getError } from "@/public/error/errors";
 
 export default function Page() {
-    const { loading, softLoading, user, signup, authWithGoogle, authWithGithub } = useAuth();
+    const { loading, softLoading, user, signup, authWithGoogle, authWithGithub, authWithDiscord } = useAuth();
     const isMobile = useIsMobile();
 
     const [email, setEmail] = useState("");
@@ -31,7 +32,7 @@ export default function Page() {
     const [error, setError] = useState("");
     const [signupEnabled, setSignupEnabled] = useState(true);
     const [isFirstAdmin, setIsFirstAdmin] = useState(false);
-    const [authProviders, setAuthProviders] = useState({ google: true, github: true });
+    const [authProviders, setAuthProviders] = useState({ google: true, github: true, discord: true });
 
     const [isVisible, setIsVisible] = useState(false);
 
@@ -41,7 +42,7 @@ export default function Page() {
         api.get("/api/auth/bootstrap-status").then((response) => {
             if (response?.success) {
                 setSignupEnabled(response.signupEnabled || params.get("first") === "1");
-                setAuthProviders({ google: response.googleAuthEnabled !== false, github: response.githubAuthEnabled !== false });
+                setAuthProviders({ google: response.googleAuthEnabled !== false, github: response.githubAuthEnabled !== false, discord: response.discordAuthEnabled !== false });
             }
         });
     }, []);
@@ -182,12 +183,13 @@ export default function Page() {
                         <h1>{passwordRequirements.matching ? <Check size={20} /> : <X size={20} />} Match passwords</h1>
                     </div>
 
-                    {authProviders.google || authProviders.github ? (
+                    {authProviders.google || authProviders.github || authProviders.discord ? (
                         <>
                             <h2 className={style.or}>or</h2>
                             <div className={style.thirdPartyAuth}>
                                 <GoogleAuth auth={authWithGoogle} type="signup" enabled={authProviders.google} />
                                 <GithubAuth auth={authWithGithub} type="signup" enabled={authProviders.github} />
+                                <DiscordAuth auth={authWithDiscord} type="signup" enabled={authProviders.discord} />
                             </div>
                         </>
                     ) : (

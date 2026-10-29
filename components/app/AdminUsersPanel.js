@@ -35,14 +35,17 @@ export default function AdminUsersPanel({ onClose, openToken }) {
     const [savingPassword, setSavingPassword] = useState(false);
     const [impersonating, setImpersonating] = useState(false);
     const [signupEnabled, setSignupEnabled] = useState(true);
-    const [authProviders, setAuthProviders] = useState({ google: true, github: true });
+    const [authProviders, setAuthProviders] = useState({ google: true, github: true, discord: true });
     const [oauthSettings, setOauthSettings] = useState({
         googleClientId: "",
         googleClientSecret: "",
         githubClientId: "",
         githubClientSecret: "",
+        discordClientId: "",
+        discordClientSecret: "",
         googleClientSecretConfigured: false,
-        githubClientSecretConfigured: false
+        githubClientSecretConfigured: false,
+        discordClientSecretConfigured: false
     });
     const [savingOAuth, setSavingOAuth] = useState(false);
     const [newUserEmail, setNewUserEmail] = useState("");
@@ -74,8 +77,8 @@ export default function AdminUsersPanel({ onClose, openToken }) {
         setShowCreateUser(false);
         setShowRemoveConfirm(false);
         setShowRemoveShareConfirm(false);
-        setAuthProviders({ google: true, github: true });
-        setOauthSettings((current) => ({ ...current, googleClientSecret: "", githubClientSecret: "" }));
+        setAuthProviders({ google: true, github: true, discord: true });
+        setOauthSettings((current) => ({ ...current, googleClientSecret: "", githubClientSecret: "", discordClientSecret: "" }));
     }, [openToken]);
 
     const loadUsers = async () => {
@@ -116,15 +119,19 @@ export default function AdminUsersPanel({ onClose, openToken }) {
                 setSignupEnabled(response.settings.signupEnabled);
                 setAuthProviders({
                     google: response.settings.googleAuthEnabled !== false,
-                    github: response.settings.githubAuthEnabled !== false
+                    github: response.settings.githubAuthEnabled !== false,
+                    discord: response.settings.discordAuthEnabled !== false
                 });
                 setOauthSettings({
                     googleClientId: response.settings.googleClientId || "",
                     googleClientSecret: "",
                     githubClientId: response.settings.githubClientId || "",
                     githubClientSecret: "",
+                    discordClientId: response.settings.discordClientId || "",
+                    discordClientSecret: "",
                     googleClientSecretConfigured: response.settings.googleClientSecretConfigured,
-                    githubClientSecretConfigured: response.settings.githubClientSecretConfigured
+                    githubClientSecretConfigured: response.settings.githubClientSecretConfigured,
+                    discordClientSecretConfigured: response.settings.discordClientSecretConfigured
                 });
             }
         });
@@ -169,7 +176,7 @@ export default function AdminUsersPanel({ onClose, openToken }) {
     };
 
     const updateAuthProvider = async (provider, enabled) => {
-        const key = provider === "google" ? "googleAuthEnabled" : "githubAuthEnabled";
+        const key = `${provider}AuthEnabled`;
         const response = await api.post("/api/admin/settings", { [key]: enabled });
         if (response?.success) setAuthProviders((current) => ({ ...current, [provider]: enabled }));
         else addError(response?.message || "Failed to update authentication provider");
@@ -184,8 +191,10 @@ export default function AdminUsersPanel({ onClose, openToken }) {
             ...current,
             googleClientSecret: "",
             githubClientSecret: "",
+            discordClientSecret: "",
             googleClientSecretConfigured: response.settings.googleClientSecretConfigured,
-            githubClientSecretConfigured: response.settings.githubClientSecretConfigured
+            githubClientSecretConfigured: response.settings.githubClientSecretConfigured,
+            discordClientSecretConfigured: response.settings.discordClientSecretConfigured
         }));
         addSuccess("OAuth settings saved");
     };
@@ -387,6 +396,16 @@ export default function AdminUsersPanel({ onClose, openToken }) {
                             <div className={styles.providerFields}>
                                 <label>Client ID<input disabled={!authProviders.github} className={!authProviders.github ? styles.disabledInput : ""} value={oauthSettings.githubClientId} onChange={(event) => setOauthSettings((current) => ({ ...current, githubClientId: event.target.value }))} /></label>
                                 <label>Client Secret<input disabled={!authProviders.github} className={!authProviders.github ? styles.disabledInput : ""} type="password" value={oauthSettings.githubClientSecret} onChange={(event) => setOauthSettings((current) => ({ ...current, githubClientSecret: event.target.value }))} placeholder={oauthSettings.githubClientSecretConfigured ? "Configured" : "Not configured"} /></label>
+                            </div>
+                        </section>
+                        <section className={styles.providerSection}>
+                            <div className={styles.providerHeader}>
+                                <h5>Discord</h5>
+                                <label><input type="checkbox" checked={authProviders.discord} onChange={(event) => updateAuthProvider("discord", event.target.checked)} /> Enable auth</label>
+                            </div>
+                            <div className={styles.providerFields}>
+                                <label>Client ID<input disabled={!authProviders.discord} className={!authProviders.discord ? styles.disabledInput : ""} value={oauthSettings.discordClientId} onChange={(event) => setOauthSettings((current) => ({ ...current, discordClientId: event.target.value }))} /></label>
+                                <label>Client Secret<input disabled={!authProviders.discord} className={!authProviders.discord ? styles.disabledInput : ""} type="password" value={oauthSettings.discordClientSecret} onChange={(event) => setOauthSettings((current) => ({ ...current, discordClientSecret: event.target.value }))} placeholder={oauthSettings.discordClientSecretConfigured ? "Configured" : "Not configured"} /></label>
                             </div>
                         </section>
                         <p className={styles.cardDescription}>Client secrets are write-only. Leave a secret blank to keep the current value.</p>
