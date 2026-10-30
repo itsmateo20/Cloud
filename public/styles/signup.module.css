@@ -30,7 +30,7 @@
 
 .inputWithText {
     position: relative;
-    margin: 3px auto 6px auto;
+    margin: 3px auto 8.5px auto;
     width: clamp(280px, 50vw, 377px);
     min-height: 55px;
     height: clamp(55px, 10vw, 60px);
@@ -72,7 +72,7 @@
 .inputWithText:has(input:focus) legend,
 .inputWithText:has(button:focus) legend,
 .inputWithText:has(input:not([value=""])) legend {
-    top: -10px;
+    top: -11px;
     left: 12px;
     font-size: 15px;
 }
