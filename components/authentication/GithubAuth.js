@@ -20,6 +20,6 @@ export function GithubAuth({ auth, type, enabled = true }) {
                 </div>
             </button>
         </div>
-    ) 
+    )
     else return null;
 }
