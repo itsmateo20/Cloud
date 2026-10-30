@@ -14,7 +14,7 @@ export function DiscordAuth({ auth, type, enabled = true }) {
                 <div className={style.gsiMaterialButtonState}></div>
                 <div className={style.gsiMaterialButtonContentWrapper}>
                     <div className={style.gsiMaterialButtonIcon}>
-                        <Image src={withBasePath("/assets/authentication/DiscordAuth.svg")} width={20} height={20} alt="Discord" />
+                        <Image src={withBasePath("/assets/authentication/DiscordAuth.svg")} loading="eager" width={20} height={20} alt="Discord" className={style.gsiMaterialButtonIconSVG} />
                     </div>
                     <span style={{ display: "none" }}>Sign in with Discord</span>
                 </div>

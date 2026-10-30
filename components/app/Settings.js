@@ -636,7 +636,7 @@ export default function Settings({ onClose, onViewModeChange, onSortByChange, on
               <>
                 <SettingCard
                   title="User Profile"
-                  description="Manage your profile picture and username via Gravatar"
+                  description="Manage your profile picture via Gravatar"
                 >
                   <div className={style.profileSection}>
                     <div className={style.profileImageSection}>
@@ -660,9 +660,6 @@ export default function Settings({ onClose, onViewModeChange, onSortByChange, on
                           Edit Profile on Gravatar
                         </a>
                       </div>
-                      <p className={style.fieldHelp}>
-                        Click the button below to manage your profile picture on Gravatar. Changes will automatically appear here after some time.
-                      </p>
                     </div>
                   </div>
                 </SettingCard>

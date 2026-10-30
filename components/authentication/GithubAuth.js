@@ -14,7 +14,7 @@ export function GithubAuth({ auth, type, enabled = true }) {
                 <div className={style.gsiMaterialButtonState}></div>
                 <div className={style.gsiMaterialButtonContentWrapper}>
                     <div className={`${style.gsiMaterialButtonIcon} ${style.gsiMaterialButtonIconGithub}`}>
-                        <Image src={withBasePath("/assets/authentication/GithubAuth.svg")} width={20} height={20} alt="Github" />
+                        <Image src={withBasePath("/assets/authentication/GithubAuth.svg")} loading="eager" width={20} height={20} alt="Github" className={style.gsiMaterialButtonIconSVG} />
                     </div>
                     <span style={{ display: "none" }}>Sign in with Github</span>
                 </div>

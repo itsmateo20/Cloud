@@ -57,6 +57,16 @@
     padding: 9px;
 }
 
+.gsiMaterialButtonIconSVG {
+    transition: filter 0.3s ease;
+}
+
+@media (prefers-color-scheme: light) {
+    .gsiMaterialButtonIconSVG {
+        filter: invert(1);
+    }
+}
+
 .gsiMaterialButton .gsiMaterialButtonContentWrapper {
     -webkit-align-items: center;
     align-items: center;

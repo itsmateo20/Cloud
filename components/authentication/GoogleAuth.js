@@ -14,7 +14,7 @@ export function GoogleAuth({ auth, type, enabled = true }) {
                 <div className={style.gsiMaterialButtonState}></div>
                 <div className={style.gsiMaterialButtonContentWrapper}>
                     <div className={style.gsiMaterialButtonIcon}>
-                        <Image src={withBasePath("/assets/authentication/GoogleAuth.svg")} width={20} height={20} alt="Google" />
+                        <Image src={withBasePath("/assets/authentication/GoogleAuth.svg")} loading="eager" width={20} height={20} alt="Google" />
                     </div>
                     <span style={{ display: "none" }}>Sign in with Google</span>
                 </div>
