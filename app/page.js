@@ -777,7 +777,6 @@ export default function Page() {
   }, [lockPrivateDisk]);
 
   const handleOpenPrivate = useCallback(() => {
-    lockPrivateDisk();
     setShowSettings(false);
     setShowShares(false);
     setShowSharedWithYou(false);
@@ -789,7 +788,7 @@ export default function Page() {
     setPrivatePath('');
     setCurrentPath('private');
     fileListRef.current?.closeShareManager?.();
-  }, [lockPrivateDisk]);
+  }, []);
 
   const handleOpenAdminUsers = useCallback(() => {
     lockPrivateDisk();
