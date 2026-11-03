@@ -1950,7 +1950,7 @@ export default function Page() {
                   />
                   <FolderTree
                     socket={socket}
-                    onFolderSelect={showPrivate ? (path) => path ? setPrivatePath(path) : handleFolderSelect('') : handleFolderSelect}
+                    onFolderSelect={showPrivate && privateUnlocked ? (path) => path ? setPrivatePath(path) : handleFolderSelect('') : handleFolderSelect}
                     onOpenSharedWithYou={handleOpenSharedWithYou}
                     onOpenTrash={handleOpenTrash}
                     onOpenPrivate={handleOpenPrivate}
