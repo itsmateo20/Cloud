@@ -410,7 +410,7 @@ const FileList = forwardRef(({
             const fullPath = normalizedPath || (path === '/' ? `/${file.name}` : `${path || ''}/${file.name}`);
             const mod = file.modified || file.modifiedAt || file.updatedAt || file.createdAt || '';
             const v = mod ? new Date(mod).getTime() : '';
-            return withBasePath(`${file.privateMode ? '/api/user/private/stream' : '/api/files/video-thumbnail'}?path=${encodeURIComponent(fullPath)}${file.privateMode ? '' : `${v ? `&v=${v}` : ''}&size=${thumbnailSize}`}`);
+            return withBasePath(`${file.privateMode ? '/api/user/private/video-thumbnail' : '/api/files/video-thumbnail'}?path=${encodeURIComponent(fullPath)}${file.privateMode ? '' : `${v ? `&v=${v}` : ''}&size=${thumbnailSize}`}`);
         }
         return null;
     }, [thumbnailSize]);
@@ -1647,12 +1647,14 @@ const FileList = forwardRef(({
     const startMarqueeSelection = useCallback((event) => {
         if (mobile || event.button !== 0) return;
         if (event.defaultPrevented) return;
+        if (event.shiftKey || event.ctrlKey || event.metaKey) return;
 
         const container = scrollContainerRef.current;
         if (!container) return;
 
         const target = event.target;
         if (target?.closest?.('button, input, textarea, select, a, [role="button"]')) return;
+        if (target?.closest?.('[data-upload-selectable="true"]')) return;
 
         event.preventDefault();
         event.stopPropagation();
@@ -2200,12 +2202,12 @@ const FileList = forwardRef(({
 
     const scrollContainerRef = useRef(null);
     const headerInnerRef = useRef(null);
-    const [virtual, setVirtual] = useState({ start: 0, end: 0, itemHeight: 32, containerHeight: 0 });
+    const [virtual, setVirtual] = useState({ start: 0, end: 0, itemHeight: 35, containerHeight: 0 });
     const totalColumnWidth = useMemo(() => (
         (columnWidths.name || 0) + (columnWidths.dateModified || 0) + (columnWidths.type || 0) + (columnWidths.size || 0)
     ), [columnWidths]);
 
-    const isVirtualizableView = ['list', 'details'].includes(viewMode);
+    const isVirtualizableView = false;
     const allRenderableItems = useMemo(() => isVirtualizableView ? [...sortedFolders, ...sortedFiles] : null, [isVirtualizableView, sortedFolders, sortedFiles]);
     const totalCount = allRenderableItems ? allRenderableItems.length : 0;
 
@@ -2216,25 +2218,34 @@ const FileList = forwardRef(({
 
         const measure = () => {
             const containerHeight = el.clientHeight;
-            setVirtual(v => ({ ...v, containerHeight }));
+            const firstItem = el.querySelector('[data-upload-selectable="true"]');
+            const measuredItemHeight = firstItem?.getBoundingClientRect().height;
+            const itemHeight = measuredItemHeight && measuredItemHeight > 0
+                ? Math.ceil(measuredItemHeight)
+                : (viewMode === 'details' ? 40 : 35);
+            setVirtual(v => ({ ...v, containerHeight, itemHeight }));
         };
-        measure();
+        const frame = requestAnimationFrame(measure);
         window.addEventListener('resize', measure);
-        return () => window.removeEventListener('resize', measure);
-    }, [isVirtualizableView]);
+        return () => {
+            cancelAnimationFrame(frame);
+            window.removeEventListener('resize', measure);
+        };
+    }, [isVirtualizableView, viewMode, totalCount]);
 
     useEffect(() => {
-        if (!isVirtualizableView) return;
         const el = scrollContainerRef.current;
         if (!el) return;
         const handleScroll = () => {
-            const scrollTop = el.scrollTop;
-            const itemHeight = virtual.itemHeight;
-            const containerHeight = el.clientHeight;
-            const startIndex = Math.max(0, Math.floor(scrollTop / itemHeight) - 10);
-            const visibleCount = Math.ceil(containerHeight / itemHeight) + 20;
-            const endIndex = Math.min(totalCount, startIndex + visibleCount);
-            setVirtual(v => ({ ...v, start: startIndex, end: endIndex }));
+            if (isVirtualizableView) {
+                const scrollTop = el.scrollTop;
+                const itemHeight = virtual.itemHeight;
+                const containerHeight = el.clientHeight;
+                const startIndex = Math.max(0, Math.floor(scrollTop / itemHeight) - 10);
+                const visibleCount = Math.ceil(containerHeight / itemHeight) + 20;
+                const endIndex = Math.min(totalCount, startIndex + visibleCount);
+                setVirtual(v => ({ ...v, start: startIndex, end: endIndex }));
+            }
 
             try {
                 const left = el.scrollLeft || 0;
@@ -2329,7 +2340,6 @@ const FileList = forwardRef(({
                 <div
                     ref={scrollContainerRef}
                     className={`${styles.content} ${styles[viewMode]}`}
-                    style={viewMode === 'details' ? { overflowX: 'auto', overflowY: 'auto', minHeight: 0 } : undefined}
                     onMouseDown={!mobile ? startMarqueeSelection : undefined}
                 >
                     {isVirtualizableView && topSpacer > 0 && (
@@ -2638,16 +2648,7 @@ const FileList = forwardRef(({
                                                     {isImage(file.name) ? (
                                                         <ThumbnailWithLoader queue={thumbnailQueueRef.current} cacheRef={thumbnailCacheRef} src={getPreviewUrl(file, currentPath)} alt={file.name} currentPath={currentPath} />
                                                     ) : (
-                                                        <video
-                                                            src={withBasePath(`/api/files/download?path=${encodeURIComponent(currentPath === '/' ? `/${file.name}` : `${currentPath}/${file.name}`)}`)}
-                                                            className={styles.previewVideo}
-                                                            muted
-                                                            playsInline
-                                                            preload="metadata"
-                                                            onLoadedData={(e) => {
-                                                                e.target.currentTime = 0;
-                                                            }}
-                                                        />
+                                                        <ThumbnailWithLoader queue={thumbnailQueueRef.current} cacheRef={thumbnailCacheRef} src={getVideoThumbnailUrl(file, currentPath)} alt={file.name} currentPath={currentPath} />
                                                     )}
                                                 </div>
                                             ) : (

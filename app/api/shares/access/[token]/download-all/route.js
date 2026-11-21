@@ -138,14 +138,16 @@ export async function GET(req, { params }) {
                 if (item.type === "folder" && stat.isDirectory()) {
                     const nested = await getAllFilesInDirectory(targetPath, path.basename(targetPath));
                     for (const file of nested) {
-                        if (seen.has(file.relativePath)) continue;
-                        seen.add(file.relativePath);
+                        const fullPathKey = path.resolve(file.fullPath);
+                        if (seen.has(fullPathKey)) continue;
+                        seen.add(fullPathKey);
                         zipFiles.push(file);
                     }
                 } else if (item.type === "file" && stat.isFile()) {
-                    const relativePath = resolved.relativePath;
-                    if (!seen.has(relativePath)) {
-                        seen.add(relativePath);
+                    const relativePath = path.basename(resolved.relativePath);
+                    const fullPathKey = path.resolve(targetPath);
+                    if (!seen.has(fullPathKey)) {
+                        seen.add(fullPathKey);
                         zipFiles.push({ fullPath: targetPath, relativePath, mtime: stat.mtime });
                     }
                 }

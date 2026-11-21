@@ -6,6 +6,20 @@ import { useState, useEffect, useRef } from 'react';
 import { Editor } from '@monaco-editor/react';
 import { api } from '@/utils/api';
 import styles from './CodeEditor.module.css';
+import { marked } from 'marked';
+import Prism from 'prismjs';
+import 'prismjs/components/prism-markup';
+import 'prismjs/components/prism-markdown';
+import 'prismjs/components/prism-css';
+import 'prismjs/components/prism-javascript';
+import 'prismjs/components/prism-typescript';
+import 'prismjs/components/prism-jsx';
+import 'prismjs/components/prism-tsx';
+import 'prismjs/components/prism-python';
+import 'prismjs/components/prism-json';
+import 'prismjs/components/prism-yaml';
+import 'prismjs/components/prism-bash';
+import { Eye, FileCode2, LoaderCircle, Pencil, Save, X } from 'lucide-react';
 
 export function CodeEditor({
     file,
@@ -147,17 +161,62 @@ export function CodeEditor({
 
     const renderMarkdown = async (markdownText) => {
         try {
-            let html = markdownText
-                .replace(/^# (.*$)/gim, '<h1>$1</h1>')
-                .replace(/^## (.*$)/gim, '<h2>$1</h2>')
-                .replace(/^### (.*$)/gim, '<h3>$1</h3>')
-                .replace(/^\* (.*$)/gim, '<li>$1</li>')
-                .replace(/^\d+\. (.*$)/gim, '<li>$1</li>')
-                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                .replace(/\*(.*?)\*/g, '<em>$1</em>')
-                .replace(/`(.*?)`/g, '<code>$1</code>')
-                .replace(/\n/g, '<br>');
+            let html = marked.parse(markdownText || '', { gfm: true, breaks: false });
+            const decodeHtmlEntities = (value) => value
+                .replace(/&amp;/g, '&')
+                .replace(/&lt;/g, '<')
+                .replace(/&gt;/g, '>')
+                .replace(/&quot;/g, '"')
+                .replace(/&#39;/g, "'");
 
+            html = html.replace(
+                /<pre><code(?: class="language-([^"]+)")?>([\s\S]*?)<\/code><\/pre>/g,
+                (match, languageName, code) => {
+                    const decodedCode = decodeHtmlEntities(code);
+                    let highlightedCode = decodedCode
+                        .replace(/&/g, '&amp;')
+                        .replace(/</g, '&lt;')
+                        .replace(/>/g, '&gt;')
+                        .replace(/"/g, '&quot;')
+                        .replace(/'/g, '&#39;');
+
+                    if (languageName) {
+                        const normalizedLanguage = String(languageName).toLowerCase();
+                        const aliases = {
+                            js: 'javascript',
+                            jsx: 'jsx',
+                            ts: 'typescript',
+                            tsx: 'tsx',
+                            html: 'markup',
+                            htm: 'markup',
+                            md: 'markdown',
+                            py: 'python',
+                            sh: 'bash',
+                            shell: 'bash',
+                            yml: 'yaml',
+                            cs: 'csharp',
+                            rb: 'ruby'
+                        };
+                        const prismLanguage = aliases[normalizedLanguage] || normalizedLanguage;
+                        if (Prism.languages[prismLanguage]) {
+                            try {
+                                highlightedCode = Prism.highlight(
+                                    decodedCode,
+                                    Prism.languages[prismLanguage],
+                                    prismLanguage
+                                );
+                            } catch { }
+                        }
+                    }
+
+                    return `<pre><code class="language-${languageName || 'text'}">${highlightedCode}</code></pre>`;
+                }
+            );
+
+            html = html.replace(
+                /<a\s+([^>]*href=["'][^"']+["'][^>]*)>/gi,
+                (match, attributes) => `<a ${attributes} target="_blank" rel="noopener noreferrer">`
+            );
             setMarkdownHtml(html);
         } catch (error) {
 
@@ -361,7 +420,7 @@ export function CodeEditor({
                     <div className={styles.fileInfo}>
                         <div className={styles.fileName}>
                             <span className={styles.fileIcon}>
-                                {getLanguage(file.name) === 'markdown' ? '📝' : '💻'}
+                                {getLanguage(file.name) === 'markdown' ? <FileCode2 size={16} /> : <Pencil size={16} />}
                             </span>
                             {file.name}
                             {hasChanges && <span className={styles.unsavedIndicator}>●</span>}
@@ -376,13 +435,15 @@ export function CodeEditor({
                                     className={`${styles.tabButton} ${!showPreview ? styles.active : ''}`}
                                     onClick={() => setShowPreview(false)}
                                 >
-                                    ✏️ Edit
+                                    <Pencil size={14} />
+                                    Edit
                                 </button>
                                 <button
                                     className={`${styles.tabButton} ${showPreview ? styles.active : ''}`}
                                     onClick={() => setShowPreview(true)}
                                 >
-                                    👁️ Preview
+                                    <Eye size={14} />
+                                    Preview
                                 </button>
                             </div>
                         )}
@@ -394,7 +455,8 @@ export function CodeEditor({
                                 disabled={!hasChanges || saving}
                                 title="Save (Ctrl+S)"
                             >
-                                {saving ? '⏳' : '💾'} Save
+                                {saving ? <LoaderCircle size={14} /> : <Save size={14} />}
+                                Save
                             </button>
                         )}
 
@@ -403,7 +465,7 @@ export function CodeEditor({
                             onClick={onClose}
                             title="Close (Esc)"
                         >
-                            ✕
+                            <X size={16} />
                         </button>
                     </div>
                 </div>

@@ -855,55 +855,56 @@
 
 .customVideoControls {
     position: fixed;
-    bottom: clamp(12px, 3vw, 20px);
+    bottom: 20px;
     left: 50%;
     transform: translateX(-50%);
-    background: rgba(0, 0, 0, 0.9);
+    box-sizing: border-box;
+    width: min(620px, calc(100vw - 32px));
+    min-width: 0;
+    max-width: 620px;
+    background: rgba(18, 18, 18, 0.88);
     -webkit-backdrop-filter: blur(20px);
     backdrop-filter: blur(20px);
-    border-radius: clamp(12px, 3vw, 16px);
-    padding: clamp(4px, 1vw, 8px);
-
+    border-radius: 18px;
+    padding: 10px 12px 12px;
     display: flex;
     flex-direction: column;
-    gap: clamp(8px, 2vw, 12px);
+    gap: 8px;
     z-index: 2003;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    min-width: clamp(380px, 75vw, 650px);
-
-    max-width: 90vw;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.38);
+    animation: videoControlsIn 160ms ease-out;
 }
 
 .customVideoControlsWithSidePanel {
     position: fixed;
-    bottom: clamp(12px, 3vw, 20px);
+    bottom: 20px;
     left: calc(50% - 200px);
     transform: translateX(-50%);
-    background: rgba(0, 0, 0, 0.9);
+    box-sizing: border-box;
+    width: min(620px, calc(100vw - 432px));
+    max-width: 620px;
+    background: rgba(18, 18, 18, 0.88);
     -webkit-backdrop-filter: blur(20px);
     backdrop-filter: blur(20px);
-    border-radius: clamp(12px, 3vw, 16px);
-    padding: clamp(4px, 1vw, 8px);
-
+    border-radius: 18px;
+    padding: 10px 12px 12px;
     display: flex;
     flex-direction: column;
-    gap: clamp(8px, 2vw, 12px);
+    gap: 8px;
     z-index: 2003;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    min-width: clamp(380px, 75vw, 650px);
-
-    max-width: 90vw;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.38);
 }
 
-@keyframes zoomPanelOpen {
+@keyframes videoControlsIn {
     0% {
         opacity: 0;
-        transform: translate(-50%, 10px);
+        transform: translate(-50%, 8px) scale(0.98);
     }
-
     100% {
         opacity: 1;
-        transform: translate(-50%, 0);
+        transform: translate(-50%, 0) scale(1);
     }
 }
 
@@ -917,127 +918,186 @@
 .videoProgressContainer {
     display: flex;
     align-items: center;
-    padding: 0 clamp(4px, 1vw, 8px);
-
-    gap: clamp(10px, 2.5vw, 16px);
+    gap: 10px;
+    padding: 2px 2px 0;
 }
 
 .videoTimeAndControls {
     display: flex;
     align-items: center;
-    gap: clamp(8px, 2vw, 12px);
     justify-content: flex-end;
-
 }
 
 .videoTimeDisplay {
-    color: var(--button-text-color);
-    font-size: clamp(11px, 2.5vw, 15px);
-
+    color: rgba(255, 255, 255, 0.88);
+    font-size: 12px;
     opacity: 0.9;
-    font-family: var(--font-courierprime);
+    font-family: var(--font-courierprime), monospace;
     font-weight: 500;
+    min-width: 42px;
+    text-align: center;
 }
 
 .videoProgressBar {
     flex: 1;
-    height: clamp(6px, 1.5vw, 10px);
-
-    background: rgba(255, 255, 255, 0.3);
-    border-radius: clamp(3px, 0.75vw, 5px);
+    height: 6px;
+    background: rgba(255, 255, 255, 0.22);
+    border-radius: 999px;
     cursor: pointer;
     position: relative;
-    overflow: hidden;
+    touch-action: none;
     -webkit-user-select: none;
     user-select: none;
 }
 
 .videoProgressBar:hover {
-    height: clamp(8px, 2vw, 12px);
-
+    height: 8px;
 }
 
 .videoProgressFill {
     height: 100%;
-    background: #007AFF;
-    border-radius: clamp(3px, 0.75vw, 5px);
-    transition: width 0.3s ease;
+    background: var(--accent-color);
+    border-radius: 999px;
+    transition: width 80ms linear;
     pointer-events: none;
-}
-
-.videoOrientationButton {
-    background: rgba(255, 255, 255, 0.2);
-    border: none;
-    color: white;
-    padding: 8px 12px;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 16px;
-    transition: background-color 0.2s ease;
-    outline: none;
-}
-
-.videoOrientationButton:hover {
-    background: rgba(255, 255, 255, 0.3);
-}
-
-.videoOrientationButton:focus {
-    outline: none;
-    background: rgba(255, 255, 255, 0.3);
 }
 
 .videoControlButtons {
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    gap: clamp(8px, 2vw, 12px);
-
-    padding: clamp(2px, 0.5vw, 4px) 0;
-
+    gap: 8px;
+    position: relative;
+    min-height: 50px;
 }
 
 .videoControlCenter {
     display: flex;
     justify-content: center;
-    gap: clamp(6px, 1.5vw, 10px);
-
-    flex: 1;
+    align-items: center;
+    gap: 6px;
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
 }
 
 .videoControlButton {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.1);
     border: none;
     color: white;
-    border-radius: clamp(6px, 1.5vw, 10px);
-
+    border-radius: 12px;
     cursor: pointer;
-    font-size: clamp(14px, 3vw, 18px);
-    width: clamp(55px, 9vw, 75px);
-
-    height: clamp(30px, 9vw, 44px);
-
+    width: 44px;
+    height: 44px;
     padding: 0;
-
-    transition: background-color 0.2s ease;
+    transition: background-color 0.18s ease, transform 0.18s ease;
     outline: none;
+    flex: 0 0 auto;
 }
 
 .videoControlButton svg {
-    width: clamp(18px, 4vw, 24px);
-
-    height: clamp(18px, 4vw, 24px);
+    width: 18px;
+    height: 18px;
 }
 
 .videoControlButton:hover {
-    background: rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.18);
+    transform: translateY(-1px);
 }
 
 .videoControlButton:focus {
     outline: none;
-    background: rgba(255, 255, 255, 0.3);
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.28);
+}
+
+.videoSideButton {
+    width: 44px;
+}
+
+.videoPlayButton {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: var(--accent-color);
+    color: white;
+}
+
+.videoPlayButton:hover {
+    background: var(--accent-color);
+    filter: brightness(1.08);
+}
+
+.videoRightControls {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: auto;
+}
+
+.videoVolumeControls {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 142px;
+}
+
+.videoVolumeSlider {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 68px;
+    height: 18px;
+    margin: 0;
+    background: transparent;
+    accent-color: var(--accent-color);
+    cursor: pointer;
+    touch-action: pan-x;
+}
+
+.videoVolumeSlider::-webkit-slider-runnable-track {
+    height: 4px;
+    border-radius: 999px;
+    background: linear-gradient(to right, var(--accent-color) 0 var(--video-volume), rgba(255, 255, 255, 0.22) var(--video-volume) 100%);
+}
+
+.videoVolumeSlider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    margin-top: -5px;
+    border: 2px solid white;
+    border-radius: 50%;
+    background: var(--accent-color);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+
+.videoVolumeSlider::-moz-range-track {
+    height: 4px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.22);
+}
+
+.videoVolumeSlider::-moz-range-progress {
+    height: 4px;
+    border-radius: 999px;
+    background: var(--accent-color);
+}
+
+.videoVolumeSlider::-moz-range-thumb {
+    width: 12px;
+    height: 12px;
+    border: 2px solid white;
+    border-radius: 50%;
+    background: var(--accent-color);
+}
+
+.videoVolumeValue {
+    width: 32px;
+    color: rgba(255, 255, 255, 0.82);
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
 }
 
 .videoVertical {
@@ -1051,12 +1111,25 @@
 
 @media (max-width: 768px) {
     .customVideoControls {
-        bottom: clamp(8px, 2vw, 10px);
-        left: clamp(8px, 2vw, 10px);
-        right: clamp(8px, 2vw, 10px);
-        transform: none;
-        min-width: auto;
+        bottom: 8px;
+        left: 8px;
+        right: 8px;
+        width: auto;
         max-width: none;
+        padding: 8px;
+        border-radius: 14px;
+        transform: none;
+    }
+
+    .customVideoControlsWithSidePanel {
+        bottom: 8px;
+        left: 8px;
+        right: 8px;
+        width: auto;
+        max-width: none;
+        padding: 8px;
+        border-radius: 14px;
+        transform: none;
     }
 
     .customVideoControlsVertical {
@@ -1070,22 +1143,60 @@
     }
 
     .videoControlButtons {
-        gap: clamp(4px, 1vw, 6px);
+        gap: 4px;
     }
 
     .videoControlCenter {
-        gap: clamp(3px, 0.8vw, 4px);
+        gap: 2px;
     }
 
     .videoControlButton {
-        padding: clamp(6px, 1.5vw, 8px) clamp(10px, 2.5vw, 12px);
-        font-size: clamp(11px, 2vw, 13px);
-        min-width: clamp(45px, 9vw, 50px);
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+    }
+
+    .videoSideButton {
+        width: 40px;
+    }
+
+    .videoPlayButton {
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
     }
 
     .videoTimeDisplay {
         min-width: 40px;
-        font-size: 15px;
+        font-size: 11px;
+    }
+
+    .videoRightControls {
+        gap: 2px;
+    }
+
+    .videoVolumeControls {
+        min-width: 112px;
+        gap: 4px;
+    }
+
+    .videoVolumeSlider {
+        width: 52px;
+    }
+
+    .videoVolumeValue {
+        display: none;
+    }
+}
+
+@media (max-width: 380px) {
+    .videoControlCenter .videoControlButton:nth-child(1),
+    .videoControlCenter .videoControlButton:nth-child(5) {
+        display: none;
+    }
+
+    .videoRightControls .videoSideButton:first-child {
+        display: none;
     }
 }
 

@@ -7,6 +7,7 @@
   --nav-user-profile-background: #EEEEEE;
   --nav-user-profile-border: #C6C3BD;
   --top-nav-height: 60px;
+  --controls-height: 60px;
   --text: #181818;
   --text-color: #181818;
   --text-color-muted: #606060;
@@ -213,6 +214,7 @@
   --nav-user-profile-background: #000000;
   --nav-user-profile-border: #ffffff;
   --top-nav-height: 60px;
+  --controls-height: 60px;
   --text: #ffffff;
   --text-color: #ffffff;
   --text-color-muted: #cccccc;

@@ -99,6 +99,9 @@
 }
 
 .tabButton {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     padding: 6px 12px;
     background: transparent;
     border: none;
@@ -121,6 +124,9 @@
 }
 
 .saveButton {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     padding: 6px 12px;
     background: #238636;
     border: none;
@@ -210,6 +216,43 @@
     margin-bottom: 8px;
 }
 
+.markdownContent h4,
+.markdownContent h5,
+.markdownContent h6 {
+    color: var(--text);
+    margin: 18px 0 8px;
+}
+
+.markdownContent a {
+    color: #66aaff;
+}
+
+.markdownContent table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+}
+
+.markdownContent th,
+.markdownContent td {
+    border: 1px solid var(--border-color);
+    padding: 8px 12px;
+}
+
+.markdownContent th {
+    background: var(--btn-background);
+}
+
+.markdownContent img {
+    max-width: 100%;
+    height: auto;
+}
+
+.markdownContent hr {
+    border: 0;
+    border-top: 1px solid var(--border-color);
+}
+
 .markdownContent ul,
 .markdownContent ol {
     margin-left: 20px;
@@ -245,6 +288,68 @@
     border-radius: 8px;
     overflow-x: auto;
     margin-bottom: 16px;
+}
+
+.markdownContent pre code {
+    padding: 0;
+    background: transparent;
+    color: var(--text);
+}
+
+.markdownContent .token.comment,
+.markdownContent .token.prolog,
+.markdownContent .token.doctype,
+.markdownContent .token.cdata {
+    color: #6a9955;
+}
+
+.markdownContent .token.punctuation {
+    color: #d4d4d4;
+}
+
+.markdownContent .token.property,
+.markdownContent .token.tag,
+.markdownContent .token.constant,
+.markdownContent .token.symbol,
+.markdownContent .token.deleted {
+    color: #569cd6;
+}
+
+.markdownContent .token.boolean,
+.markdownContent .token.number {
+    color: #b5cea8;
+}
+
+.markdownContent .token.selector,
+.markdownContent .token.attr-name,
+.markdownContent .token.string,
+.markdownContent .token.char,
+.markdownContent .token.builtin,
+.markdownContent .token.inserted {
+    color: #ce9178;
+}
+
+.markdownContent .token.operator,
+.markdownContent .token.entity,
+.markdownContent .token.url {
+    color: #d4d4d4;
+}
+
+.markdownContent .token.atrule,
+.markdownContent .token.attr-value,
+.markdownContent .token.keyword {
+    color: #c586c0;
+}
+
+.markdownContent .token.function,
+.markdownContent .token.class-name {
+    color: #dcdcaa;
+}
+
+.markdownContent .token.regex,
+.markdownContent .token.important,
+.markdownContent .token.variable {
+    color: #d16969;
 }
 
 .markdownContent blockquote {

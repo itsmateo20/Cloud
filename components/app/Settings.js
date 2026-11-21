@@ -971,7 +971,8 @@ export default function Settings({ onClose, onViewModeChange, onSortByChange, on
         message={
           <div className={style.deleteForm}>
             <p className={style.warningText}>
-              ⚠️ Your account will be disabled for 30 days. After that, all your data will be permanently deleted. You can cancel the deletion anytime within those 30 days.
+              <AlertTriangle size={18} />
+              <span>Your account will be disabled for 30 days. After that, all your data will be permanently deleted. You can cancel the deletion anytime within those 30 days.</span>
             </p>
 
             <p className={style.infoText}>

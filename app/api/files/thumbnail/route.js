@@ -111,7 +111,9 @@ export async function GET(req) {
             const placeholderSvg = `
                 <svg width="64" height="64" xmlns="http://www.w3.org/2000/svg">
                     <rect width="64" height="64" fill="#f0f0f0"/>
-                    <text x="32" y="40" text-anchor="middle" font-family="Arial" font-size="24">🎬</text>
+                    <rect x="14" y="18" width="36" height="28" rx="4" fill="#555"/>
+                    <path d="M22 18l6 6-6 6v-12zm10 0l6 6-6 6v-12z" fill="#ddd"/>
+                    <path d="M27 34l12 7-12 7z" fill="#fff"/>
                 </svg>
             `;
             return new NextResponse(placeholderSvg, {

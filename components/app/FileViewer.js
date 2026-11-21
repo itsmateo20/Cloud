@@ -13,6 +13,7 @@ import { withBasePath } from '@/lib/basePath';
 import { useIsMobile } from '@/utils/useIsMobile';
 import { getMimeType } from '@/lib/mimeTypes';
 import Prism from 'prismjs';
+import { marked } from 'marked';
 import 'prismjs/themes/prism-tomorrow.css';
 import 'prismjs/components/prism-markup';
 import 'prismjs/components/prism-css';
@@ -107,6 +108,8 @@ export function FileViewer({
     const [fileInfoSheetTransitionMs, setFileInfoSheetTransitionMs] = useState(200);
     const [deleteSheetTransitionMs, setDeleteSheetTransitionMs] = useState(200);
     const [isVideoMuted, setIsVideoMuted] = useState(false);
+    const [videoVolume, setVideoVolume] = useState(1);
+    const volumeBeforeMuteRef = useRef(1);
     const [isVideoFullscreen, setIsVideoFullscreen] = useState(false);
     const [isEmpty, setIsEmpty] = useState(false);
     const [isHtmlPreview, setIsHtmlPreview] = useState(false);
@@ -171,6 +174,17 @@ export function FileViewer({
         }
     };
 
+    const goToPreviousVideo = () => {
+        if (currentFileIndex > 0) {
+            for (let i = currentFileIndex - 1; i >= 0; i--) {
+                if (getFileType(files[i].name) === 'video') {
+                    onNavigate(i);
+                    return;
+                }
+            }
+        }
+    };
+
     const goToNextVideo = () => {
         if (currentFileIndex < files.length - 1) {
             const nextIndex = currentFileIndex + 1;
@@ -221,14 +235,8 @@ export function FileViewer({
         }
     };
 
-    const handleProgressBarMouseDown = (e) => {
-        e.stopPropagation();
-        setIsDraggingProgress(true);
-        handleProgressBarClick(e);
-    };
-
-    const handleProgressBarMouseMove = (e) => {
-        if (isDraggingProgress && videoRef.current && progressBarRef.current && videoDuration > 0) {
+    const updateProgressFromPointer = (e) => {
+        if (videoRef.current && progressBarRef.current && videoDuration > 0) {
             const rect = progressBarRef.current.getBoundingClientRect();
             const percent = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
             const newTime = percent * videoDuration;
@@ -237,24 +245,22 @@ export function FileViewer({
         }
     };
 
-    const handleProgressBarMouseUp = () => {
-        setIsDraggingProgress(false);
+    const handleProgressBarPointerDown = (e) => {
+        e.stopPropagation();
+        e.currentTarget.setPointerCapture?.(e.pointerId);
+        setIsDraggingProgress(true);
+        updateProgressFromPointer(e);
     };
 
-    useEffect(() => {
-        if (isDraggingProgress) {
-            const handleMouseMove = (e) => handleProgressBarMouseMove(e);
-            const handleMouseUp = () => handleProgressBarMouseUp();
+    const handleProgressBarPointerMove = (e) => {
+        if (!isDraggingProgress) return;
+        updateProgressFromPointer(e);
+    };
 
-            document.addEventListener('mousemove', handleMouseMove);
-            document.addEventListener('mouseup', handleMouseUp);
-
-            return () => {
-                document.removeEventListener('mousemove', handleMouseMove);
-                document.removeEventListener('mouseup', handleMouseUp);
-            };
-        }
-    }, [isDraggingProgress, videoDuration]);
+    const handleProgressBarPointerUp = (e) => {
+        e.currentTarget.releasePointerCapture?.(e.pointerId);
+        setIsDraggingProgress(false);
+    };
 
     const toggleVideoOrientation = () => {
         setIsVideoVertical(!isVideoVertical);
@@ -262,9 +268,25 @@ export function FileViewer({
 
     const toggleVideoMute = () => {
         if (videoRef.current) {
-            videoRef.current.muted = !videoRef.current.muted;
-            setIsVideoMuted(videoRef.current.muted);
+            if (videoRef.current.muted || videoVolume === 0) {
+                const restoreVolume = volumeBeforeMuteRef.current > 0 ? volumeBeforeMuteRef.current : 0.5;
+                setVideoVolumeLevel(restoreVolume);
+            } else {
+                if (videoVolume > 0) volumeBeforeMuteRef.current = videoVolume;
+                videoRef.current.muted = true;
+                setIsVideoMuted(true);
+            }
         }
+    };
+
+    const setVideoVolumeLevel = (value) => {
+        if (!videoRef.current) return;
+        const nextVolume = Math.max(0, Math.min(1, Number(value)));
+        videoRef.current.volume = nextVolume;
+        videoRef.current.muted = nextVolume === 0;
+        setVideoVolume(nextVolume);
+        setIsVideoMuted(nextVolume === 0);
+        if (nextVolume > 0) volumeBeforeMuteRef.current = nextVolume;
     };
 
     const toggleVideoFullscreen = () => {
@@ -533,13 +555,13 @@ export function FileViewer({
                 case 'ArrowUp':
                     if (getFileType(currentFile?.name) === 'video' && videoRef.current) {
                         e.preventDefault();
-                        videoRef.current.volume = Math.min(1, videoRef.current.volume + 0.1);
+                        setVideoVolumeLevel(videoVolume + 0.1);
                     }
                     break;
                 case 'ArrowDown':
                     if (getFileType(currentFile?.name) === 'video' && videoRef.current) {
                         e.preventDefault();
-                        videoRef.current.volume = Math.max(0, videoRef.current.volume - 0.1);
+                        setVideoVolumeLevel(videoVolume - 0.1);
                     }
                     break;
                 case 'j':
@@ -561,6 +583,10 @@ export function FileViewer({
                 e.preventDefault();
                 if (e.deltaY < 0) handleZoomIn();
                 else handleZoomOut();
+            } else if (getFileType(currentFile?.name) === 'video') {
+                e.preventDefault();
+                const step = e.deltaY < 0 ? 0.05 : -0.05;
+                setVideoVolumeLevel((videoRef.current?.volume ?? videoVolume) + step);
             }
         };
 
@@ -629,6 +655,8 @@ export function FileViewer({
             setVideoCurrentTime(0);
             setVideoDuration(0);
             setIsVideoMuted(false);
+            setVideoVolume(1);
+            volumeBeforeMuteRef.current = 1;
             setIsVideoFullscreen(false);
 
             setIsHtmlPreview(false);
@@ -1141,6 +1169,137 @@ export function FileViewer({
         return ext === 'html' || ext === 'htm';
     };
 
+    const isMarkdownFile = (filename) => {
+        if (!filename) return false;
+        const ext = filename.split('.').pop()?.toLowerCase();
+        return ext === 'md' || ext === 'markdown';
+    };
+
+    const getMarkdownPreviewDocument = (markdown) => {
+        let renderedMarkdown = '';
+        try {
+            renderedMarkdown = marked.parse(markdown || '', {
+                gfm: true,
+                breaks: false
+            });
+        } catch {
+            renderedMarkdown = '<p>Unable to render Markdown preview.</p>';
+        }
+
+        const decodeHtmlEntities = (value) => {
+            return value
+                .replace(/&amp;/g, '&')
+                .replace(/&lt;/g, '<')
+                .replace(/&gt;/g, '>')
+                .replace(/&quot;/g, '"')
+                .replace(/&#39;/g, "'");
+        };
+
+        renderedMarkdown = renderedMarkdown.replace(
+            /<pre><code(?: class="language-([^"]+)")?>([\s\S]*?)<\/code><\/pre>/g,
+            (match, languageName, code) => {
+                const decodedCode = decodeHtmlEntities(code);
+                let highlightedCode = decodedCode
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#39;');
+
+                if (languageName) {
+                    const normalizedLanguage = String(languageName).toLowerCase();
+                    const languageAliases = {
+                        js: 'javascript',
+                        jsx: 'jsx',
+                        ts: 'typescript',
+                        tsx: 'tsx',
+                        html: 'markup',
+                        htm: 'markup',
+                        md: 'markdown',
+                        py: 'python',
+                        sh: 'bash',
+                        shell: 'bash',
+                        yml: 'yaml',
+                        cs: 'csharp',
+                        rb: 'ruby'
+                    };
+                    const prismLanguage = languageAliases[normalizedLanguage] || normalizedLanguage;
+
+                    if (Prism.languages[prismLanguage]) {
+                        try {
+                            highlightedCode = Prism.highlight(
+                                decodedCode,
+                                Prism.languages[prismLanguage],
+                                prismLanguage
+                            );
+                        } catch { }
+                    }
+                }
+
+                return `<pre><code class="language-${languageName || 'text'}">${highlightedCode}</code></pre>`;
+            }
+        );
+
+        renderedMarkdown = renderedMarkdown.replace(
+            /<a\s+([^>]*href=["'][^"']+["'][^>]*)>/gi,
+            (match, attributes) => `<a ${attributes} target="_blank" rel="noopener noreferrer">`
+        );
+
+        return `<!doctype html>
+<html>
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <style>
+            :root { color-scheme: light dark; }
+            body {
+                box-sizing: border-box;
+                max-width: 900px;
+                margin: 0 auto;
+                padding: 32px;
+                color: #d8d8d8;
+                background: #171717;
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+                line-height: 1.6;
+                overflow-wrap: anywhere;
+            }
+            h1, h2, h3, h4, h5, h6 { margin-top: 1.5em; margin-bottom: 0.5em; line-height: 1.25; }
+            h1, h2 { padding-bottom: 0.3em; border-bottom: 1px solid #404040; }
+            a { color: #66aaff; }
+            blockquote { margin: 1em 0; padding: 0.5em 1em; border-left: 4px solid #555; color: #bbbbbb; }
+            code { padding: 0.15em 0.35em; border-radius: 4px; background: #2a2a2a; font-family: Consolas, monospace; }
+            pre { overflow-x: auto; padding: 16px; border-radius: 8px; background: #232323; }
+            pre code { padding: 0; background: transparent; }
+            .token.comment, .token.prolog, .token.doctype, .token.cdata { color: #6a9955; }
+            .token.punctuation { color: #d4d4d4; }
+            .token.property, .token.tag, .token.constant, .token.symbol, .token.deleted { color: #569cd6; }
+            .token.boolean, .token.number { color: #b5cea8; }
+            .token.selector, .token.attr-name, .token.string, .token.char, .token.builtin, .token.inserted { color: #ce9178; }
+            .token.operator, .token.entity, .token.url { color: #d4d4d4; }
+            .token.atrule, .token.attr-value, .token.keyword { color: #c586c0; }
+            .token.function, .token.class-name { color: #dcdcaa; }
+            .token.regex, .token.important, .token.variable { color: #d16969; }
+            table { width: 100%; border-collapse: collapse; margin: 1em 0; }
+            th, td { border: 1px solid #454545; padding: 8px 12px; }
+            th { background: #252525; }
+            img { max-width: 100%; height: auto; }
+            hr { border: 0; border-top: 1px solid #404040; }
+            @media (prefers-color-scheme: light) {
+                body { color: #242424; background: #ffffff; }
+                h1, h2 { border-bottom-color: #dddddd; }
+                blockquote { border-left-color: #cccccc; color: #555555; }
+                code { background: #f2f2f2; }
+                pre { background: #f5f5f5; }
+                th { background: #f5f5f5; }
+                th, td { border-color: #dddddd; }
+                hr { border-top-color: #dddddd; }
+            }
+        </style>
+    </head>
+    <body>${renderedMarkdown}</body>
+</html>`;
+    };
+
     const openCodeEditor = () => {
         if (isEditableFile(currentFile?.name)) {
             setShowCodeEditor(true);
@@ -1254,7 +1413,6 @@ export function FileViewer({
                                 ref={videoRef}
                                 src={getStreamUrl(currentFile)}
                                 className={`${style.video} ${isVideoVertical ? style.videoVertical : ''}`}
-                                loop
                                 preload="metadata"
                                 onError={handleVideoError}
                                 onTimeUpdate={handleVideoTimeUpdate}
@@ -1284,8 +1442,10 @@ export function FileViewer({
                                     <div
                                         ref={progressBarRef}
                                         className={style.videoProgressBar}
-                                        onMouseDown={handleProgressBarMouseDown}
-                                        onClick={handleProgressBarClick}
+                                        onPointerDown={handleProgressBarPointerDown}
+                                        onPointerMove={handleProgressBarPointerMove}
+                                        onPointerUp={handleProgressBarPointerUp}
+                                        onPointerCancel={handleProgressBarPointerUp}
                                     >
                                         <div
                                             className={style.videoProgressFill}
@@ -1296,66 +1456,69 @@ export function FileViewer({
                                         <div className={style.videoTimeDisplay}>
                                             {formatTime(videoDuration)}
                                         </div>
-                                        {isMobile && (
-                                            <button
-                                                className={style.videoOrientationButton}
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    toggleVideoOrientation();
-                                                }}
-                                                title="Toggle orientation"
-                                            >
-                                                <RotateCw size={16} />
-                                            </button>
-                                        )}
                                     </div>
                                 </div>
 
                                 <div className={style.videoControlButtons}>
-                                    <button
-                                        className={style.videoControlButton}
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            toggleVideoMute();
-                                        }}
-                                        title={isVideoMuted ? "Unmute" : "Mute"}
-                                    >
-                                        {isVideoMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
-                                    </button>
+                                    <div className={style.videoVolumeControls}>
+                                        <button
+                                            className={`${style.videoControlButton} ${style.videoSideButton}`}
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                toggleVideoMute();
+                                            }}
+                                            title={isVideoMuted ? "Unmute" : "Mute"}
+                                        >
+                                            {isVideoMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
+                                        </button>
+                                        <input
+                                            className={style.videoVolumeSlider}
+                                            type="range"
+                                            min="0"
+                                            max="100"
+                                            step="1"
+                                            value={Math.round(videoVolume * 100)}
+                                            aria-label="Volume"
+                                            onPointerDown={(e) => e.stopPropagation()}
+                                            onClick={(e) => e.stopPropagation()}
+                                            onChange={(e) => setVideoVolumeLevel(Number(e.target.value) / 100)}
+                                            style={{ '--video-volume': `${Math.round(videoVolume * 100)}%` }}
+                                        />
+                                        <span className={style.videoVolumeValue}>{Math.round(videoVolume * 100)}%</span>
+                                    </div>
 
                                     <div className={style.videoControlCenter}>
                                         <button
                                             className={style.videoControlButton}
                                             onClick={(e) => {
                                                 e.stopPropagation();
-                                                seekVideo(10);
+                                                seekVideo(-10);
                                             }}
-                                            title="+10s"
+                                            title="-10 seconds"
                                         >
-                                            10s <Redo2 size={14} strokeWidth={3} />
+                                            <Undo2 size={17} />
                                         </button>
 
                                         <button
                                             className={style.videoControlButton}
                                             onClick={(e) => {
                                                 e.stopPropagation();
-                                                restartVideo();
+                                                goToPreviousVideo();
                                             }}
-                                            title="Restart"
-                                            style={{ rotate: '180deg' }}
+                                            title="Previous video"
                                         >
-                                            <FastForward fill='currentColor' size={14} strokeWidth={2} />
+                                            <ChevronLeft size={19} />
                                         </button>
 
                                         <button
-                                            className={style.videoControlButton}
+                                            className={`${style.videoControlButton} ${style.videoPlayButton}`}
                                             onClick={(e) => {
                                                 e.stopPropagation();
                                                 toggleVideoPlay();
                                             }}
                                             title={isVideoPlaying ? "Pause" : "Play"}
                                         >
-                                            {isVideoPlaying ? <Pause fill='currentColor' size={14} strokeWidth={2} /> : <Play fill='currentColor' size={13} strokeWidth={4} />}
+                                            {isVideoPlaying ? <Pause fill="currentColor" size={18} /> : <Play fill="currentColor" size={18} />}
                                         </button>
 
                                         <button
@@ -1366,31 +1529,45 @@ export function FileViewer({
                                             }}
                                             title="Next video"
                                         >
-                                            <FastForward fill='currentColor' size={14} strokeWidth={2} />
+                                            <ChevronRight size={19} />
                                         </button>
 
                                         <button
                                             className={style.videoControlButton}
                                             onClick={(e) => {
                                                 e.stopPropagation();
-                                                seekVideo(-10);
+                                                seekVideo(10);
                                             }}
-                                            title="-10s"
+                                            title="+10 seconds"
                                         >
-                                            <Undo2 size={14} strokeWidth={3} /> 10s
+                                            <Redo2 size={17} />
                                         </button>
                                     </div>
 
-                                    <button
-                                        className={style.videoControlButton}
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            toggleVideoFullscreen();
-                                        }}
-                                        title={isVideoFullscreen ? "Exit fullscreen" : "Fullscreen"}
-                                    >
-                                        <Maximize size={16} />
-                                    </button>
+                                    <div className={style.videoRightControls}>
+                                        {isMobile && (
+                                            <button
+                                                className={`${style.videoControlButton} ${style.videoSideButton}`}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    toggleVideoOrientation();
+                                                }}
+                                                title="Toggle orientation"
+                                            >
+                                                <RotateCw size={17} />
+                                            </button>
+                                        )}
+                                        <button
+                                            className={`${style.videoControlButton} ${style.videoSideButton}`}
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                toggleVideoFullscreen();
+                                            }}
+                                            title={isVideoFullscreen ? "Exit fullscreen" : "Fullscreen"}
+                                        >
+                                            <Maximize size={17} />
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         )}
@@ -1424,6 +1601,21 @@ export function FileViewer({
                                     className={style.htmlPreview}
                                     sandbox="allow-same-origin allow-scripts allow-forms"
                                     title="HTML Preview"
+                                />
+                            </div>
+                        </div>
+                    );
+                }
+
+                if (isMarkdownFile(currentFile?.name) && isHtmlPreview) {
+                    return (
+                        <div className={style.contentContainer}>
+                            <div className={style.htmlPreviewContainer}>
+                                <iframe
+                                    srcDoc={getMarkdownPreviewDocument(fileContent)}
+                                    className={style.htmlPreview}
+                                    sandbox="allow-same-origin allow-popups"
+                                    title="Markdown Preview"
                                 />
                             </div>
                         </div>
@@ -1635,6 +1827,16 @@ export function FileViewer({
                                                     className={`${style.controlButton} ${isHtmlPreview ? style.previewButtonActive : ''}`}
                                                     onClick={() => setIsHtmlPreview(!isHtmlPreview)}
                                                     title={isHtmlPreview ? "Show code" : "Preview HTML"}
+                                                >
+                                                    {isHtmlPreview ? <FileText size={20} /> : <Eye size={20} />}
+                                                </button>
+                                            )}
+
+                                            {isMarkdownFile(currentFile?.name) && (
+                                                <button
+                                                    className={`${style.controlButton} ${isHtmlPreview ? style.previewButtonActive : ''}`}
+                                                    onClick={() => setIsHtmlPreview(!isHtmlPreview)}
+                                                    title={isHtmlPreview ? "Show code" : "Preview Markdown"}
                                                 >
                                                     {isHtmlPreview ? <FileText size={20} /> : <Eye size={20} />}
                                                 </button>

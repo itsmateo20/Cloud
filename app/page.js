@@ -34,7 +34,34 @@ import { useIsMobile } from "@/utils/useIsMobile";
 import { withBasePath } from "@/lib/basePath";
 
 import { Resizable } from "re-resizable";
-import { AlertTriangle, ArrowLeft, Check, CheckCircle2, Download, EllipsisVertical, Info, LayoutGrid, List, LockKeyhole, Plus, Share2, Star, Trash2, X, XCircle } from "lucide-react";
+import {
+  AlertTriangle,
+  Archive,
+  ArrowLeft,
+  Camera,
+  Check,
+  CheckCircle2,
+  Download,
+  EllipsisVertical,
+  FileSpreadsheet,
+  FileText,
+  Folder,
+  HardDrive,
+  Image as ImageIcon,
+  Info,
+  LayoutGrid,
+  List,
+  LockKeyhole,
+  Music,
+  Paperclip,
+  Plus,
+  Share2,
+  Star,
+  Trash2,
+  Video,
+  X,
+  XCircle
+} from "lucide-react";
 import ConfirmModal from '@/components/app/ConfirmModal';
 
 const normalizeUploadSelection = (files) => {
@@ -609,26 +636,26 @@ export default function Page() {
       case 'gif':
       case 'bmp':
       case 'webp':
-        return '🖼️';
+        return <ImageIcon size={22} />;
       case 'pdf':
-        return '📄';
+        return <FileText size={22} />;
       case 'doc':
       case 'docx':
-        return '📝';
+        return <FileText size={22} />;
       case 'xls':
       case 'xlsx':
-        return '📊';
+        return <FileSpreadsheet size={22} />;
       case 'txt':
-        return '📃';
+        return <FileText size={22} />;
       case 'zip':
       case 'rar':
-        return '📦';
+        return <Archive size={22} />;
       case 'mp4':
       case 'avi':
       case 'mov':
       case 'webm':
       case 'mkv':
-        return '🎬';
+        return <Video size={22} />;
       case 'mp3':
       case 'wav':
       case 'flac':
@@ -641,7 +668,7 @@ export default function Page() {
       case 'wma':
       case 'aif':
       case 'aiff':
-        return '🎵';
+        return <Music size={22} />;
       case 'nef':
       case 'cr2':
       case 'arw':
@@ -661,9 +688,9 @@ export default function Page() {
       case 'bay':
       case 'rwl':
       case 'raw':
-        return '📷';
+        return <Camera size={22} />;
       default:
-        return '📎';
+        return <Paperclip size={22} />;
     }
   };
 
@@ -1387,7 +1414,7 @@ export default function Page() {
       }
 
       if (totalUploaded > 0) {
-        toast.addSuccess(`✅ Uploaded ${totalUploaded} file${totalUploaded > 1 ? 's' : ''}`);
+        toast.addSuccess(`Uploaded ${totalUploaded} file${totalUploaded > 1 ? 's' : ''}`);
         if (fileListRef.current) {
           fileListRef.current.refresh();
         }
@@ -2083,7 +2110,7 @@ export default function Page() {
                     >
                       <div className={style.favouriteMediaContainer}>
                         <div className={style.favouriteIcon}>
-                          📁
+                          <Folder size={20} />
                         </div>
                         <div className={style.favouriteInfo}>
                           <span className={style.favouriteName}>{folder.name}</span>
@@ -2125,7 +2152,7 @@ export default function Page() {
                   }}
                 >
                   <div className={style.storageIcon}>
-                    💾
+                    <HardDrive size={25} />
                   </div>
                   <div className={style.storageInfo}>
                     <span className={style.storageName}>Main Storage</span>
@@ -2181,7 +2208,7 @@ export default function Page() {
                     }}
                   >
                     <div className={style.storageIcon}>
-                      ⭐
+                      <Star size={25} />
                     </div>
                     <div className={style.storageInfo}>
                       <span className={style.storageName}>Favourites</span>
