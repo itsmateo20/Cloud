@@ -40,7 +40,9 @@ export default function ShareManager({
                                     ? "Share Options"
                                     : shareCreateModal.stage === "append"
                                         ? "Append to Existing Share"
-                                        : "Create Share"}
+                                        : shareCreateModal.stage === "access"
+                                            ? "Share Folder Access"
+                                            : "Create Share"}
                             </h3>
                             <button className={styles.closeButton} onClick={() => setShareCreateModal(prev => ({ ...prev, visible: false }))}>x</button>
                         </div>
@@ -68,7 +70,103 @@ export default function ShareManager({
                                                 : "Add selected items to an existing share"}
                                         </span>
                                     </button>
+                                    {shareCreateModal.items.length > 0 &&
+                                        shareCreateModal.items.every((item) => item.type === "folder") && (
+                                            <button
+                                                type="button"
+                                                className={styles.shareModeChoiceCard}
+                                                onClick={() => setShareCreateModal((prev) => ({
+                                                    ...prev,
+                                                    mode: "access",
+                                                    stage: "access",
+                                                    name: prev.items.find((item) => item.path === prev.accessFolderPath)?.name || prev.items[0]?.name || "Shared Folder",
+                                                    allowedEmails: []
+                                                }))}
+                                            >
+                                                <strong>Share Access</strong>
+                                                <span>Grant selected folders to specific users.</span>
+                                            </button>
+                                        )}
                                 </div>
+                            )}
+
+                            {shareCreateModal.stage === "access" && (
+                                <>
+                                    <label className={styles.shareFieldLabel}>Folder</label>
+                                    {shareCreateModal.items.length > 1 ? (
+                                        <select
+                                            className={styles.shareSelect}
+                                            value={shareCreateModal.accessFolderPath}
+                                            onChange={(event) => {
+                                                const accessFolderPath = event.target.value;
+                                                const folder = shareCreateModal.items.find((item) => item.path === accessFolderPath);
+                                                setShareCreateModal((prev) => ({
+                                                    ...prev,
+                                                    accessFolderPath,
+                                                    name: folder?.name || prev.name
+                                                }));
+                                            }}
+                                        >
+                                            {shareCreateModal.items.filter((item) => item.type === "folder").map((item) => (
+                                                <option key={item.path} value={item.path}>{item.name}</option>
+                                            ))}
+                                        </select>
+                                    ) : (
+                                        <p className={styles.shareInfoLine}>{shareCreateModal.items[0]?.path}</p>
+                                    )}
+
+                                    <label className={styles.shareFieldLabel}>Share Name</label>
+                                    <input
+                                        className={styles.shareInput}
+                                        value={shareCreateModal.name}
+                                        onChange={(event) => setShareCreateModal((prev) => ({ ...prev, name: event.target.value }))}
+                                    />
+
+                                    <label className={styles.shareFieldLabel}>User Emails</label>
+                                    <div className={styles.shareEmailEditor}>
+                                        {(shareCreateModal.allowedEmails || []).length === 0 ? (
+                                            <p className={styles.shareEmailHint}>Add account emails to grant access to this folder.</p>
+                                        ) : (
+                                            (shareCreateModal.allowedEmails || []).map((email, idx) => (
+                                                <div key={`access-email-${idx}`} className={styles.shareEmailRow}>
+                                                    <input
+                                                        type="email"
+                                                        className={styles.shareInput}
+                                                        value={email}
+                                                        placeholder="name@example.com"
+                                                        onChange={(event) => setShareCreateModal((prev) => {
+                                                            const nextEmails = [...(prev.allowedEmails || [])];
+                                                            nextEmails[idx] = event.target.value;
+                                                            return { ...prev, allowedEmails: nextEmails };
+                                                        })}
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        className={styles.shareEmailRemoveButton}
+                                                        onClick={() => setShareCreateModal((prev) => {
+                                                            const nextEmails = [...(prev.allowedEmails || [])];
+                                                            nextEmails.splice(idx, 1);
+                                                            return { ...prev, allowedEmails: nextEmails };
+                                                        })}
+                                                        aria-label={`Remove email ${email || idx + 1}`}
+                                                    >
+                                                        <Minus size={14} />
+                                                    </button>
+                                                </div>
+                                            ))
+                                        )}
+                                        <button
+                                            type="button"
+                                            className={styles.shareEmailAddButton}
+                                            onClick={() => setShareCreateModal((prev) => ({
+                                                ...prev,
+                                                allowedEmails: [...(prev.allowedEmails || []), ""]
+                                            }))}
+                                        >
+                                            <Plus size={14} /> Add email
+                                        </button>
+                                    </div>
+                                </>
                             )}
 
                             {shareCreateModal.stage === "append" && (
@@ -216,12 +314,13 @@ export default function ShareManager({
                                     disabled={
                                         shareCreateModal.submitting ||
                                         (shareCreateModal.stage === "create" && !shareCreateModal.name.trim()) ||
-                                        (shareCreateModal.stage === "append" && !shareCreateModal.targetShareId)
+                                        (shareCreateModal.stage === "append" && !shareCreateModal.targetShareId) ||
+                                        (shareCreateModal.stage === "access" && (!shareCreateModal.name.trim() || !shareCreateModal.accessFolderPath))
                                     }
                                 >
                                     {shareCreateModal.submitting
                                         ? (shareCreateModal.stage === "append" ? "Appending..." : "Creating...")
-                                        : (shareCreateModal.stage === "append" ? "Append" : "Create Share")}
+                                        : (shareCreateModal.stage === "append" ? "Append" : shareCreateModal.stage === "access" ? "Share Access" : "Create Share")}
                                 </button>
                             )}
                         </div>

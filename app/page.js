@@ -63,6 +63,7 @@ import {
   XCircle
 } from "lucide-react";
 import ConfirmModal from '@/components/app/ConfirmModal';
+import fileListStyles from '@/components/app/FileList.module.css';
 
 const normalizeUploadSelection = (files) => {
   if (!files) return [];
@@ -147,6 +148,7 @@ export default function Page() {
   const [sortBy, setSortBy] = useState("name");
   const [desktopViewMode, setDesktopViewMode] = useState("details");
   const [mobileViewMode, setMobileViewMode] = useState("list");
+  const [sharedAccessViewMode, setSharedAccessViewMode] = useState("grid");
   const [thumbnailResolution, setThumbnailResolution] = useState("medium");
   const [favorites, setFavorites] = useState({ files: [], folders: [] });
   const [trashItemCount, setTrashItemCount] = useState(0);
@@ -165,6 +167,7 @@ export default function Page() {
   const [showNewFolderPopup, setShowNewFolderPopup] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
   const [confirmState, setConfirmState] = useState({ open: false, title: '', message: '', action: '' });
+  const [sharedQrModal, setSharedQrModal] = useState({ open: false, type: 'download', qrCode: null, items: [], loading: false });
   const [showSettings, setShowSettings] = useState(false);
   const [settingsInitialSection, setSettingsInitialSection] = useState('profile');
   const [showShares, setShowShares] = useState(false);
@@ -207,7 +210,6 @@ export default function Page() {
   const [controlsDisabled, setControlsDisabled] = useState(false);
   const [sharedAccessSelectedItems, setSharedAccessSelectedItems] = useState([]);
   const [sharedAccessReady, setSharedAccessReady] = useState(false);
-  const [pendingSharedAccessItems, setPendingSharedAccessItems] = useState(null);
 
   const [isGlobalDragOver, setIsGlobalDragOver] = useState(false);
   const [isDragInvalid, setIsDragInvalid] = useState(false);
@@ -235,7 +237,10 @@ export default function Page() {
 
   const viewMode = isMobile ? mobileViewMode : desktopViewMode;
   const sharedAccessActive = showSharedWithYou && sharedSubtab === 'access';
+  const effectiveTrashEnabled = sharedAccessActive ? false : trashEnabled;
+  const sharedViewsHideDetails = showSharedWithYou && sharedSubtab !== 'by';
   const activeSelection = sharedAccessActive ? sharedAccessSelectedItems : selectedItems;
+  const sharedToYouDownloadActive = showSharedWithYou && sharedSubtab === 'to' && activeSelection.length > 0;
   const specialControlsDisabled = Boolean(
     showSettings || showShares || showAdminUsers || showTrash ||
     (showSharedWithYou && !sharedAccessActive) ||
@@ -798,32 +803,7 @@ export default function Page() {
     setCurrentPath('');
   }, [lockPrivateDisk]);
 
-  const openSharedAccessDialog = useCallback((items = []) => {
-    const folders = (items || []).filter((item) => item?.type === 'folder');
-    if (folders.length === 0) {
-      toast?.addError('Select a folder to share access');
-      return;
-    }
-
-    lockPrivateDisk();
-    setPendingSharedAccessItems(folders);
-    setShowSettings(false);
-    setShowShares(false);
-    setShowSharedWithYou(true);
-    setSharedSubtab('access');
-    setShowAdminUsers(false);
-    setShowTrash(false);
-    setShowPrivate(false);
-    setCurrentPath('');
-  }, [lockPrivateDisk, toast]);
-
-  useEffect(() => {
-    if (!pendingSharedAccessItems || !sharedAccessActive || !sharedAccessRef.current) return;
-    sharedAccessRef.current.openShareModal(pendingSharedAccessItems);
-    setPendingSharedAccessItems(null);
-  }, [pendingSharedAccessItems, sharedAccessActive]);
-
-  const handleOpenSharedWithYou = useCallback(() => {
+  const handleOpenShared = useCallback(() => {
     lockPrivateDisk();
     setShowSettings(false);
     setShowShares(false);
@@ -933,6 +913,15 @@ export default function Page() {
   };
 
   const handleSelectAll = () => {
+    if (sharedAccessActive) {
+      const count = Number(sharedAccessRef.current?.getSelectableCount?.() || 0);
+      if (count > 0 && sharedAccessSelectedItems.length >= count) {
+        sharedAccessRef.current?.clearSelection?.();
+        return;
+      }
+      sharedAccessRef.current?.selectAll?.();
+      return;
+    }
     const totalSelectable = Number(fileListRef.current?.getSelectableCount?.() || 0);
     const allSelected = totalSelectable > 0 && selectedItems.length >= totalSelectable;
     if (allSelected) {
@@ -944,6 +933,10 @@ export default function Page() {
   };
 
   const toggleViewMode = () => {
+    if (showSharedWithYou && sharedSubtab === 'access') {
+      setSharedAccessViewMode(prevMode => prevMode === 'list' ? 'grid' : 'list');
+      return;
+    }
     if (isMobile) {
       setMobileViewMode(prevMode => prevMode === 'list' ? 'grid' : 'list');
     } else {
@@ -1263,6 +1256,17 @@ export default function Page() {
     const totalBytes = uploadSelection.reduce((sum, file) => sum + (file.size || 0), 0);
     let uploadedBytesCommitted = 0;
     const uploadId = createUploadId();
+    const abortController = new AbortController();
+    const handleUploadCancel = (event) => {
+      if (event.detail?.id === uploadId) abortController.abort();
+    };
+    const throwIfUploadCancelled = () => {
+      if (!abortController.signal.aborted) return;
+      const error = new Error('Upload cancelled');
+      error.name = 'AbortError';
+      throw error;
+    };
+    window.addEventListener('uploadCancel', handleUploadCancel);
     let lastProgressAt = Date.now();
     let lastLoaded = 0;
 
@@ -1286,6 +1290,7 @@ export default function Page() {
     emitUploadProgress(0, totalBytes);
 
     try {
+      throwIfUploadCancelled();
 
       const folderStructure = new Map();
       const foldersToCreate = new Set();
@@ -1343,6 +1348,7 @@ export default function Page() {
         });
 
         for (const folderPath of sortedFolders) {
+          throwIfUploadCancelled();
           try {
             const folderName = folderPath.split('/').pop();
             const parentPath = folderPath.includes('/') ?
@@ -1353,7 +1359,8 @@ export default function Page() {
               name: folderName,
               type: 'folder',
               currentPath: parentPath
-            });
+            }, { signal: abortController.signal });
+            throwIfUploadCancelled();
 
             if (!result.success && result.code !== 'exists') {
               console.warn(`Failed to create folder ${folderName}: ${result.message}`);
@@ -1362,6 +1369,7 @@ export default function Page() {
               return;
             }
           } catch (error) {
+            if (abortController.signal.aborted) throw error;
             console.warn(`Error creating folder ${folderPath}:`, error);
             toast.addError(`Error creating folder: ${folderPath}`);
             window.dispatchEvent(new CustomEvent('uploadComplete', { detail: { id: uploadId, success: false, error: `Error creating folder: ${folderPath}` } }));
@@ -1383,6 +1391,7 @@ export default function Page() {
       toast.addInfo(`Uploading ${uploadSelection.length} file${uploadSelection.length > 1 ? 's' : ''} (${sizeText})...`);
 
       for (const [folderPath, fileGroup] of folderStructure) {
+        throwIfUploadCancelled();
         const targetPath = folderPath
           ? (currentPath ? `${currentPath}/${folderPath}` : folderPath)
           : (currentPath || '');
@@ -1390,13 +1399,15 @@ export default function Page() {
         const smallFiles = [];
 
         for (const { file } of fileGroup) {
+          throwIfUploadCancelled();
           if (file.size > 8 * 1024 * 1024) {
             const baseBytes = uploadedBytesCommitted;
 
             const largeResult = await uploadLargeFile(file, targetPath, (uploaded, total) => {
               const currentUploaded = Math.min(baseBytes + uploaded, totalBytes);
               emitUploadProgress(currentUploaded, totalBytes);
-            });
+            }, abortController.signal);
+            throwIfUploadCancelled();
 
             if (largeResult?.success) {
               totalUploaded += 1;
@@ -1421,7 +1432,8 @@ export default function Page() {
           appendMetadataToFormData(formData, smallFiles);
 
           try {
-            const result = await api.upload('/api/files/upload', formData);
+            const result = await api.upload('/api/files/upload', formData, { signal: abortController.signal });
+            throwIfUploadCancelled();
 
             if (result.success) {
               totalUploaded += smallFiles.length;
@@ -1454,6 +1466,7 @@ export default function Page() {
               toast.addError(`${errorMsg} (folder: ${folderPath || 'current folder'})`);
             }
           } catch (error) {
+            if (abortController.signal.aborted) throw error;
             console.error('Upload error:', error);
             toast.addError(`Network error uploading to folder: ${folderPath || 'current folder'}`);
           }
@@ -1467,11 +1480,12 @@ export default function Page() {
         }
       }
 
+      throwIfUploadCancelled();
       emitUploadProgress(totalBytes, totalBytes);
       window.dispatchEvent(new CustomEvent('uploadComplete', { detail: { id: uploadId, success: true } }));
 
     } catch (error) {
-      if (error.name === 'AbortError') {
+      if (abortController.signal.aborted || error.name === 'AbortError') {
         toast.addWarning('Upload cancelled');
       } else if (error.message?.includes('fetch')) {
         toast.addError('Network error: Check your connection and try again');
@@ -1485,6 +1499,8 @@ export default function Page() {
           error: error?.message || 'Upload failed'
         }
       }));
+    } finally {
+      window.removeEventListener('uploadCancel', handleUploadCancel);
     }
   };
 
@@ -1564,9 +1580,61 @@ export default function Page() {
     }
   };
 
+  const generateSharedQr = async (type, items) => {
+    if (type === 'download' && !items?.length) return;
+    setSharedQrModal({ open: true, type, qrCode: null, items: items || [], loading: true });
+    try {
+      let mode = null;
+      let extra = {};
+      if (showSharedWithYou && sharedSubtab === 'access') {
+        mode = 'sharedAccess';
+        extra.shareId = sharedAccessRef.current?.getShareId?.();
+        if (type === 'upload') extra.currentPath = sharedAccessRef.current?.getBrowsePath?.() || "";
+      } else if (showSharedWithYou && sharedSubtab === 'to') {
+        mode = 'sharedToYou';
+        extra.shareToken = items[0]?.__shareToken;
+        extra.passcode = items[0]?.__sharePasscode || "";
+      }
+      if (!mode) return;
+      const response = await api.post('/api/qr/generate', {
+        type,
+        mode,
+        items: items.map((item) => ({ path: item.path, name: item.name, type: item.type })),
+        ...extra
+      });
+      if (!response.success) throw new Error(response.message || 'Failed to generate QR code');
+      setSharedQrModal({ open: true, type, qrCode: response.qrCode, items: items || [], loading: false });
+    } catch (error) {
+      setSharedQrModal({ open: false, type: 'download', qrCode: null, items: [], loading: false });
+      toast?.addError(error.message || 'Failed to generate QR code');
+    }
+  };
+
   const handleDownload = () => {
     if (showSharedWithYou && sharedSubtab === 'access') {
       sharedAccessRef.current?.downloadSelected();
+      return;
+    }
+    if (showSharedWithYou && sharedSubtab === 'to' && activeSelection.length > 0) {
+      const token = activeSelection[0].__shareToken;
+      const passcode = activeSelection[0].__sharePasscode;
+      if (!token) return;
+      const passcodeParam = passcode ? `&passcode=${encodeURIComponent(passcode)}` : "";
+      fetch(withBasePath(`/api/shares/access/${token}/download-all?paths=${encodeURIComponent(JSON.stringify(activeSelection.map((item) => item.path)))}${passcodeParam}`), {
+        credentials: 'same-origin'
+      }).then(async (response) => {
+        if (!response.ok) throw new Error('Failed to download selected items');
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `shared-selection-${activeSelection.length}.zip`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+        toast?.addInfo(`Started download of ${activeSelection.length} selected item${activeSelection.length > 1 ? "s" : ""}`);
+      }).catch((error) => toast?.addError(error.message || 'Failed to download selected items'));
       return;
     }
     if (!selectedItems || selectedItems.length === 0) {
@@ -1715,6 +1783,12 @@ export default function Page() {
   };
 
   const handleViewChange = (newViewMode) => {
+    if (showSharedWithYou && sharedSubtab === 'access') {
+      if (newViewMode === 'list' || newViewMode === 'grid') {
+        setSharedAccessViewMode(newViewMode);
+      }
+      return;
+    }
     if (isMobile) {
 
       if (newViewMode === 'list' || newViewMode === 'grid') {
@@ -1759,6 +1833,10 @@ export default function Page() {
     const selectedFiles = normalizeUploadSelection(files);
 
     if (selectedFiles.length > 0) {
+      if (showSharedWithYou && sharedSubtab === 'access') {
+        sharedAccessRef.current?.uploadFiles(selectedFiles);
+        return;
+      }
       if (showPrivate && privateUnlocked) {
         const uploadPrivateFiles = async () => {
           const groups = new Map();
@@ -1984,6 +2062,51 @@ export default function Page() {
           onCancel={() => setConfirmState({ open: false, title: '', message: '', action: '' })}
           onConfirm={executeConfirmed}
         />
+        {sharedQrModal.open && (
+          <div className={fileListStyles.qrModalOverlay}>
+            <div className={fileListStyles.qrModal}>
+              <div className={fileListStyles.qrModalHeader}>
+                <h3>{sharedQrModal.type === 'upload' ? 'Upload Files via QR Code' : 'Download Files via QR Code'}</h3>
+                <button
+                  className={fileListStyles.qrModalClose}
+                  onClick={() => setSharedQrModal({ open: false, type: 'download', qrCode: null, items: [], loading: false })}
+                >
+                  ×
+                </button>
+              </div>
+              <div className={fileListStyles.qrModalContent}>
+                {sharedQrModal.loading ? (
+                  <p>Generating QR code...</p>
+                ) : sharedQrModal.qrCode ? (
+                  <>
+                    <div className={fileListStyles.qrCodeContainer}>
+                      <img src={sharedQrModal.qrCode} alt="QR Code" className={fileListStyles.qrCodeImage} />
+                    </div>
+                    <div className={fileListStyles.qrInstructions}>
+                      <p>
+                        {sharedQrModal.type === 'download'
+                          ? 'Scan this QR code with your mobile device to download the selected files.'
+                          : 'Scan this QR code with your mobile device to upload files to this folder.'}
+                      </p>
+                      <p><strong>This QR code expires in 1 hour.</strong></p>
+                      <p>No login required on mobile device.</p>
+                      {sharedQrModal.type === 'download' && sharedQrModal.items.length > 0 && (
+                        <div className={fileListStyles.qrFileList}>
+                          <p><strong>Files to download:</strong></p>
+                          <ul>
+                            {sharedQrModal.items.map((item, index) => (
+                              <li key={`${item.path}-${index}`}>{item.name}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  </>
+                ) : null}
+              </div>
+            </div>
+          </div>
+        )}
         <FilePropertiesModal
           open={propertiesState.open}
           items={propertiesState.items}
@@ -2005,23 +2128,31 @@ export default function Page() {
               }}
               onUpload={handleUpload}
               onDownload={handleDownload}
-              onGenerateQR={(type, items) => fileListRef.current?.generateQRCode?.(type, items)}
+              onGenerateQR={(type, items) => {
+                if ((sharedAccessActive) || (showSharedWithYou && sharedSubtab === 'to' && type === 'download')) {
+                  generateSharedQr(type, items?.length ? items : activeSelection);
+                  return;
+                }
+                fileListRef.current?.generateQRCode?.(type, items);
+              }}
               onDelete={handleDelete}
               onRename={handleRename}
               onFavorite={handleFavorite}
               onProperties={handleProperties}
               sortBy={sortBy}
               onSortChange={handleSortChange}
-              viewMode={viewMode}
+              viewMode={sharedAccessActive ? sharedAccessViewMode : (sharedViewsHideDetails && viewMode === 'details' ? 'largeIcons' : viewMode)}
               onViewChange={handleViewChange}
               onRefresh={handleRefresh}
               onShare={(items) => fileListRef.current?.openShareCreate?.(items)}
-              onShareAccess={openSharedAccessDialog}
+              navbarDisabled={specialControlsDisabled && !sharedAccessActive}
+              sharedAccessViewOnly={sharedAccessActive}
+              hideDetailsView={sharedViewsHideDetails}
               shareDisabled={sharedAccessActive}
+              downloadEnabledOverride={sharedToYouDownloadActive}
               qrDisabled={sharedAccessActive}
-              shareAccessDisabled={sharedAccessActive}
-              trashEnabled={trashEnabled}
-              disabled={controlsDisabled || specialControlsDisabled || propertiesState.open}
+              trashEnabled={effectiveTrashEnabled}
+              disabled={controlsDisabled || propertiesState.open || (showSharedWithYou && sharedSubtab === 'to')}
               favoriteDisabled={sharedAccessActive}
               propertiesDisabled={sharedAccessActive}
             />
@@ -2060,7 +2191,7 @@ export default function Page() {
                   <FolderTree
                     socket={socket}
                     onFolderSelect={showPrivate && privateUnlocked ? (path) => path ? setPrivatePath(path) : handleFolderSelect('') : handleFolderSelect}
-                    onOpenSharedWithYou={handleOpenSharedWithYou}
+                    onOpenShared={handleOpenShared}
                     onOpenTrash={handleOpenTrash}
                     onOpenPrivate={handleOpenPrivate}
                     selectedPath={showPrivate ? (privateUnlocked ? privatePath : 'private') : currentPath}
@@ -2101,7 +2232,7 @@ export default function Page() {
                     onNavigateToFile={(path) => setCurrentPath(path)}
                     onProperties={handleProperties}
                     sortBy={sortBy}
-                    viewMode={viewMode}
+                    viewMode={sharedAccessActive ? sharedAccessViewMode : viewMode}
                     user={user}
                     mobile={isMobile}
                     thumbnailResolution={thumbnailResolution}
@@ -2123,7 +2254,7 @@ export default function Page() {
                       onNavigateToFile={setPrivatePath}
                       onProperties={handleProperties}
                       sortBy={sortBy}
-                      viewMode={viewMode}
+                      viewMode={sharedAccessActive ? sharedAccessViewMode : viewMode}
                       user={user}
                       mobile={isMobile}
                       privateMode
@@ -2168,7 +2299,6 @@ export default function Page() {
                     onFolderDoubleClick={handleFolderDoubleClick}
                     onRootLoadError={handleStorageRootError}
                     onSelectionChange={handleSelectionChange}
-                    onShareAccess={openSharedAccessDialog}
                     onFilesUpload={handleFilesUpload}
                     onNavigateToFile={showPrivate ? setPrivatePath : setCurrentPath}
                     onProperties={handleProperties}
@@ -2395,7 +2525,7 @@ export default function Page() {
                               <Star size={18} fill={mobileFavoriteActionLabel === 'Unfavourite' ? 'currentColor' : 'none'} />
                             </button>
                           )}
-                          <button className={style.menuButton} onClick={handleDelete} aria-label={trashEnabled ? "Move selected to bin" : "Delete selected"}>
+                          <button className={style.menuButton} onClick={handleDelete} aria-label={effectiveTrashEnabled ? "Move selected to bin" : "Delete selected"}>
                             <Trash2 size={18} />
                           </button>
                           {!sharedAccessActive && (
@@ -2530,7 +2660,6 @@ export default function Page() {
                       onFolderDoubleClick={showPrivate ? setPrivatePath : handleFolderDoubleClick}
                       onRootLoadError={handleStorageRootError}
                       onSelectionChange={handleSelectionChange}
-                      onShareAccess={openSharedAccessDialog}
                       onFilesUpload={handleFilesUpload}
                       onNavigateToFile={showPrivate ? setPrivatePath : setCurrentPath}
                       onProperties={handleProperties}
@@ -2570,7 +2699,9 @@ export default function Page() {
                       handleSelectAll();
                     }}>
                       <span className={style.sortMenuOptionIcon}><Check size={17} /></span>
-                      <span>{(Number(fileListRef.current?.getSelectableCount?.() || 0) > 0 && selectedItems.length >= Number(fileListRef.current?.getSelectableCount?.() || 0)) ? 'Unselect All' : 'Select All'}</span>
+                      <span>{sharedAccessActive
+                        ? ((Number(sharedAccessRef.current?.getSelectableCount?.() || 0) > 0 && sharedAccessSelectedItems.length >= Number(sharedAccessRef.current?.getSelectableCount?.() || 0)) ? 'Unselect All' : 'Select All')
+                        : ((Number(fileListRef.current?.getSelectableCount?.() || 0) > 0 && selectedItems.length >= Number(fileListRef.current?.getSelectableCount?.() || 0)) ? 'Unselect All' : 'Select All')}</span>
                     </button>
                     <button onClick={() => {
                       setShowSortMenu(false);

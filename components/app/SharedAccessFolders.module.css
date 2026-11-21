@@ -92,8 +92,9 @@
     flex: 1;
     min-width: 0;
     min-height: 0;
+    height: calc(100vh - 180px);
     padding: 16px 20px;
-    overflow: auto;
+    overflow: hidden auto;
 }
 
 .emptyMain {
@@ -151,6 +152,7 @@
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(150px, 180px));
     gap: 10px;
+    position: relative;
 }
 
 .tile,
@@ -174,23 +176,46 @@
     cursor: pointer;
 }
 
+.tileThumbnail {
+    width: 72px;
+    height: 72px;
+    object-fit: cover;
+    border-radius: 6px;
+}
+
 .tile .itemOpen {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     gap: 8px;
+    box-sizing: border-box;
+    padding: 8px 8px 42px;
 }
 
 .tile .itemOpen span {
-    max-width: 140px;
+    display: block;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
     overflow: hidden;
     text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .listView {
     display: grid;
     gap: 4px;
+    position: relative;
+}
+
+.marqueeSelection {
+    position: absolute;
+    border: 1px solid var(--text);
+    background: var(--explorer-selected);
+    opacity: 0.35;
+    pointer-events: none;
+    z-index: 20;
 }
 
 .listRow {
@@ -201,8 +226,15 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 4px 100px 4px 8px;
+    padding: 4px 156px 4px 8px;
     text-align: left;
+}
+
+.listRow .itemOpen span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .itemActions {
@@ -210,6 +242,12 @@
     right: 6px;
     bottom: 6px;
     gap: 4px;
+}
+
+.tile .itemActions {
+    left: 0;
+    right: 0;
+    justify-content: center;
 }
 
 .itemActions a,
@@ -228,55 +266,22 @@
     justify-content: center;
 }
 
-.detailsView {
-    border: 1px solid var(--border-color);
-    border-radius: 10px;
-    overflow: hidden;
-}
-
-.detailsHeader,
-.detailsRow {
-    display: grid;
-    grid-template-columns: minmax(180px, 1fr) 120px 120px 110px;
-    align-items: center;
-    min-height: 42px;
-}
-
-.detailsHeader {
-    background: var(--surface);
-    color: var(--text-color-muted);
-    font-size: 12px;
-}
-
-.detailsHeader span,
-.detailsRow>span {
-    padding: 0 10px;
-}
-
-.detailsRow {
-    border-top: 1px solid var(--border-color);
-}
-
 .selectedRow {
-    background: color-mix(in srgb, var(--button-primary) 18%, var(--surface));
+    background: var(--explorer-selected);
 }
 
-.detailsName {
-    border: 0;
-    background: transparent;
+.tile.selectedRow {
+    border-color: var(--text);
+    box-shadow: none;
+}
+
+.listRow.selectedRow {
+    border-color: var(--border-color);
+    box-shadow: none;
+}
+
+.selectedRow .itemOpen {
     color: var(--text);
-    height: 42px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 0 10px;
-    cursor: pointer;
-}
-
-.detailsRow .itemActions {
-    position: static;
-    justify-self: end;
-    margin-right: 6px;
 }
 
 .emptyText,
@@ -301,8 +306,7 @@
     justify-content: center;
 }
 
-.modal,
-.editorModal {
+.modal {
     width: min(520px, calc(100vw - 24px));
     border: 1px solid var(--border-color);
     border-radius: 12px;
@@ -310,10 +314,6 @@
     padding: 16px;
     display: grid;
     gap: 10px;
-}
-
-.editorModal {
-    width: min(760px, calc(100vw - 24px));
 }
 
 .modalHeader {
@@ -332,8 +332,7 @@
 }
 
 .modal input,
-.modal textarea,
-.editor {
+.modal textarea {
     border: 1px solid var(--border-color);
     border-radius: 8px;
     background: var(--surface);
@@ -344,12 +343,6 @@
 .modal textarea {
     min-height: 100px;
     resize: vertical;
-}
-
-.editor {
-    min-height: 360px;
-    resize: vertical;
-    font-family: monospace;
 }
 
 .modalActions {
@@ -399,8 +392,4 @@
         flex-wrap: wrap;
     }
 
-    .detailsHeader,
-    .detailsRow {
-        grid-template-columns: minmax(150px, 1fr) 90px 90px 110px;
-    }
 }

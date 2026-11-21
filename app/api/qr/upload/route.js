@@ -55,6 +55,50 @@ export async function POST(request) {
             }, { status: 400 });
         }
 
+        if (data.mode === 'sharedAccess') {
+            const ownerRoot = await ensureUserUploadPath(data.ownerId);
+            if (!ownerRoot.success) {
+                return NextResponse.json({ success: false, message: 'Failed to access shared folder' }, { status: 500 });
+            }
+            const source = resolvePathWithinBase(ownerRoot.path, data.folderPath);
+            const target = resolvePathWithinBase(source.resolvedPath, data.targetPath || '');
+            if (!source.isInside || !target.isInside) {
+                return NextResponse.json({ success: false, message: 'Invalid shared folder target' }, { status: 400 });
+            }
+            await mkdir(target.resolvedPath, { recursive: true });
+            const uploadedFiles = [];
+            for (const file of files) {
+                const bytes = await file.arrayBuffer();
+                const buffer = Buffer.from(bytes);
+                const originalName = path.basename(file.name || 'upload');
+                let fileName = originalName;
+                let filePath = path.join(target.resolvedPath, fileName);
+                let counter = 1;
+                while (true) {
+                    try {
+                        await access(filePath);
+                        const ext = path.extname(originalName);
+                        const baseName = path.basename(originalName, ext);
+                        fileName = `${baseName} (${counter})${ext}`;
+                        filePath = path.join(target.resolvedPath, fileName);
+                        counter++;
+                    } catch {
+                        break;
+                    }
+                }
+                await writeFile(filePath, buffer);
+                uploadedFiles.push({ name: fileName, size: buffer.length });
+            }
+            try {
+                global.io?.to(`user:${data.ownerId}`).emit('file-updated', { userId: data.ownerId, action: 'upload', path: data.targetPath || '' });
+            } catch {}
+            return NextResponse.json({
+                success: true,
+                message: `Successfully uploaded ${uploadedFiles.length} file(s)`,
+                files: uploadedFiles
+            });
+        }
+
         if (!files || files.length === 0) {
             return NextResponse.json({
                 success: false,

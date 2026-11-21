@@ -4,9 +4,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { api } from "@/utils/api";
-import { Download, Eye, X } from "lucide-react";
+import { Download } from "lucide-react";
 import SoftLoading from "@/components/SoftLoading";
-import { getMimeType } from "@/lib/mimeTypes";
 import { withBasePath } from "@/lib/basePath";
 import loadingStyles from "@/public/styles/loading.module.css";
 import styles from "./page.module.css";
@@ -23,15 +22,6 @@ function getFileType(name) {
     return "file";
 }
 
-function isTextFile(name) {
-    const ext = String(name || "").split(".").pop()?.toLowerCase();
-    return ["txt", "md", "json", "xml", "csv", "log", "js", "jsx", "ts", "tsx", "css", "scss", "sass", "html", "htm", "yml", "yaml", "py", "java", "c", "cpp", "h", "cs", "php", "rb", "go", "rs", "swift", "sql", "sh", "bash", "ps1", "toml", "ini", "cfg"].includes(ext);
-}
-
-function isPdfFile(name) {
-    return String(name || "").toLowerCase().endsWith(".pdf");
-}
-
 export default function SharedPage() {
     const params = useParams();
     const token = params?.token;
@@ -42,9 +32,6 @@ export default function SharedPage() {
     const [passcodeInput, setPasscodeInput] = useState("");
     const [passcode, setPasscode] = useState("");
     const [requiresPasscode, setRequiresPasscode] = useState(false);
-    const [viewerItem, setViewerItem] = useState(null);
-    const [viewerText, setViewerText] = useState("");
-    const [viewerLoading, setViewerLoading] = useState(false);
 
     useEffect(() => {
         const run = async () => {
@@ -73,26 +60,6 @@ export default function SharedPage() {
     const passcodeQuery = passcode ? `&passcode=${encodeURIComponent(passcode)}` : "";
 
     const getThumbUrl = (item) => withBasePath(`/api/shares/access/${share?.token}/thumbnail?path=${encodeURIComponent(item.path)}&size=medium${passcodeQuery}`);
-    const getStreamUrl = (item) => withBasePath(`/api/shares/access/${share?.token}/stream?path=${encodeURIComponent(item.path)}${passcodeQuery}`);
-
-    const openViewer = async (item) => {
-        if (!share?.token || item.type !== "file") return;
-        setViewerItem(item);
-        setViewerText("");
-
-        if (isTextFile(item.name)) {
-            setViewerLoading(true);
-            try {
-                const res = await fetch(getStreamUrl(item));
-                const text = await res.text();
-                setViewerText(text || "");
-            } catch {
-                setViewerText("Failed to load file preview.");
-            } finally {
-                setViewerLoading(false);
-            }
-        }
-    };
 
     if (loading) {
         return (
@@ -177,12 +144,6 @@ export default function SharedPage() {
                             <span className={styles.itemType}>{item.type === "folder" ? "folder zip" : getFileType(item.name)}</span>
                         </div>
                         <div className={styles.itemActions}>
-                            {item.type === "file" && (
-                                <button type="button" className={styles.secondaryButton} onClick={() => openViewer(item)}>
-                                    <Eye size={16} />
-                                    View
-                                </button>
-                            )}
                             <a
                                 href={withBasePath(`/api/shares/access/${share.token}/download?path=${encodeURIComponent(item.path)}${passcode ? `&passcode=${encodeURIComponent(passcode)}` : ""}`)}
                                 download
@@ -195,46 +156,6 @@ export default function SharedPage() {
                     </div>
                 ))}
             </section>
-
-            {viewerItem && (
-                <div className={styles.viewerOverlay} onClick={() => setViewerItem(null)}>
-                    <div className={styles.viewerModal} onClick={(e) => e.stopPropagation()}>
-                        <div className={styles.viewerHeader}>
-                            <h3>{viewerItem.name}</h3>
-                            <button type="button" className={styles.closeViewerButton} onClick={() => setViewerItem(null)}>
-                                <X size={18} />
-                            </button>
-                        </div>
-                        <div className={styles.viewerBody}>
-                            {getFileType(viewerItem.name) === "image" && (
-                                <img src={getStreamUrl(viewerItem)} alt={viewerItem.name} className={styles.viewerImage} />
-                            )}
-                            {getFileType(viewerItem.name) === "video" && (
-                                <video src={getStreamUrl(viewerItem)} controls className={styles.viewerVideo} />
-                            )}
-                            {getFileType(viewerItem.name) === "audio" && (
-                                <audio controls preload="metadata" className={styles.viewerAudio}>
-                                    <source src={getStreamUrl(viewerItem)} type={getMimeType(viewerItem.name)} />
-                                    Your browser does not support the audio element.
-                                </audio>
-                            )}
-                            {isPdfFile(viewerItem.name) && (
-                                <iframe src={getStreamUrl(viewerItem)} title={viewerItem.name} className={styles.viewerFrame} />
-                            )}
-                            {isTextFile(viewerItem.name) && (
-                                viewerLoading ? (
-                                    <div className={styles.viewerLoading}><SoftLoading /></div>
-                                ) : (
-                                    <pre className={styles.viewerText}>{viewerText}</pre>
-                                )
-                            )}
-                            {!isPdfFile(viewerItem.name) && !isTextFile(viewerItem.name) && ["file", "raw"].includes(getFileType(viewerItem.name)) && (
-                                <div className={styles.viewerUnsupported}>Preview unavailable for this file type. Use Download.</div>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            )}
         </main>
     );
 }

@@ -21,6 +21,6 @@ export async function GET() {
         const shares = await listSharesForViewerEmail(viewerEmail);
         return NextResponse.json({ success: true, shares }, { status: 200 });
     } catch {
-        return NextResponse.json({ success: false, code: "shared_with_you_list_failed", message: "Failed to load shares shared with you" }, { status: 500 });
+        return NextResponse.json({ success: false, code: "shared_list_failed", message: "Failed to load shared" }, { status: 500 });
     }
 }

@@ -270,6 +270,27 @@
     gap: 8px;
 }
 
+.cancelButton {
+    background: none;
+    border: none;
+    color: var(--text-color-muted);
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.cancelButton:hover:not(:disabled) {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+}
+
+.cancelButton:disabled {
+    cursor: wait;
+    opacity: 0.6;
+}
+
 .progressContainer {
     display: flex;
     align-items: center;
@@ -409,7 +430,7 @@
 
 @media (max-width: 768px) {
     .floatingButton {
-        display: none;
+        display: flex;
     }
 
     .panelContainer {

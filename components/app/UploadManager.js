@@ -187,6 +187,12 @@ export function UploadManager() {
     const shouldShowButton = hasActiveUploads || hasHistory;
 
     useEffect(() => {
+        if (hasActiveUploads) {
+            setIsExpanded(true);
+        }
+    }, [hasActiveUploads, isMobile]);
+
+    useEffect(() => {
         window.dispatchEvent(new CustomEvent('uploadManagerVisibility', {
             detail: {
                 visible: shouldShowButton,
@@ -235,6 +241,13 @@ export function UploadManager() {
         setHistory([]);
     };
 
+    const cancelUpload = (id) => {
+        window.dispatchEvent(new CustomEvent('uploadCancel', { detail: { id } }));
+        setUploads(prev => prev.map(upload => (
+            upload.id === id ? { ...upload, status: 'cancelling' } : upload
+        )));
+    };
+
     const getUploadIcon = (status) => {
         if (status === 'completed') {
             return (
@@ -268,9 +281,9 @@ export function UploadManager() {
 
     const overallProgress = getOverallProgress();
 
-    if (isMobile || !shouldShowButton) return null;
+    if (!shouldShowButton) return null;
 
-    const rightOffset = isDownloadManagerVisible ? 92 : 20;
+    const rightOffset = !isMobile && isDownloadManagerVisible ? 92 : 20;
 
     return (
         <div className={style.uploadManager} style={{ right: `${rightOffset}px` }}>
@@ -397,6 +410,17 @@ export function UploadManager() {
                                                         <div className={style.fileIcon}>{getUploadIcon(upload.status)}</div>
                                                         <div className={style.fileName}>{upload.fileName}</div>
                                                     </div>
+                                                    <button
+                                                        className={style.cancelButton}
+                                                        onClick={() => cancelUpload(upload.id)}
+                                                        title={upload.status === 'cancelling' ? 'Cancelling upload' : 'Cancel upload'}
+                                                        aria-label={`Cancel upload ${upload.fileName}`}
+                                                        disabled={upload.status === 'cancelling'}
+                                                    >
+                                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                                                            <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" />
+                                                        </svg>
+                                                    </button>
                                                 </div>
 
                                                 <div className={style.progressContainer}>

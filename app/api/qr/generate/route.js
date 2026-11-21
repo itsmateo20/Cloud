@@ -6,6 +6,8 @@ import crypto from 'crypto';
 import { getSiteUrl } from '@/lib/getSiteUrl';
 import { getSession } from '@/lib/session';
 import { createQrToken } from '@/lib/qrTokens';
+import { ensureShareTables, getShareByToken, canAccessShare } from '@/lib/shares';
+import { canAccessSharedFolder } from '@/lib/sharedAccess';
 
 export async function POST(request) {
     try {
@@ -18,7 +20,8 @@ export async function POST(request) {
         }
 
         const { id: userId } = session.user;
-        const { type, items, currentPath } = await request.json();
+        const authorizedEmail = session.user.email || session.user.googleEmail || session.user.githubEmail || session.user.discordEmail || "";
+        const { type, items, currentPath, mode, shareId, shareToken, passcode } = await request.json();
 
         if (!type || !['download', 'upload'].includes(type)) {
             return NextResponse.json({
@@ -36,11 +39,40 @@ export async function POST(request) {
                 }, { status: 400 });
             }
 
+            let sharedData = null;
+            if (mode === 'sharedAccess') {
+                const access = await canAccessSharedFolder(Number(shareId), userId, authorizedEmail);
+                if (!access.ok) {
+                    return NextResponse.json({ success: false, message: 'Shared folder access denied' }, { status: 403 });
+                }
+                sharedData = {
+                    mode,
+                    shareId: access.share.id,
+                    ownerId: access.share.ownerId,
+                    folderPath: access.share.folderPath,
+                    authorizedEmail
+                };
+            } else if (mode === 'sharedToYou') {
+                await ensureShareTables();
+                const share = await getShareByToken(shareToken);
+                const access = await canAccessShare(share, session, passcode || "");
+                if (!access.ok) {
+                    return NextResponse.json({ success: false, message: access.message || 'Share access denied' }, { status: access.status || 403 });
+                }
+                sharedData = {
+                    mode,
+                    shareToken,
+                    passcode: passcode || "",
+                    authorizedEmail
+                };
+            }
+
             await createQrToken({
                 token,
                 type: 'download',
                 data: JSON.stringify({
                     userId,
+                    ...sharedData,
                     items: items.map(item => ({
                         path: item.path,
                         name: item.name,
@@ -51,11 +83,27 @@ export async function POST(request) {
                 expiresAt
             });
         } else {
+            let sharedUploadData = null;
+            if (mode === 'sharedAccess') {
+                const access = await canAccessSharedFolder(Number(shareId), userId, authorizedEmail);
+                if (!access.ok) {
+                    return NextResponse.json({ success: false, message: 'Shared folder access denied' }, { status: 403 });
+                }
+                sharedUploadData = {
+                    mode,
+                    shareId: access.share.id,
+                    ownerId: access.share.ownerId,
+                    folderPath: access.share.folderPath,
+                    targetPath: currentPath || "",
+                    authorizedEmail
+                };
+            }
             await createQrToken({
                 token,
                 type: 'upload',
                 data: JSON.stringify({
                     userId,
+                    ...sharedUploadData,
                     targetPath: currentPath
                 }),
                 expiresAt

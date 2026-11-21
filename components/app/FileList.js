@@ -360,7 +360,6 @@ const FileList = forwardRef(({
     onFilesUpload,
     onProperties,
     onNavigateToFile,
-    onShareAccess,
     sortBy = 'name',
     viewMode = 'list',
     user,
@@ -624,7 +623,8 @@ const FileList = forwardRef(({
             passcode: '',
             durationValue: 1,
             durationUnit: 'never',
-            submitting: false
+            submitting: false,
+            accessFolderPath: selected.find((item) => item.type === 'folder')?.path || ''
         });
     };
 
@@ -678,6 +678,24 @@ const FileList = forwardRef(({
 
     const createShareSubmit = async () => {
         setShareCreateModal(prev => ({ ...prev, submitting: true }));
+
+        if (shareCreateModal.stage === 'access') {
+            const response = await api.post('/api/shared-access', {
+                folderPath: shareCreateModal.accessFolderPath,
+                name: shareCreateModal.name,
+                allowedEmails: parseEmailList(shareCreateModal.allowedEmails)
+            });
+
+            if (!response?.success) {
+                setShareCreateModal(prev => ({ ...prev, submitting: false }));
+                toast?.addError(response?.message || 'Failed to share folder');
+                return;
+            }
+
+            setShareCreateModal(prev => ({ ...prev, visible: false, submitting: false }));
+            toast?.addSuccess('Shared folder created');
+            return;
+        }
 
         if (shareCreateModal.mode === 'append') {
             if (!shareCreateModal.targetShareId) {
@@ -2749,7 +2767,6 @@ const FileList = forwardRef(({
                     selectedItems={contextMenu.items}
                     onAction={handleContextMenuAction}
                     currentPath={currentPath}
-                    onShareAccess={onShareAccess}
                     mobile={mobile}
                     trashEnabled={trashEnabled}
                     privateMode={privateMode}

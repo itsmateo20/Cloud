@@ -1,10 +1,11 @@
 // components/app/DownloadManager.js
 "use client";
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { Resizable } from "re-resizable";
 import style from './DownloadManager.module.css';
 import { useIsMobile } from '@/utils/useIsMobile';
+import { downloadManager } from '@/utils/downloadUtils';
 
 const MAX_HISTORY_ITEMS = 200;
 
@@ -23,8 +24,6 @@ export function DownloadManager() {
     const [isExpanded, setIsExpanded] = useState(false);
     const [downloads, setDownloads] = useState([]);
     const [history, setHistory] = useState([]);
-    const downloadRefs = useRef(new Map());
-
     useEffect(() => {
         const interval = setInterval(() => {
             setDownloads(prev => {
@@ -204,13 +203,10 @@ export function DownloadManager() {
     };
 
     const cancelDownload = (id) => {
-        const downloadRef = downloadRefs.current.get(id);
-        if (downloadRef && downloadRef.abort) {
-            downloadRef.abort();
-        }
-
-        setDownloads(prev => prev.filter(d => d.id !== id));
-        window.dispatchEvent(new CustomEvent('downloadCancel', { detail: { id } }));
+        setDownloads(prev => prev.map(download => (
+            download.id === id ? { ...download, status: 'cancelling' } : download
+        )));
+        downloadManager.cancelDownload(id);
     };
 
     const clearHistory = () => {
@@ -453,7 +449,9 @@ export function DownloadManager() {
                                                     <button
                                                         className={style.cancelButton}
                                                         onClick={() => cancelDownload(download.id)}
-                                                        title="Cancel download"
+                                                        title={download.status === 'cancelling' ? 'Cancelling download' : 'Cancel download'}
+                                                        aria-label={`Cancel download ${download.fileName}`}
+                                                        disabled={download.status === 'cancelling'}
                                                     >
                                                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
                                                             <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" />

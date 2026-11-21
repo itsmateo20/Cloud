@@ -5,26 +5,30 @@ import { ArrowLeft, Download, File, FolderClosed, FolderUsers, LogOut, Pencil, T
 import SoftLoading from "@/components/SoftLoading";
 import { api } from "@/utils/api";
 import { withBasePath } from "@/lib/basePath";
+import ConfirmModal from "@/components/app/ConfirmModal";
 import styles from "./SharedAccessFolders.module.css";
 
-const SharedAccessFolders = forwardRef(function SharedAccessFolders({ toast, viewMode = "details", sortBy = "name", onSelectionChange, onReadyChange }, ref) {
+const SharedAccessFolders = forwardRef(function SharedAccessFolders({ toast, viewMode = "grid", sortBy = "name", onSelectionChange, onReadyChange }, ref) {
     const [loading, setLoading] = useState(true);
     const [shares, setShares] = useState([]);
     const [selectedShareId, setSelectedShareId] = useState(null);
     const [browsePath, setBrowsePath] = useState("");
     const [browseItems, setBrowseItems] = useState([]);
     const [browsing, setBrowsing] = useState(false);
-    const browseViewMode = viewMode === "details" || viewMode === "list" ? viewMode : "grid";
+    const browseViewMode = viewMode === "list" ? "list" : "grid";
     const [createOpen, setCreateOpen] = useState(false);
     const [createFolderPath, setCreateFolderPath] = useState("");
     const [createName, setCreateName] = useState("");
     const [createEmails, setCreateEmails] = useState("");
     const [createBusy, setCreateBusy] = useState(false);
     const [selectedItems, setSelectedItems] = useState([]);
-    const [editItem, setEditItem] = useState(null);
-    const [editContent, setEditContent] = useState("");
-    const [editBusy, setEditBusy] = useState(false);
+    const [nameModal, setNameModal] = useState({ open: false, mode: "create", type: "folder", item: null, value: "" });
+    const [deleteConfirm, setDeleteConfirm] = useState({ open: false, items: [], loading: false });
     const uploadInputRef = useRef(null);
+    const itemContainerRef = useRef(null);
+    const lastSelectedItemRef = useRef(null);
+    const marqueeStartRef = useRef(null);
+    const [marqueeRect, setMarqueeRect] = useState(null);
 
     const selectedShare = shares.find((share) => Number(share.id) === Number(selectedShareId)) || null;
     const sortedItems = useMemo(() => {
@@ -80,6 +84,7 @@ const SharedAccessFolders = forwardRef(function SharedAccessFolders({ toast, vie
 
     useEffect(() => {
         setSelectedItems([]);
+        lastSelectedItemRef.current = null;
         onSelectionChange?.([]);
     }, [selectedShareId, browsePath, onSelectionChange]);
 
@@ -89,14 +94,33 @@ const SharedAccessFolders = forwardRef(function SharedAccessFolders({ toast, vie
 
     const toggleSelectedItem = (item, event) => {
         event?.stopPropagation();
-        setSelectedItems((current) => {
-            const exists = current.some((selected) => selected.path === item.path);
-            const next = exists
-                ? current.filter((selected) => selected.path !== item.path)
-                : [...current, item];
-            onSelectionChange?.(next);
-            return next;
-        });
+        let next;
+        if (event?.ctrlKey || event?.metaKey) {
+            const exists = selectedItems.some((selected) => selected.path === item.path);
+            next = exists
+                ? selectedItems.filter((selected) => selected.path !== item.path)
+                : [...selectedItems, item];
+        } else if (event?.shiftKey) {
+            const anchor = lastSelectedItemRef.current;
+            if (!anchor) {
+                next = [item];
+            } else {
+                const anchorIndex = sortedItems.findIndex((candidate) => candidate.path === anchor.path);
+                const currentIndex = sortedItems.findIndex((candidate) => candidate.path === item.path);
+                if (anchorIndex === -1 || currentIndex === -1) {
+                    next = [item];
+                } else {
+                    const start = Math.min(anchorIndex, currentIndex);
+                    const end = Math.max(anchorIndex, currentIndex);
+                    next = sortedItems.slice(start, end + 1);
+                }
+            }
+        } else {
+            next = [item];
+        }
+        lastSelectedItemRef.current = item;
+        setSelectedItems(next);
+        onSelectionChange?.(next);
     };
 
     const openShare = (share) => {
@@ -146,38 +170,78 @@ const SharedAccessFolders = forwardRef(function SharedAccessFolders({ toast, vie
     };
 
     const createItem = async (type) => {
-        const name = window.prompt(type === "folder" ? "Folder name" : "File name");
+        setNameModal({
+            open: true,
+            mode: "create",
+            type,
+            item: null,
+            value: ""
+        });
+    };
+
+    const submitNameModal = async () => {
+        const name = nameModal.value.trim();
         if (!name) return;
+        setNameModal((current) => ({ ...current, loading: true }));
+        if (nameModal.mode === "rename") {
+            const item = nameModal.item;
+            const response = await api.post(`/api/shared-access/${selectedShareId}/files`, {
+                action: "rename",
+                oldPath: item.path,
+                newName: name
+            });
+            setNameModal((current) => ({ ...current, open: false, loading: false }));
+            if (!response?.success) toast?.addError(response?.message || "Failed to rename item");
+            else await loadBrowse(selectedShareId, browsePath);
+            return;
+        }
         const response = await api.post(`/api/shared-access/${selectedShareId}/files`, {
             action: "create",
             path: browsePath,
             name,
-            type
+            type: nameModal.type
         });
+        setNameModal((current) => ({ ...current, open: false, loading: false }));
         if (!response?.success) toast?.addError(response?.message || "Failed to create item");
         else await loadBrowse(selectedShareId, browsePath);
     };
 
     const renameItem = async (item) => {
-        const name = window.prompt("New name", item.name);
-        if (!name || name === item.name) return;
-        const response = await api.post(`/api/shared-access/${selectedShareId}/files`, {
-            action: "rename",
-            oldPath: item.path,
-            newName: name
+        setNameModal({
+            open: true,
+            mode: "rename",
+            type: "file",
+            item,
+            value: item.name
         });
-        if (!response?.success) toast?.addError(response?.message || "Failed to rename item");
-        else await loadBrowse(selectedShareId, browsePath);
     };
 
     const deleteItem = async (item) => {
-        if (!window.confirm(`Delete "${item.name}"?`)) return;
+        setDeleteConfirm({ open: true, items: [item], loading: false });
+    };
+
+    const confirmDeleteSelected = async () => {
+        const items = deleteConfirm.items;
+        if (items.length === 0) return;
+        setDeleteConfirm((current) => ({ ...current, loading: true }));
         const response = await api.post(`/api/shared-access/${selectedShareId}/files`, {
             action: "delete",
-            paths: [item.path]
+            paths: items.map((item) => item.path)
         });
-        if (!response?.success) toast?.addError(response?.message || "Failed to delete item");
-        else await loadBrowse(selectedShareId, browsePath);
+        setDeleteConfirm({ open: false, items: [], loading: false });
+        if (!response?.success) toast?.addError(response?.message || "Failed to delete selected items");
+        else {
+            toast?.addSuccess(`${items.length} item${items.length === 1 ? "" : "s"} deleted`);
+            setSelectedItems([]);
+            lastSelectedItemRef.current = null;
+            onSelectionChange?.([]);
+            await loadBrowse(selectedShareId, browsePath);
+        }
+    };
+
+    const deleteSelectedItems = async () => {
+        if (selectedItems.length === 0) return;
+        setDeleteConfirm({ open: true, items: [...selectedItems], loading: false });
     };
 
     const uploadFiles = async (event) => {
@@ -195,39 +259,6 @@ const SharedAccessFolders = forwardRef(function SharedAccessFolders({ toast, vie
         }).then((result) => result.json()).catch(() => ({ success: false, message: "Upload failed" }));
         if (!response?.success) toast?.addError(response?.message || "Upload failed");
         else await loadBrowse(selectedShareId, browsePath);
-    };
-
-    const openEditor = async (item) => {
-        const ext = item.name.split(".").pop()?.toLowerCase();
-        const editable = ["txt", "md", "json", "js", "jsx", "ts", "tsx", "css", "html", "xml", "csv", "log", "env"].includes(ext);
-        if (!editable) {
-            toast?.addInfo("This file type cannot be edited here");
-            return;
-        }
-        const response = await fetch(withBasePath(`/api/shared-access/${selectedShareId}/stream?path=${encodeURIComponent(item.path)}`), { credentials: "same-origin" });
-        if (!response.ok) {
-            toast?.addError("Failed to open file");
-            return;
-        }
-        setEditItem(item);
-        setEditContent(await response.text());
-    };
-
-    const saveEditor = async () => {
-        if (!editItem) return;
-        setEditBusy(true);
-        const response = await api.post(`/api/shared-access/${selectedShareId}/files`, {
-            action: "edit",
-            path: editItem.path,
-            content: editContent
-        });
-        setEditBusy(false);
-        if (!response?.success) toast?.addError(response?.message || "Failed to save file");
-        else {
-            toast?.addSuccess("File saved");
-            setEditItem(null);
-            await loadBrowse(selectedShareId, browsePath);
-        }
     };
 
     useImperativeHandle(ref, () => ({
@@ -257,19 +288,115 @@ const SharedAccessFolders = forwardRef(function SharedAccessFolders({ toast, vie
             }
             uploadInputRef.current?.click();
         },
-        downloadSelected: () => selectedItems.forEach((item) => {
+        downloadSelected: async () => {
+            if (selectedItems.length === 0) return;
+            if (selectedItems.length === 1) {
+                const link = document.createElement("a");
+                link.href = withBasePath(`/api/shared-access/${selectedShareId}/download?path=${encodeURIComponent(selectedItems[0].path)}`);
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+                return;
+            }
+            const response = await fetch(withBasePath(`/api/shared-access/${selectedShareId}/download?paths=${encodeURIComponent(JSON.stringify(selectedItems.map((item) => item.path)))}`), {
+                credentials: "same-origin"
+            });
+            if (!response.ok) {
+                toast?.addError("Failed to download selected items");
+                return;
+            }
+            const blob = await response.blob();
+            const url = URL.createObjectURL(blob);
             const link = document.createElement("a");
-            link.href = withBasePath(`/api/shared-access/${selectedShareId}/download?path=${encodeURIComponent(item.path)}`);
+            link.href = url;
+            link.download = `shared-selection-${selectedItems.length}.zip`;
+            document.body.appendChild(link);
             link.click();
-        }),
-        deleteSelected: () => selectedItems.forEach((item) => deleteItem(item)),
+            link.remove();
+            URL.revokeObjectURL(url);
+        },
+        deleteSelected: deleteSelectedItems,
         renameSelected: () => {
             if (selectedItems.length === 1) renameItem(selectedItems[0]);
         },
+        selectAll: () => {
+            setSelectedItems(sortedItems);
+            lastSelectedItemRef.current = sortedItems.at(-1) || null;
+            onSelectionChange?.(sortedItems);
+        },
+        clearSelection: () => {
+            setSelectedItems([]);
+            lastSelectedItemRef.current = null;
+            onSelectionChange?.([]);
+        },
+        getSelectableCount: () => sortedItems.length,
         refresh: () => loadBrowse(selectedShareId, browsePath),
-        openEditor: (item) => openEditor(item),
+        getShareId: () => selectedShareId,
+        getBrowsePath: () => browsePath,
         hasShare: () => Boolean(selectedShareId)
-    }), [selectedItems, browsePath, selectedShareId, toast, loadBrowse]);
+    }), [selectedItems, sortedItems, browsePath, selectedShareId, toast, loadBrowse, onSelectionChange]);
+
+    const startMarqueeSelection = (event) => {
+        if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey) return;
+        if (event.target.closest("[data-share-access-item]")) return;
+        const container = itemContainerRef.current;
+        if (!container) return;
+        const rect = container.getBoundingClientRect();
+        if (!rect) return;
+
+        const startX = event.clientX - rect.left;
+        const startY = event.clientY - rect.top;
+        marqueeStartRef.current = { startX, startY };
+        setMarqueeRect({ left: startX, top: startY, width: 0, height: 0 });
+        setSelectedItems([]);
+        lastSelectedItemRef.current = null;
+        onSelectionChange?.([]);
+        event.preventDefault();
+
+        const handleMove = (moveEvent) => {
+            const currentRect = container.getBoundingClientRect();
+            if (!currentRect) return;
+            const x = moveEvent.clientX - currentRect.left;
+            const y = moveEvent.clientY - currentRect.top;
+            const left = Math.min(startX, x);
+            const top = Math.min(startY, y);
+            const width = Math.abs(x - startX);
+            const height = Math.abs(y - startY);
+            setMarqueeRect({ left, top, width, height });
+
+            const selectionRect = {
+                left: left + currentRect.left,
+                top: top + currentRect.top,
+                right: left + width + currentRect.left,
+                bottom: top + height + currentRect.top
+            };
+            const next = Array.from(container.querySelectorAll("[data-share-access-item]")).reduce((items, element) => {
+                const itemRect = element.getBoundingClientRect();
+                const intersects = itemRect.left < selectionRect.right &&
+                    itemRect.right > selectionRect.left &&
+                    itemRect.top < selectionRect.bottom &&
+                    itemRect.bottom > selectionRect.top;
+                if (intersects) {
+                    const path = element.getAttribute("data-share-access-item");
+                    const item = sortedItems.find((candidate) => candidate.path === path);
+                    if (item) items.push(item);
+                }
+                return items;
+            }, []);
+            setSelectedItems(next);
+            onSelectionChange?.(next);
+        };
+
+        const handleUp = () => {
+            setMarqueeRect(null);
+            marqueeStartRef.current = null;
+            window.removeEventListener("mousemove", handleMove);
+            window.removeEventListener("mouseup", handleUp);
+        };
+
+        window.addEventListener("mousemove", handleMove);
+        window.addEventListener("mouseup", handleUp);
+    };
 
     const getShareLabel = (share) => (
         share.isOwner
@@ -280,9 +407,6 @@ const SharedAccessFolders = forwardRef(function SharedAccessFolders({ toast, vie
     return (
         <div className={styles.sharedAccess}>
             <aside className={styles.shareList}>
-                <div className={styles.shareListHeader}>
-                    <span>Shared folders</span>
-                </div>
                 {loading ? (
                     <div className={styles.loadingCenter}><SoftLoading /></div>
                 ) : shares.length === 0 ? (
@@ -327,32 +451,37 @@ const SharedAccessFolders = forwardRef(function SharedAccessFolders({ toast, vie
                             <div className={styles.loadingCenter}><SoftLoading /></div>
                         ) : browseItems.length === 0 ? (
                             <p className={styles.emptyText}>This folder is empty.</p>
-                        ) : browseViewMode === "details" ? (
-                            <div className={styles.detailsView}>
-                                <div className={styles.detailsHeader}><span>Name</span><span>Type</span><span>Size</span><span /></div>
-                                {sortedItems.map((item) => (
-                                    <div key={item.id} className={`${styles.detailsRow} ${selectedItems.some((selected) => selected.path === item.path) ? styles.selectedRow : ""}`} onClick={(event) => toggleSelectedItem(item, event)} onDoubleClick={() => item.type === "folder" && setBrowsePath(item.browsePath)}>
-                                        <button type="button" className={styles.detailsName} onClick={(event) => toggleSelectedItem(item, event)}>
-                                            {item.type === "folder" ? <FolderClosed size={18} /> : <File size={18} />}
-                                            <span>{item.name}</span>
-                                        </button>
-                                        <span>{item.type}</span>
-                                        <span>{item.type === "file" ? `${item.size} bytes` : "—"}</span>
-                                        <ItemActions item={item} onEdit={openEditor} onRename={renameItem} onDelete={deleteItem} shareId={selectedShareId} />
-                                    </div>
-                                ))}
-                            </div>
                         ) : (
-                            <div className={browseViewMode === "grid" ? styles.gridView : styles.listView}>
+                            <div
+                                ref={itemContainerRef}
+                                className={browseViewMode === "grid" ? styles.gridView : styles.listView}
+                                onMouseDown={startMarqueeSelection}
+                            >
                                 {sortedItems.map((item) => (
-                                    <div key={item.id} className={`${browseViewMode === "grid" ? styles.tile : styles.listRow} ${selectedItems.some((selected) => selected.path === item.path) ? styles.selectedRow : ""}`} onClick={(event) => toggleSelectedItem(item, event)} onDoubleClick={() => item.type === "folder" && setBrowsePath(item.browsePath)}>
+                                    <div key={item.id} data-share-access-item={item.path} className={`${browseViewMode === "grid" ? styles.tile : styles.listRow} ${selectedItems.some((selected) => selected.path === item.path) ? styles.selectedRow : ""}`} onClick={(event) => toggleSelectedItem(item, event)} onDoubleClick={() => item.type === "folder" && setBrowsePath(item.browsePath)}>
                                         <button type="button" className={styles.itemOpen} onClick={(event) => toggleSelectedItem(item, event)}>
-                                            {item.type === "folder" ? <FolderClosed size={browseViewMode === "grid" ? 42 : 24} /> : <File size={browseViewMode === "grid" ? 38 : 22} />}
+                                            <ItemVisual
+                                                item={item}
+                                                shareId={selectedShareId}
+                                                size={browseViewMode === "grid" ? 42 : 24}
+                                                variant={browseViewMode === "grid" ? "tile" : "small"}
+                                            />
                                             <span title={item.name}>{item.name}</span>
                                         </button>
-                                        <ItemActions item={item} onEdit={openEditor} onRename={renameItem} onDelete={deleteItem} shareId={selectedShareId} />
+                                        <ItemActions item={item} onRename={renameItem} onDelete={deleteItem} shareId={selectedShareId} />
                                     </div>
                                 ))}
+                                {marqueeRect && (
+                                    <div
+                                        className={styles.marqueeSelection}
+                                        style={{
+                                            left: marqueeRect.left,
+                                            top: marqueeRect.top,
+                                            width: marqueeRect.width,
+                                            height: marqueeRect.height
+                                        }}
+                                    />
+                                )}
                             </div>
                         )}
                     </>
@@ -377,34 +506,84 @@ const SharedAccessFolders = forwardRef(function SharedAccessFolders({ toast, vie
                 </div>
             )}
 
-            {editItem && (
+            {nameModal.open && (
                 <div className={styles.modalOverlay}>
-                    <div className={styles.editorModal}>
-                        <div className={styles.modalHeader}><h4>{editItem.name}</h4><button type="button" onClick={() => setEditItem(null)}><X size={18} /></button></div>
-                        <textarea className={styles.editor} value={editContent} onChange={(event) => setEditContent(event.target.value)} />
+                    <div className={styles.modal}>
+                        <div className={styles.modalHeader}>
+                            <h4>{nameModal.mode === "rename" ? "Rename item" : nameModal.type === "folder" ? "Create folder" : "Create file"}</h4>
+                            <button type="button" onClick={() => setNameModal((current) => ({ ...current, open: false }))}>
+                                <X size={18} />
+                            </button>
+                        </div>
+                        <input
+                            autoFocus
+                            value={nameModal.value}
+                            onChange={(event) => setNameModal((current) => ({ ...current, value: event.target.value }))}
+                            onKeyDown={(event) => {
+                                if (event.key === "Enter") submitNameModal();
+                            }}
+                            placeholder={nameModal.mode === "rename" ? "New name" : "Name"}
+                        />
                         <div className={styles.modalActions}>
-                            <button type="button" onClick={() => setEditItem(null)}>Cancel</button>
-                            <button type="button" className={styles.primaryButton} disabled={editBusy} onClick={saveEditor}>Save</button>
+                            <button type="button" onClick={() => setNameModal((current) => ({ ...current, open: false }))}>Cancel</button>
+                            <button type="button" className={styles.primaryButton} disabled={nameModal.loading || !nameModal.value.trim()} onClick={submitNameModal}>
+                                {nameModal.mode === "rename" ? "Rename" : "Create"}
+                            </button>
                         </div>
                     </div>
                 </div>
             )}
+
+            <ConfirmModal
+                open={deleteConfirm.open}
+                title={deleteConfirm.items.length === 1 ? "Delete item" : "Delete selected items"}
+                message={deleteConfirm.items.length === 1
+                    ? `Delete "${deleteConfirm.items[0]?.name}"? This cannot be undone.`
+                    : `Delete ${deleteConfirm.items.length} selected items? This cannot be undone.`}
+                confirmLabel="Delete"
+                destructive
+                isLoading={deleteConfirm.loading}
+                onCancel={() => setDeleteConfirm({ open: false, items: [], loading: false })}
+                onConfirm={confirmDeleteSelected}
+            />
+
         </div>
     );
 });
 
-function ItemActions({ item, onEdit, onRename, onDelete, shareId }) {
+function ItemActions({ item, onRename, onDelete, shareId }) {
     return (
         <div className={styles.itemActions} onClick={(event) => event.stopPropagation()}>
             {item.type === "file" && (
-                <>
-                    <button type="button" onClick={() => onEdit(item)} title="Edit"><Pencil size={14} /></button>
-                    <a href={withBasePath(`/api/shared-access/${shareId}/download?path=${encodeURIComponent(item.path)}`)} title="Download"><Download size={14} /></a>
-                </>
+                <a href={withBasePath(`/api/shared-access/${shareId}/download?path=${encodeURIComponent(item.path)}`)} title="Download"><Download size={14} /></a>
             )}
             <button type="button" onClick={() => onRename(item)} title="Rename"><Pencil size={14} /></button>
             <button type="button" onClick={() => onDelete(item)} title="Delete"><Trash2 size={14} /></button>
         </div>
+    );
+}
+
+function ItemVisual({ item, shareId, size, variant }) {
+    const [thumbnailFailed, setThumbnailFailed] = useState(false);
+    const isImage = item.type === "file" && ["jpg", "jpeg", "png", "gif", "bmp", "svg", "webp"]
+        .includes(item.name.split(".").pop()?.toLowerCase());
+
+    useEffect(() => {
+        setThumbnailFailed(false);
+    }, [item.path, shareId]);
+
+    if (item.type === "folder") return <FolderClosed size={size} />;
+    if (variant !== "tile" || !isImage || thumbnailFailed) return <File size={size} />;
+
+    return (
+        <img
+            src={withBasePath(`/api/shared-access/${shareId}/thumbnail?path=${encodeURIComponent(item.path)}&size=medium`)}
+            alt=""
+            className={styles.tileThumbnail}
+            loading="lazy"
+            decoding="async"
+            onError={() => setThumbnailFailed(true)}
+        />
     );
 }
 

@@ -30,8 +30,7 @@ import {
     BarChart3,
     LayoutGrid,
     RefreshCw,
-    Share2,
-    FolderUsers
+    Share2
 } from 'lucide-react';
 
 const Controls = ({
@@ -51,14 +50,15 @@ const Controls = ({
     onViewChange,
     onRefresh,
     onShare,
-    onShareAccess,
+    downloadEnabledOverride = false,
+    navbarDisabled = false,
+    sharedAccessViewOnly = false,
+    hideDetailsView = false,
+    shareDisabled = false,
+    favoriteDisabled = false,
+    privateMode = false,
     trashEnabled = true,
     disabled = false,
-    favoriteDisabled = false,
-    propertiesDisabled = false,
-    shareDisabled = false,
-    qrDisabled = false,
-    shareAccessDisabled = false
 }) => {
     const selectedArray = Array.isArray(selectedItems)
         ? selectedItems
@@ -124,8 +124,8 @@ const Controls = ({
     }, []);
 
     const hasSelection = selectedArray.length > 0;
+    const canDownload = hasSelection && (!disabled || downloadEnabledOverride);
     const isSpecialPath = currentPath === 'favorites';
-    const controlsInactive = disabled || isSpecialPath;
 
     const sortOptions = [
         { value: 'name', label: 'Name', icon: <Edit3 size={16} /> },
@@ -134,7 +134,12 @@ const Controls = ({
         { value: 'size', label: 'Size', icon: <Ruler size={16} /> }
     ];
 
-    const viewOptions = [
+    const sharedViewOptions = [
+        { value: 'grid', label: 'Grid', icon: <LayoutGrid size={16} /> },
+        { value: 'list', label: 'List', icon: <List size={16} /> }
+    ];
+
+    const viewOptions = sharedAccessViewOnly ? sharedViewOptions : [
         { value: 'extraLargeIcons', label: 'Extra Large Icons', icon: <Image size={16} /> },
         { value: 'largeIcons', label: 'Large Icons', icon: <Square size={16} /> },
         { value: 'mediumIcons', label: 'Medium Icons', icon: <SquareDot size={16} /> },
@@ -142,25 +147,25 @@ const Controls = ({
         { value: 'list', label: 'List', icon: <List size={16} /> },
         { value: 'details', label: 'Details', icon: <BarChart3 size={16} /> },
         { value: 'tiles', label: 'Tiles', icon: <LayoutGrid size={16} /> }
-    ];
+    ].filter((option) => !hideDetailsView || option.value !== 'details');
 
     return (
-        <div className={styles.controls}>
+        <div className={`${styles.controls} ${navbarDisabled ? styles.disabled : ''}`}>
             <div className={styles.section}>
                 <div className={styles.dropdown} ref={newDropdownRef}>
-                    <button
-                        className={`${styles.button} ${styles.newButton} ${controlsInactive ? styles.disabled : ''}`}
+                    {!privateMode && <button
+                        className={`${styles.button} ${styles.newButton} ${isSpecialPath || disabled ? styles.disabled : ''}`}
                         onClick={() => setShowNewDropdown(!showNewDropdown)}
-                        disabled={controlsInactive}
+                        disabled={isSpecialPath || disabled}
                         title="New"
                     >
                         <span className={styles.icon}><Plus size={16} /></span>
                         <span className={styles.label}>New</span>
                         <span className={styles.arrow}><ChevronDown size={12} /></span>
-                    </button>
+                    </button>}
                     {showNewDropdown && !isSpecialPath && !disabled && (
                         <div className={styles.dropdownMenu}>
-                            <button
+                            {!privateMode && <button
                                 className={styles.dropdownItem}
                                 onClick={() => {
                                     onOpenNewItemModal?.('folder');
@@ -169,8 +174,8 @@ const Controls = ({
                             >
                                 <span className={styles.dropdownIcon}><FolderPlus size={16} /></span>
                                 Folder
-                            </button>
-                            <button
+                            </button>}
+                            {!privateMode && <button
                                 className={styles.dropdownItem}
                                 onClick={() => {
                                     onOpenNewItemModal?.('file');
@@ -179,7 +184,7 @@ const Controls = ({
                             >
                                 <span className={styles.dropdownIcon}><FileIcon size={16} /></span>
                                 File
-                            </button>
+                            </button>}
                             <button
                                 className={styles.dropdownItem}
                                 onClick={() => {
@@ -196,9 +201,9 @@ const Controls = ({
 
                 <div className={styles.dropdown} ref={uploadDropdownRef}>
                     <button
-                        className={`${styles.button} ${controlsInactive ? styles.disabled : ''}`}
+                        className={`${styles.button} ${isSpecialPath || disabled ? styles.disabled : ''}`}
                         onClick={() => setShowUploadDropdown(!showUploadDropdown)}
-                        disabled={controlsInactive}
+                        disabled={isSpecialPath || disabled}
                         title="Upload"
                     >
                         <span className={styles.icon}><Upload size={16} /></span>
@@ -252,7 +257,6 @@ const Controls = ({
                             </button>
                             <button
                                 className={styles.dropdownItem}
-                                disabled={qrDisabled}
                                 onClick={() => {
                                     onGenerateQR?.('upload', []);
                                     setShowUploadDropdown(false);
@@ -266,16 +270,16 @@ const Controls = ({
                 </div>
                 <div className={styles.dropdown} ref={downloadDropdownRef}>
                     <button
-                        className={`${styles.button} ${!hasSelection || disabled ? styles.disabled : ''}`}
-                        onClick={() => hasSelection && !disabled && setShowDownloadDropdown(!showDownloadDropdown)}
-                        disabled={!hasSelection || disabled}
+                        className={`${styles.button} ${downloadEnabledOverride ? styles.downloadOverride : ''} ${!canDownload ? styles.disabled : ''}`}
+                        onClick={() => canDownload && setShowDownloadDropdown(!showDownloadDropdown)}
+                        disabled={!canDownload}
                         title="Download"
                     >
                         <span className={styles.icon}><Download size={16} /></span>
                         <span className={styles.label}>Download</span>
                         <span className={styles.arrow}><ChevronDown size={12} /></span>
                     </button>
-                    {showDownloadDropdown && hasSelection && !disabled && (
+                    {showDownloadDropdown && canDownload && (
                         <div className={styles.dropdownMenu}>
                             <button
                                 className={styles.dropdownItem}
@@ -289,7 +293,6 @@ const Controls = ({
                             </button>
                             <button
                                 className={styles.dropdownItem}
-                                disabled={qrDisabled}
                                 onClick={() => {
                                     onGenerateQR?.('download', selectedArray);
                                     setShowDownloadDropdown(false);
@@ -307,7 +310,7 @@ const Controls = ({
 
             <div className={styles.section}>
                 <button
-                    className={`${styles.button} ${!hasSelection || isSpecialPath || disabled ? styles.disabled : ''}`}
+                    className={`${styles.button} ${(!hasSelection || disabled) ? styles.disabled : ''}`}
                     onClick={onDelete}
                     disabled={!hasSelection || isSpecialPath || disabled}
                     title={trashEnabled ? "Move to Bin" : "Delete"}
@@ -317,7 +320,7 @@ const Controls = ({
                 </button>
 
                 <button
-                    className={`${styles.button} ${!hasSelection || selectedArray.length !== 1 || disabled ? styles.disabled : ''}`}
+                    className={`${styles.button} ${(!hasSelection || disabled) ? styles.disabled : ''}`}
                     onClick={onRename}
                     disabled={!hasSelection || selectedArray.length !== 1 || disabled}
                     title="Rename"
@@ -326,25 +329,17 @@ const Controls = ({
                     <span className={styles.label}>Rename</span>
                 </button>
 
-                <button
-                    className={`${styles.button} ${!hasSelection || disabled || shareDisabled ? styles.disabled : ''}`}
-                    onClick={() => onShare?.(selectedArray)}
-                    disabled={!hasSelection || disabled || shareDisabled}
-                    title="Share files"
-                >
-                    <span className={styles.icon}><Share2 size={16} /></span>
-                    <span className={styles.label}>Share files</span>
-                </button>
-
-                <button
-                    className={`${styles.button} ${!hasSelection || disabled || shareAccessDisabled ? styles.disabled : ''}`}
-                    onClick={() => onShareAccess?.(selectedArray)}
-                    disabled={!hasSelection || disabled || shareAccessDisabled}
-                    title="Share folder access"
-                >
-                    <span className={styles.icon}><FolderUsers size={16} /></span>
-                    <span className={styles.label}>Share Access</span>
-                </button>
+                {!shareDisabled && (
+                    <button
+                        className={`${styles.button} ${(!hasSelection || disabled) ? styles.disabled : ''}`}
+                        onClick={() => onShare?.(selectedArray)}
+                        disabled={!hasSelection || disabled}
+                        title="Share"
+                    >
+                        <span className={styles.icon}><Share2 size={16} /></span>
+                        <span className={styles.label}>Share</span>
+                    </button>
+                )}
 
                 <button
                     className={`${styles.button} ${disabled ? styles.disabled : ''}`}
@@ -439,24 +434,26 @@ const Controls = ({
                     </button>
                     {showMoreDropdown && !disabled && (
                         <div className={styles.dropdownMenu}>
-                            <button
-                                className={`${styles.dropdownItem} ${!hasSelection ? styles.disabled : ''}`}
-                                onClick={() => {
-                                    onFavorite();
-                                    setShowMoreDropdown(false);
-                                }}
-                                disabled={!hasSelection || isSpecialPath || disabled || favoriteDisabled}
-                            >
-                                <span className={styles.dropdownIcon}><Star size={16} /></span>
-                                Favorite
-                            </button>
+                            {!favoriteDisabled && (
+                                <button
+                                    className={`${styles.dropdownItem} ${!hasSelection ? styles.disabled : ''}`}
+                                    onClick={() => {
+                                        onFavorite();
+                                        setShowMoreDropdown(false);
+                                    }}
+                                    disabled={!hasSelection || isSpecialPath || disabled}
+                                >
+                                    <span className={styles.dropdownIcon}><Star size={16} /></span>
+                                    Favorite
+                                </button>
+                            )}
                             <button
                                 className={`${styles.dropdownItem} ${!hasSelection ? styles.disabled : ''}`}
                                 onClick={() => {
                                     onProperties();
                                     setShowMoreDropdown(false);
                                 }}
-                                disabled={!hasSelection || disabled || propertiesDisabled}
+                                disabled={!hasSelection || disabled}
                             >
                                 <span className={styles.dropdownIcon}><Settings size={16} /></span>
                                 Properties

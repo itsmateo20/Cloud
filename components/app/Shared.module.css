@@ -23,6 +23,17 @@
     font-family: var(--font-poppins);
 }
 
+.trashHeaderActions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+}
+
+.trashHeaderActions button {
+    margin-left: 0;
+}
+
 .subtabs {
     display: flex;
     align-items: center;
@@ -124,7 +135,7 @@
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
-    white-space: wrap;
+    white-space: nowrap;
 }
 
 .shareRowMeta,
@@ -234,6 +245,7 @@
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(150px, 180px));
     gap: 10px;
+    position: relative;
 }
 
 .itemTile,
@@ -259,19 +271,51 @@
 }
 
 .itemTile .itemOpenButton {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
+    position: relative;
+    display: block;
+    box-sizing: border-box;
+    padding: 0;
 }
 
 .itemIcon {
     color: var(--text-color-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
 }
 
-.itemDownloadButton,
-.rowDownloadButton {
+.itemTile .itemIcon {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.sharedItemThumbnail {
+    width: 64px;
+    height: 64px;
+    object-fit: cover;
+    border-radius: 6px;
+    flex: none;
+    display: block;
+    margin-inline: auto;
+}
+
+.itemTile .itemTitle {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    max-width: 100%;
+    padding: 0 4px;
+    box-sizing: border-box;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.itemDownloadButton {
     width: 32px;
     height: 32px;
     border: 1px solid var(--border-color);
@@ -289,9 +333,36 @@
     bottom: 8px;
 }
 
+.itemTile .itemDownloadButton {
+    top: 8px;
+    bottom: auto;
+}
+
 .itemsListView {
     display: grid;
     gap: 4px;
+    position: relative;
+}
+
+.selectedSharedItem {
+    background: var(--explorer-selected);
+}
+
+.itemTile.selectedSharedItem {
+    border-color: var(--text);
+}
+
+.itemListRow.selectedSharedItem {
+    border-color: var(--border-color);
+}
+
+.sharedMarqueeSelection {
+    position: absolute;
+    border: 1px solid var(--text);
+    background: var(--explorer-selected);
+    opacity: 0.35;
+    pointer-events: none;
+    z-index: 20;
 }
 
 .itemListRow {
@@ -304,49 +375,6 @@
     align-items: center;
     padding: 4px 48px 4px 8px;
     text-align: left;
-}
-
-.detailsView {
-    width: 100%;
-    height: 100%;
-    border: 1px solid var(--border-color);
-    border-radius: 10px;
-}
-
-.detailsHeader,
-.detailsRow {
-    display: grid;
-    grid-template-columns: minmax(180px, 1fr) 120px 120px 36px;
-    align-items: center;
-    min-height: 42px;
-}
-
-.detailsHeader {
-    background: var(--surface);
-    color: var(--text-color-muted);
-    font-size: 12px;
-    border-bottom: 1px solid var(--border-color);
-}
-
-.detailsHeader span,
-.detailsRow>span {
-    padding: 0 10px;
-}
-
-.detailsRow {
-    border-bottom: 1px solid var(--border-color);
-}
-
-.detailsName {
-    border: 0;
-    background: transparent;
-    color: var(--text);
-    height: 42px;
-    padding: 0 10px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    cursor: pointer;
 }
 
 .input {
@@ -428,6 +456,11 @@
 
     .sharedHeader h3 {
         font-size: 22px;
+    }
+
+    .trashHeaderActions {
+        width: 100%;
+        justify-content: flex-end;
     }
 
     .subtabs {

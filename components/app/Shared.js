@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Download, File, FolderClosed, Grid2X2, List, LogOut, TableProperties } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ArrowLeft, Download, File, FolderClosed, Grid2X2, List, LogOut } from "lucide-react";
 import FileList from "./FileList";
 import SharedAccessFolders from "./SharedAccessFolders";
 import SoftLoading from "@/components/SoftLoading";
@@ -25,6 +25,32 @@ function encodePasscode(passcode) {
 function passcodeQuery(passcode) {
     const encoded = encodePasscode(passcode);
     return encoded ? `?pc=${encodeURIComponent(encoded)}` : "";
+}
+
+function SharedItemVisual({ item, token, passcode, size, variant }) {
+    const [thumbnailFailed, setThumbnailFailed] = useState(false);
+    const extension = item.name.split(".").pop()?.toLowerCase();
+    const isImage = item.type === "file" && ["jpg", "jpeg", "png", "gif", "bmp", "svg", "webp"].includes(extension);
+
+    useEffect(() => {
+        setThumbnailFailed(false);
+    }, [item.path, passcode, token]);
+
+    if (item.type === "folder") return <FolderClosed size={size} />;
+    if (variant !== "tile" || !isImage || thumbnailFailed) return <File size={size} />;
+
+    const encodedPasscode = encodePasscode(passcode);
+    const passcodeParam = encodedPasscode ? `&pc=${encodeURIComponent(encodedPasscode)}` : "";
+    return (
+        <img
+            src={withBasePath(`/api/shares/access/${token}/thumbnail?path=${encodeURIComponent(item.path)}&size=medium${passcodeParam}`)}
+            alt=""
+            className={styles.sharedItemThumbnail}
+            loading="lazy"
+            decoding="async"
+            onError={() => setThumbnailFailed(true)}
+        />
+    );
 }
 
 export default function Shared({
@@ -89,7 +115,7 @@ export default function Shared({
 
             <div className={styles.sharedBody}>
                 {subtab === "to" ? (
-                    <SharedToYou toast={toast} viewMode={viewMode} />
+                    <SharedToYou toast={toast} viewMode={viewMode} onSelectionChange={onSelectionChange} />
                 ) : subtab === "by" ? (
                     <FileList
                         key={`shared-by-${mobile ? "mobile" : "desktop"}`}
@@ -118,7 +144,7 @@ export default function Shared({
     );
 }
 
-function SharedToYou({ toast, viewMode = "grid" }) {
+function SharedToYou({ toast, viewMode = "grid", onSelectionChange }) {
     const [loading, setLoading] = useState(true);
     const [shares, setShares] = useState([]);
     const [selectedShareId, setSelectedShareId] = useState(null);
@@ -130,7 +156,11 @@ function SharedToYou({ toast, viewMode = "grid" }) {
     const [browsePath, setBrowsePath] = useState("");
     const [browseItems, setBrowseItems] = useState([]);
     const [browsing, setBrowsing] = useState(false);
-    const [browseViewMode, setBrowseViewMode] = useState(viewMode === "details" ? "details" : viewMode === "list" ? "list" : "grid");
+    const [browseViewMode, setBrowseViewMode] = useState(viewMode === "list" ? "list" : "grid");
+    const [selectedItems, setSelectedItems] = useState([]);
+    const itemContainerRef = useRef(null);
+    const lastSelectedItemRef = useRef(null);
+    const [marqueeRect, setMarqueeRect] = useState(null);
 
     const selectedMeta = useMemo(
         () => shares.find((share) => Number(share.id) === Number(selectedShareId)) || null,
@@ -143,7 +173,7 @@ function SharedToYou({ toast, viewMode = "grid" }) {
         const response = await api.get("/api/shares/shared");
         if (!response?.success) {
             setShares([]);
-            setLoadError(response?.message || "Failed to load shares shared with you");
+            setLoadError(response?.message || "Failed to load shared");
         } else {
             const nextShares = response.shares || [];
             setShares(nextShares);
@@ -205,6 +235,99 @@ function SharedToYou({ toast, viewMode = "grid" }) {
     useEffect(() => {
         if (selectedMeta && selectedShareData) loadBrowse(selectedMeta, selectedPasscode, browsePath);
     }, [selectedMeta, selectedShareData, selectedPasscode, browsePath, loadBrowse]);
+
+    useEffect(() => {
+        setSelectedItems([]);
+        lastSelectedItemRef.current = null;
+        onSelectionChange?.([]);
+    }, [selectedShareId, browsePath]);
+
+    const notifySelection = (next) => {
+        onSelectionChange?.(next.map((item) => ({
+            ...item,
+            __shareToken: selectedShareData?.token,
+            __sharePasscode: selectedPasscode
+        })));
+    };
+
+    const toggleSelectedItem = (item, event) => {
+        event?.stopPropagation();
+        let next;
+        if (event?.ctrlKey || event?.metaKey) {
+            next = selectedItems.some((selected) => selected.path === item.path)
+                ? selectedItems.filter((selected) => selected.path !== item.path)
+                : [...selectedItems, item];
+        } else if (event?.shiftKey) {
+            const anchor = lastSelectedItemRef.current;
+            if (!anchor) {
+                next = [item];
+            } else {
+                const anchorIndex = browseItems.findIndex((candidate) => candidate.path === anchor.path);
+                const currentIndex = browseItems.findIndex((candidate) => candidate.path === item.path);
+                if (anchorIndex === -1 || currentIndex === -1) next = [item];
+                else {
+                    const start = Math.min(anchorIndex, currentIndex);
+                    const end = Math.max(anchorIndex, currentIndex);
+                    next = browseItems.slice(start, end + 1);
+                }
+            }
+        } else {
+            next = [item];
+        }
+        lastSelectedItemRef.current = item;
+        setSelectedItems(next);
+        notifySelection(next);
+    };
+
+    const startMarqueeSelection = (event) => {
+        if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey) return;
+        if (event.target.closest("[data-shared-to-you-item]")) return;
+        const container = itemContainerRef.current;
+        if (!container) return;
+        const rect = container.getBoundingClientRect();
+        const startX = event.clientX - rect.left;
+        const startY = event.clientY - rect.top;
+        setMarqueeRect({ left: startX, top: startY, width: 0, height: 0 });
+        setSelectedItems([]);
+        onSelectionChange?.([]);
+        lastSelectedItemRef.current = null;
+        event.preventDefault();
+
+        const handleMove = (moveEvent) => {
+            const currentRect = container.getBoundingClientRect();
+            const x = moveEvent.clientX - currentRect.left;
+            const y = moveEvent.clientY - currentRect.top;
+            const left = Math.min(startX, x);
+            const top = Math.min(startY, y);
+            const width = Math.abs(x - startX);
+            const height = Math.abs(y - startY);
+            setMarqueeRect({ left, top, width, height });
+
+            const next = Array.from(container.querySelectorAll("[data-shared-to-you-item]")).reduce((items, element) => {
+                const itemRect = element.getBoundingClientRect();
+                const intersects = itemRect.left < currentRect.left + left + width &&
+                    itemRect.right > currentRect.left + left &&
+                    itemRect.top < currentRect.top + top + height &&
+                    itemRect.bottom > currentRect.top + top;
+                if (intersects) {
+                    const path = element.getAttribute("data-shared-to-you-item");
+                    const item = browseItems.find((candidate) => candidate.path === path);
+                    if (item) items.push(item);
+                }
+                return items;
+            }, []);
+            setSelectedItems(next);
+            notifySelection(next);
+        };
+
+        const handleUp = () => {
+            setMarqueeRect(null);
+            window.removeEventListener("mousemove", handleMove);
+            window.removeEventListener("mouseup", handleUp);
+        };
+        window.addEventListener("mousemove", handleMove);
+        window.addEventListener("mouseup", handleUp);
+    };
 
     const leaveShare = async (shareId) => {
         const response = await api.post(`/api/shares/shared/${shareId}/leave`, {});
@@ -272,7 +395,6 @@ function SharedToYou({ toast, viewMode = "grid" }) {
                                 ))}
                             </div>
                             <div className={styles.viewModeButtons}>
-                                <button type="button" className={browseViewMode === "details" ? styles.activeViewMode : ""} onClick={() => setBrowseViewMode("details")}><TableProperties size={16} /></button>
                                 <button type="button" className={browseViewMode === "grid" ? styles.activeViewMode : ""} onClick={() => setBrowseViewMode("grid")}><Grid2X2 size={16} /></button>
                                 <button type="button" className={browseViewMode === "list" ? styles.activeViewMode : ""} onClick={() => setBrowseViewMode("list")}><List size={16} /></button>
                             </div>
@@ -281,32 +403,47 @@ function SharedToYou({ toast, viewMode = "grid" }) {
                             <div className={styles.loadingCenter}><SoftLoading /></div>
                         ) : browseItems.length === 0 ? (
                             <p className={styles.emptyHint}>This folder is empty.</p>
-                        ) : browseViewMode === "details" ? (
-                            <div className={styles.detailsView}>
-                                <div className={styles.detailsHeader}><span>Name</span><span>Type</span><span>Size</span></div>
-                                {browseItems.map((item) => (
-                                    <div key={item.id} className={styles.detailsRow} onDoubleClick={() => item.type === "folder" && setBrowsePath(item.path)}>
-                                        <button type="button" className={styles.detailsName} onClick={() => item.type === "folder" && setBrowsePath(item.path)}>
-                                            {item.type === "folder" ? <FolderClosed size={18} /> : <File size={18} />}<span>{item.name}</span>
-                                        </button>
-                                        <span>{item.type}</span>
-                                        <span>{item.type === "file" ? `${item.size} bytes` : "—"}</span>
-                                        {item.type === "file" && <a href={withBasePath(`/api/shares/access/${selectedShareData.token}/download?path=${encodeURIComponent(item.path)}${selectedPasscode ? `&pc=${encodeURIComponent(encodePasscode(selectedPasscode))}` : ""}`)} className={styles.rowDownloadButton}><Download size={15} /></a>}
-                                    </div>
-                                ))}
-                            </div>
                         ) : (
-                            <div className={browseViewMode === "grid" ? styles.itemsGrid : styles.itemsListView}>
+                            <div
+                                ref={itemContainerRef}
+                                className={browseViewMode === "grid" ? styles.itemsGrid : styles.itemsListView}
+                                onMouseDown={startMarqueeSelection}
+                            >
                                 {browseItems.map((item) => (
-                                    <div key={item.id} className={browseViewMode === "grid" ? styles.itemTile : styles.itemListRow} onDoubleClick={() => item.type === "folder" && setBrowsePath(item.path)}>
-                                        <button type="button" className={styles.itemOpenButton} onClick={() => item.type === "folder" && setBrowsePath(item.path)}>
-                                            <div className={styles.itemIcon}>{item.type === "folder" ? <FolderClosed size={browseViewMode === "grid" ? 42 : 24} /> : <File size={browseViewMode === "grid" ? 38 : 22} />}</div>
+                                    <div
+                                        key={item.id}
+                                        data-shared-to-you-item={item.path}
+                                        className={`${browseViewMode === "grid" ? styles.itemTile : styles.itemListRow} ${selectedItems.some((selected) => selected.path === item.path) ? styles.selectedSharedItem : ""}`}
+                                        onClick={(event) => toggleSelectedItem(item, event)}
+                                        onDoubleClick={() => item.type === "folder" && setBrowsePath(item.path)}
+                                    >
+                                        <button type="button" className={styles.itemOpenButton} onClick={(event) => toggleSelectedItem(item, event)}>
+                                            <div className={styles.itemIcon}>
+                                                <SharedItemVisual
+                                                    item={item}
+                                                    token={selectedShareData.token}
+                                                    passcode={selectedPasscode}
+                                                    size={browseViewMode === "grid" ? (item.type === "folder" ? 42 : 38) : (item.type === "folder" ? 24 : 22)}
+                                                    variant={browseViewMode === "grid" ? "tile" : "small"}
+                                                />
+                                            </div>
                                             <div className={styles.itemTitle}>{item.name}</div>
                                             {browseViewMode === "list" && <div className={styles.itemMeta}>{item.type} • {item.type === "file" ? `${item.size} bytes` : "—"}</div>}
                                         </button>
-                                        {item.type === "file" && <a href={withBasePath(`/api/shares/access/${selectedShareData.token}/download?path=${encodeURIComponent(item.path)}${selectedPasscode ? `&pc=${encodeURIComponent(encodePasscode(selectedPasscode))}` : ""}`)} className={styles.itemDownloadButton}><Download size={15} /></a>}
+                                        {item.type === "file" && <a href={withBasePath(`/api/shares/access/${selectedShareData.token}/download?path=${encodeURIComponent(item.path)}${selectedPasscode ? `&pc=${encodeURIComponent(encodePasscode(selectedPasscode))}` : ""}`)} className={styles.itemDownloadButton} onClick={(event) => event.stopPropagation()}><Download size={15} /></a>}
                                     </div>
                                 ))}
+                                {marqueeRect && (
+                                    <div
+                                        className={styles.sharedMarqueeSelection}
+                                        style={{
+                                            left: marqueeRect.left,
+                                            top: marqueeRect.top,
+                                            width: marqueeRect.width,
+                                            height: marqueeRect.height
+                                        }}
+                                    />
+                                )}
                             </div>
                         )}
                     </>

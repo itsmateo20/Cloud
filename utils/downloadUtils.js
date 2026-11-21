@@ -4,6 +4,10 @@ import JSZip from 'jszip';
 import { api } from '@/utils/api';
 import { withBasePath } from '@/lib/basePath';
 
+const isDownloadCancelled = (error) => (
+    error?.name === 'AbortError' || error?.message === 'Download cancelled'
+);
+
 export class DownloadManager {
     static instance = null;
     activeDownloads = new Map();
@@ -256,15 +260,15 @@ export class DownloadManager {
             isCompleted = true;
             this.activeDownloads.delete(downloadId);
 
-            if (error.name === 'AbortError' || error.message === 'Download cancelled') {
+            if (isDownloadCancelled(error)) {
                 window.dispatchEvent(new CustomEvent('downloadComplete', {
                     detail: { id: downloadId, fileName, success: false, error: 'Download cancelled' }
                 }));
-            } else {
-                window.dispatchEvent(new CustomEvent('downloadComplete', {
-                    detail: { id: downloadId, fileName, success: false, error: error.message }
-                }));
+                return;
             }
+            window.dispatchEvent(new CustomEvent('downloadComplete', {
+                detail: { id: downloadId, fileName, success: false, error: error.message }
+            }));
             throw error;
         } finally {
             if (handleCancel) {
@@ -382,15 +386,15 @@ export class DownloadManager {
             isCompleted = true;
             this.activeDownloads.delete(downloadId);
 
-            if (error.name === 'AbortError' || error.message === 'Download cancelled') {
+            if (isDownloadCancelled(error)) {
                 window.dispatchEvent(new CustomEvent('downloadComplete', {
                     detail: { id: downloadId, fileName, success: false, error: 'Download cancelled' }
                 }));
-            } else {
-                window.dispatchEvent(new CustomEvent('downloadComplete', {
-                    detail: { id: downloadId, fileName, success: false, error: error.message }
-                }));
+                return;
             }
+            window.dispatchEvent(new CustomEvent('downloadComplete', {
+                detail: { id: downloadId, fileName, success: false, error: error.message }
+            }));
             throw error;
         }
     }
@@ -518,15 +522,15 @@ export class DownloadManager {
             isCompleted = true;
             this.activeDownloads.delete(downloadId);
 
-            if (error.name === 'AbortError' || error.message === 'Download cancelled') {
+            if (isDownloadCancelled(error)) {
                 window.dispatchEvent(new CustomEvent('downloadComplete', {
                     detail: { id: downloadId, fileName: zipName, success: false, error: 'Download cancelled' }
                 }));
-            } else {
-                window.dispatchEvent(new CustomEvent('downloadComplete', {
-                    detail: { id: downloadId, fileName: zipName, success: false, error: error.message }
-                }));
+                return;
             }
+            window.dispatchEvent(new CustomEvent('downloadComplete', {
+                detail: { id: downloadId, fileName: zipName, success: false, error: error.message }
+            }));
             throw error;
         }
     }
@@ -630,15 +634,15 @@ export class DownloadManager {
             isCompleted = true;
             this.activeDownloads.delete(downloadId);
 
-            if (error.name === 'AbortError' || error.message === 'Download cancelled') {
+            if (isDownloadCancelled(error)) {
                 window.dispatchEvent(new CustomEvent('downloadComplete', {
                     detail: { id: downloadId, fileName: folderName, success: false, error: 'Download cancelled' }
                 }));
-            } else {
-                window.dispatchEvent(new CustomEvent('downloadComplete', {
-                    detail: { id: downloadId, fileName: folderName, success: false, error: error.message }
-                }));
+                return;
             }
+            window.dispatchEvent(new CustomEvent('downloadComplete', {
+                detail: { id: downloadId, fileName: folderName, success: false, error: error.message }
+            }));
             throw error;
         }
     }
@@ -647,7 +651,6 @@ export class DownloadManager {
         const abortController = this.activeDownloads.get(downloadId);
         if (abortController) {
             abortController.abort();
-            this.activeDownloads.delete(downloadId);
         }
     }
 

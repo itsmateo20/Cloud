@@ -96,6 +96,7 @@ export async function GET(req, { params }) {
         const { token } = await params;
         const url = new URL(req.url);
         const passcode = decodePasscodeFromQuery(url);
+        const pathsParam = url.searchParams.get("paths");
 
         await ensureShareTables();
         const share = await getShareByToken(token);
@@ -127,7 +128,37 @@ export async function GET(req, { params }) {
         const zipFiles = [];
         const seen = new Set();
 
-        for (const item of (share.items || [])) {
+        let selectedItems = share.items || [];
+        if (pathsParam) {
+            let selectedPaths;
+            try {
+                selectedPaths = JSON.parse(pathsParam);
+            } catch {
+                selectedPaths = null;
+            }
+            if (!Array.isArray(selectedPaths) || selectedPaths.length === 0) {
+                return NextResponse.json({ success: false, code: "share_selection_empty", message: "No items selected" }, { status: 400 });
+            }
+            selectedItems = selectedPaths.map((selectedPath) => {
+                const normalizedSelectedPath = String(selectedPath || "").replace(/\\/g, "/");
+                const matched = (share.items || []).find((shareItem) => {
+                    const shareItemPath = String(shareItem.path || "").replace(/\\/g, "/");
+                    return normalizedSelectedPath === shareItemPath ||
+                        (shareItem.type === "folder" && normalizedSelectedPath.startsWith(`${shareItemPath}/`));
+                });
+                if (!matched) return null;
+                return {
+                    ...matched,
+                    path: normalizedSelectedPath,
+                    name: path.basename(normalizedSelectedPath),
+                    type: matched.type === "folder" && normalizedSelectedPath !== String(matched.path || "").replace(/\\/g, "/")
+                        ? "folder"
+                        : matched.type
+                };
+            }).filter(Boolean);
+        }
+
+        for (const item of selectedItems) {
             const resolved = resolvePathWithinBase(userFolder, item.path);
             if (!resolved.isInside) continue;
 
@@ -135,7 +166,7 @@ export async function GET(req, { params }) {
 
             try {
                 const stat = await fs.stat(targetPath);
-                if (item.type === "folder" && stat.isDirectory()) {
+                if (stat.isDirectory()) {
                     const nested = await getAllFilesInDirectory(targetPath, path.basename(targetPath));
                     for (const file of nested) {
                         const fullPathKey = path.resolve(file.fullPath);
@@ -143,7 +174,7 @@ export async function GET(req, { params }) {
                         seen.add(fullPathKey);
                         zipFiles.push(file);
                     }
-                } else if (item.type === "file" && stat.isFile()) {
+                } else if (stat.isFile()) {
                     const relativePath = path.basename(resolved.relativePath);
                     const fullPathKey = path.resolve(targetPath);
                     if (!seen.has(fullPathKey)) {

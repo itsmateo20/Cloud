@@ -12,7 +12,7 @@ const SPECIAL_PATHS = new Set(["favorites", "shared", "trash", "private"]);
 export default function FolderTree({
     socket,
     onFolderSelect,
-    onOpenSharedWithYou,
+    onOpenShared,
     onOpenTrash,
     onOpenPrivate,
     selectedPath,
@@ -27,7 +27,7 @@ export default function FolderTree({
 
     const [tabVisibility, setTabVisibility] = useState({
         favorites: false,
-        sharedWithYou: false,
+        shared: false,
         trash: false,
     });
 
@@ -245,27 +245,24 @@ export default function FolderTree({
     const checkTabVisibility = async () => {
         try {
             const favoritesData = await api.get("/api/user/favorites");
-            const sharedWithYouData = await api.get("/api/shares/shared");
-            const sharedByYouData = await api.get("/api/shares");
+            const sharedData = await api.get("/api/shares/shared");
             const trashData = await api.get("/api/user/trash");
             const hasFavorites = favoritesData.success && (
                 (favoritesData.files && favoritesData.files.length > 0) ||
                 (favoritesData.folders && favoritesData.folders.length > 0)
             );
-            const hasSharedWithYou =
-                (sharedWithYouData.success && (sharedWithYouData.shares || []).length > 0) ||
-                (sharedByYouData.success && (sharedByYouData.shares || []).length > 0);
+            const hasShared = sharedData.success && (sharedData.shares || []).length > 0;
             const hasTrash = trashData.success && (trashData.items || []).length > 0;
 
             setTabVisibility({
                 favorites: hasFavorites,
-                sharedWithYou: hasSharedWithYou,
+                shared: hasShared,
                 trash: hasTrash,
             });
         } catch (error) {
             setTabVisibility({
                 favorites: false,
-                sharedWithYou: false,
+                shared: false,
                 trash: false,
             });
         }
@@ -357,10 +354,10 @@ export default function FolderTree({
                     </div>
                 )}
 
-                {tabVisibility.sharedWithYou && (
+                {tabVisibility.shared && (
                     <div
                         className={`${styles.specialItem} ${selectedPath === 'shared' ? styles.selected : ''}`}
-                        onClick={() => onOpenSharedWithYou ? onOpenSharedWithYou() : onFolderSelect('')}
+                        onClick={() => onOpenShared ? onOpenShared() : onFolderSelect('')}
                     >
                         <span className={styles.folderIcon}><Share2 size={18} /></span>
                         <span>Shared</span>
