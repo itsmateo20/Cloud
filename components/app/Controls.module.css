@@ -42,17 +42,18 @@
     min-height: clamp(28px, 6vw, 36px);
 }
 
-.button:hover:not(.disabled) {
+.button:hover:not(.disabled):not(:disabled) {
     background-color: var(--hover-background);
     border-color: var(--border-color);
 }
 
-.button:active:not(.disabled) {
+.button:active:not(.disabled):not(:disabled) {
     background-color: var(--active-background);
     transform: translateY(1px);
 }
 
-.button.disabled {
+.button.disabled,
+.button:disabled {
     opacity: 0.5;
     cursor: not-allowed;
     color: var(--text-color-muted);
@@ -149,11 +150,12 @@
     position: relative;
 }
 
-.dropdownItem:hover:not(.disabled) {
+.dropdownItem:hover:not(.disabled):not(:disabled) {
     background-color: var(--hover-background);
 }
 
-.dropdownItem.disabled {
+.dropdownItem.disabled,
+.dropdownItem:disabled {
     opacity: 0.5;
     cursor: not-allowed;
     color: var(--text-color-muted);

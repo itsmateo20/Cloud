@@ -139,7 +139,12 @@ export async function GET(req, { params }) {
 
         const userFolder = getUserUploadPath(share.ownerId);
         const itemResolution = resolvePathWithinBase(userFolder, itemPath);
-        const matchedItem = (share.items || []).find((item) => item.path === itemResolution.relativePath && ["file", "folder"].includes(item.type));
+        const matchedItem = (share.items || []).find((item) => {
+            if (!["file", "folder"].includes(item.type)) return false;
+            if (item.path === itemResolution.relativePath) return true;
+            return item.type === "folder" &&
+                itemResolution.relativePath.startsWith(`${item.path}/`);
+        });
         if (!matchedItem) {
             return NextResponse.json({ success: false, code: "share_item_not_found", message: "File is not part of this share" }, { status: 404 });
         }
@@ -151,10 +156,7 @@ export async function GET(req, { params }) {
 
         const stat = await fs.stat(targetPath);
 
-        if (matchedItem.type === "folder") {
-            if (!stat.isDirectory()) {
-                return NextResponse.json({ success: false, code: "share_folder_expected", message: "Folder not found" }, { status: 400 });
-            }
+        if (stat.isDirectory()) {
 
             const filesInFolder = await getAllFilesInDirectory(targetPath, path.basename(targetPath));
             if (!filesInFolder.length) {
@@ -185,7 +187,7 @@ export async function GET(req, { params }) {
             });
         }
 
-        if (stat.isDirectory()) {
+        if (!stat.isFile()) {
             return NextResponse.json({ success: false, code: "share_file_expected", message: "Only files can be downloaded directly" }, { status: 400 });
         }
 

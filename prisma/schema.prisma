@@ -198,3 +198,26 @@ model SharedCollectionAccessLog {
 
   @@map("SharedCollectionAccessLog")
 }
+
+model SharedAccessFolder {
+  id         Int      @id @default(autoincrement())
+  ownerId    Int
+  folderPath String
+  name       String
+  allowedEmails String @default("[]")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @default(now())
+
+  @@map("SharedAccessFolder")
+}
+
+model SharedAccessMember {
+  id        Int      @id @default(autoincrement())
+  shareId   Int
+  userId    Int
+  email     String
+  joinedAt  DateTime @default(now())
+
+  @@unique([shareId, userId])
+  @@map("SharedAccessMember")
+}

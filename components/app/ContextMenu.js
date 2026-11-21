@@ -13,6 +13,7 @@ import {
     Upload,
     Edit3,
     Share2,
+    FolderUsers,
     Star,
     StarOff,
     RotateCcw,
@@ -30,7 +31,8 @@ export function ContextMenu({
     currentPath,
     mobile = false,
     trashEnabled = true,
-    privateMode = false
+    privateMode = false,
+    onShareAccess
 }) {
     const menuRef = useRef(null);
     const [showFavoriteSubmenu, setShowFavoriteSubmenu] = useState(false);
@@ -191,6 +193,16 @@ export function ContextMenu({
                         <span className={styles.icon}><Share2 size={16} /></span>
                         Share{isMultipleSelected ? ` (${selectedItems.length})` : ""}
                     </div>
+
+                    {!privateMode && selectedArray.every((item) => item.type === "folder") && (
+                        <div className={styles.menuItem} onClick={() => {
+                            onShareAccess?.(selectedArray);
+                            onClose();
+                        }}>
+                            <span className={styles.icon}><FolderUsers size={16} /></span>
+                            Share Access
+                        </div>
+                    )}
 
                     {shouldShowSubmenu ? (
                         <div

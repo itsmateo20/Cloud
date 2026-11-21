@@ -86,10 +86,6 @@ export default function UserProfileDropdown({ user, mobile, onOpenSettings, onOp
                     <User size={25} strokeWidth={2} />
                     <h1>Edit Gravatar</h1>
                 </div>
-                <div className={`${nav.userProfileMobileListItem} ${nav.userProfileMobileSettings}`} onClick={onOpenShares}>
-                    <Share2 size={25} strokeWidth={2} />
-                    <h1>Shared Files</h1>
-                </div>
                 {user?.admin && (
                     <div className={`${nav.userProfileMobileListItem} ${nav.userProfileMobileSettings}`} onClick={onOpenAdminUsers}>
                         <Users size={25} strokeWidth={2} />
@@ -142,7 +138,6 @@ export default function UserProfileDropdown({ user, mobile, onOpenSettings, onOp
                 <ul>
                     <li onClick={onOpenSettings}><span>Settings</span><Cog size={22} strokeWidth={3} /></li>
                     <li onClick={() => window.open(`https://en.gravatar.com/emails/`, '_blank')}><span>Edit Gravatar</span><User size={22} strokeWidth={3} /></li>
-                    <li onClick={onOpenShares}><span>Shared Files</span><Share2 size={22} strokeWidth={3} /></li>
                     {user?.admin && <li onClick={onOpenAdminUsers}><span>Admin Panel</span><Users size={22} strokeWidth={3} /></li>}
                 </ul>
                 <ul>

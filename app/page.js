@@ -17,7 +17,7 @@ import FolderTree from "@/components/app/FolderTree";
 import FileList from "@/components/app/FileList";
 import Controls from "@/components/app/Controls";
 import Settings from "@/components/app/Settings";
-import SharedWithYou from "@/components/app/SharedWithYou";
+import Shared from "@/components/app/Shared";
 import TrashView from "@/components/app/TrashView";
 import PrivateDisk from "@/components/app/PrivateDisk";
 import AdminUsersPanel from "@/components/app/AdminUsersPanel";
@@ -137,6 +137,7 @@ let socket;
 export default function Page() {
   const { user, loading } = useAuth();
   const fileListRef = useRef(null);
+  const sharedAccessRef = useRef(null);
   const privateDiskRef = useRef(null);
   const toast = useToast();
   const [mobileNotificationOpen, setMobileNotificationOpen] = useState(false);
@@ -168,6 +169,7 @@ export default function Page() {
   const [settingsInitialSection, setSettingsInitialSection] = useState('profile');
   const [showShares, setShowShares] = useState(false);
   const [showSharedWithYou, setShowSharedWithYou] = useState(false);
+  const [sharedSubtab, setSharedSubtab] = useState("to");
   const [showTrash, setShowTrash] = useState(false);
   const [showPrivate, setShowPrivate] = useState(false);
   const [privateUnlocked, setPrivateUnlocked] = useState(false);
@@ -203,6 +205,9 @@ export default function Page() {
     return 300;
   });
   const [controlsDisabled, setControlsDisabled] = useState(false);
+  const [sharedAccessSelectedItems, setSharedAccessSelectedItems] = useState([]);
+  const [sharedAccessReady, setSharedAccessReady] = useState(false);
+  const [pendingSharedAccessItems, setPendingSharedAccessItems] = useState(null);
 
   const [isGlobalDragOver, setIsGlobalDragOver] = useState(false);
   const [isDragInvalid, setIsDragInvalid] = useState(false);
@@ -229,20 +234,29 @@ export default function Page() {
         : Info;
 
   const viewMode = isMobile ? mobileViewMode : desktopViewMode;
-  const mobileSelectionActive = Boolean(isMobile && selectedItems && selectedItems.length > 0);
-  const selectedTotalSize = (selectedItems || []).reduce((total, item) => total + (Number(item?.size) || 0), 0);
-  const selectedFavoritedCount = (selectedItems || []).filter((item) => Boolean(item?.isFavorited)).length;
-  const selectedUnfavoritedCount = Math.max(0, (selectedItems?.length || 0) - selectedFavoritedCount);
-  const mobileShouldUnfavorite = selectedItems.length > 0 && selectedUnfavoritedCount === 0;
+  const sharedAccessActive = showSharedWithYou && sharedSubtab === 'access';
+  const activeSelection = sharedAccessActive ? sharedAccessSelectedItems : selectedItems;
+  const specialControlsDisabled = Boolean(
+    showSettings || showShares || showAdminUsers || showTrash ||
+    (showSharedWithYou && !sharedAccessActive) ||
+    (sharedAccessActive && !sharedAccessReady) ||
+    currentPath === 'favorites' ||
+    (showPrivate && !privateUnlocked)
+  );
+  const mobileSelectionActive = Boolean(isMobile && !specialControlsDisabled && activeSelection && activeSelection.length > 0);
+  const selectedTotalSize = (activeSelection || []).reduce((total, item) => total + (Number(item?.size) || 0), 0);
+  const selectedFavoritedCount = (activeSelection || []).filter((item) => Boolean(item?.isFavorited)).length;
+  const selectedUnfavoritedCount = Math.max(0, (activeSelection?.length || 0) - selectedFavoritedCount);
+  const mobileShouldUnfavorite = activeSelection.length > 0 && selectedUnfavoritedCount === 0;
   const mobileFavoriteActionLabel = mobileShouldUnfavorite ? 'Unfavourite' : 'Favourite';
   const mobileInSpecialPage = Boolean(showSettings || showShares || showSharedWithYou || showAdminUsers || showTrash || (showPrivate && !privateUnlocked));
   const mobileHidePath = Boolean(mobileInSpecialPage || currentPath === 'favorites');
   const mobilePageTitle = showSettings
     ? 'Settings'
     : showShares
-      ? 'Shared Files'
+      ? 'Shared'
       : showSharedWithYou
-        ? 'Shared With You'
+        ? 'Shared'
         : showTrash
           ? 'Bin'
           : showPrivate
@@ -776,16 +790,44 @@ export default function Page() {
   const handleOpenShares = useCallback(() => {
     lockPrivateDisk();
     setShowSettings(false);
-    setShowShares(true);
+    setShowShares(false);
     setShowSharedWithYou(false);
+    setSharedSubtab("by");
+    setShowSharedWithYou(true);
     setShowAdminUsers(false);
     setCurrentPath('');
   }, [lockPrivateDisk]);
+
+  const openSharedAccessDialog = useCallback((items = []) => {
+    const folders = (items || []).filter((item) => item?.type === 'folder');
+    if (folders.length === 0) {
+      toast?.addError('Select a folder to share access');
+      return;
+    }
+
+    lockPrivateDisk();
+    setPendingSharedAccessItems(folders);
+    setShowSettings(false);
+    setShowShares(false);
+    setShowSharedWithYou(true);
+    setSharedSubtab('access');
+    setShowAdminUsers(false);
+    setShowTrash(false);
+    setShowPrivate(false);
+    setCurrentPath('');
+  }, [lockPrivateDisk, toast]);
+
+  useEffect(() => {
+    if (!pendingSharedAccessItems || !sharedAccessActive || !sharedAccessRef.current) return;
+    sharedAccessRef.current.openShareModal(pendingSharedAccessItems);
+    setPendingSharedAccessItems(null);
+  }, [pendingSharedAccessItems, sharedAccessActive]);
 
   const handleOpenSharedWithYou = useCallback(() => {
     lockPrivateDisk();
     setShowSettings(false);
     setShowShares(false);
+    setSharedSubtab("to");
     setShowSharedWithYou(true);
     setShowAdminUsers(false);
     setCurrentPath('shared');
@@ -1034,6 +1076,11 @@ export default function Page() {
   };
 
   const handleUpload = (files = null) => {
+    if (showSharedWithYou && sharedSubtab === 'access') {
+      const selection = normalizeUploadSelection(files);
+      sharedAccessRef.current?.uploadFiles(selection.length ? selection : null);
+      return;
+    }
     if (showPrivate) {
       if (privateUnlocked) {
         const selected = normalizeUploadSelection(files);
@@ -1518,6 +1565,10 @@ export default function Page() {
   };
 
   const handleDownload = () => {
+    if (showSharedWithYou && sharedSubtab === 'access') {
+      sharedAccessRef.current?.downloadSelected();
+      return;
+    }
     if (!selectedItems || selectedItems.length === 0) {
       return;
     }
@@ -1538,6 +1589,10 @@ export default function Page() {
   };
 
   const handleDelete = async () => {
+    if (showSharedWithYou && sharedSubtab === 'access') {
+      sharedAccessRef.current?.deleteSelected();
+      return;
+    }
     if (!selectedItems || selectedItems.length === 0) return;
 
     const itemNames = selectedItems.map(item => item.name).join(', ');
@@ -1551,6 +1606,10 @@ export default function Page() {
   };
 
   const handleRename = () => {
+    if (showSharedWithYou && sharedSubtab === 'access') {
+      sharedAccessRef.current?.renameSelected();
+      return;
+    }
     if (!selectedItems || selectedItems.length !== 1) return;
     if (fileListRef.current) {
       fileListRef.current.startRename?.(selectedItems[0]);
@@ -1603,6 +1662,11 @@ export default function Page() {
   };
 
   const handleRefresh = async () => {
+    if (showSharedWithYou && sharedSubtab === 'access') {
+      sharedAccessRef.current?.refresh();
+      toast?.addSuccess('Refreshed');
+      return;
+    }
     if (showPrivate) {
       privateDiskRef.current?.refresh?.();
       toast?.addSuccess('Refreshed');
@@ -1678,11 +1742,16 @@ export default function Page() {
 
   const handleClearMobileSelection = () => {
     fileListRef.current?.clearSelection?.();
+    setSharedAccessSelectedItems([]);
     setSelectedItems([]);
   };
 
   const handleMobileSelectionShare = () => {
-    if (!selectedItems || selectedItems.length === 0) return;
+    if (!activeSelection || activeSelection.length === 0) return;
+    if (sharedAccessActive) {
+      sharedAccessRef.current?.openShareModal(activeSelection);
+      return;
+    }
     fileListRef.current?.openShareCreate?.(selectedItems);
   };
 
@@ -1924,8 +1993,16 @@ export default function Page() {
           <div className={style.desktopContainer}>
             <Controls
               currentPath={currentPath}
-              selectedItems={selectedItems}
-              onOpenNewItemModal={openNewItemModal}
+              selectedItems={activeSelection}
+              onOpenNewItemModal={(type) => {
+                if (!sharedAccessActive) {
+                  openNewItemModal(type);
+                } else if (type === 'folder') {
+                  sharedAccessRef.current?.createFolder();
+                } else {
+                  sharedAccessRef.current?.createTextFile();
+                }
+              }}
               onUpload={handleUpload}
               onDownload={handleDownload}
               onGenerateQR={(type, items) => fileListRef.current?.generateQRCode?.(type, items)}
@@ -1939,9 +2016,14 @@ export default function Page() {
               onViewChange={handleViewChange}
               onRefresh={handleRefresh}
               onShare={(items) => fileListRef.current?.openShareCreate?.(items)}
-              privateMode={showPrivate && privateUnlocked}
+              onShareAccess={openSharedAccessDialog}
+              shareDisabled={sharedAccessActive}
+              qrDisabled={sharedAccessActive}
+              shareAccessDisabled={sharedAccessActive}
               trashEnabled={trashEnabled}
-              disabled={controlsDisabled || showSettings || showShares || showSharedWithYou || showAdminUsers || showTrash || (showPrivate && !privateUnlocked) || propertiesState.open}
+              disabled={controlsDisabled || specialControlsDisabled || propertiesState.open}
+              favoriteDisabled={sharedAccessActive}
+              propertiesDisabled={sharedAccessActive}
             />
             <div className={style.diskContainerRow}>
               <Resizable
@@ -2002,7 +2084,29 @@ export default function Page() {
                     isMobile={false}
                   />
                 ) : showSharedWithYou ? (
-                  <SharedWithYou toast={toast} />
+                  <Shared
+                    initialSubtab={sharedSubtab}
+                    setInitialSubtab={setSharedSubtab}
+                    toast={toast}
+                    fileListRef={fileListRef}
+                    sharedAccessRef={sharedAccessRef}
+                    onSharedAccessSelectionChange={setSharedAccessSelectedItems}
+                    onSharedAccessReadyChange={setSharedAccessReady}
+                    socket={socket}
+                    currentPath={currentPath}
+                    onFolderDoubleClick={handleFolderDoubleClick}
+                    onRootLoadError={handleStorageRootError}
+                    onSelectionChange={handleSelectionChange}
+                    onFilesUpload={handleFilesUpload}
+                    onNavigateToFile={(path) => setCurrentPath(path)}
+                    onProperties={handleProperties}
+                    sortBy={sortBy}
+                    viewMode={viewMode}
+                    user={user}
+                    mobile={isMobile}
+                    thumbnailResolution={thumbnailResolution}
+                    trashEnabled={trashEnabled}
+                  />
                 ) : showTrash ? (
                   <TrashView toast={toast} />
                 ) : showPrivate ? (
@@ -2064,6 +2168,7 @@ export default function Page() {
                     onFolderDoubleClick={handleFolderDoubleClick}
                     onRootLoadError={handleStorageRootError}
                     onSelectionChange={handleSelectionChange}
+                    onShareAccess={openSharedAccessDialog}
                     onFilesUpload={handleFilesUpload}
                     onNavigateToFile={showPrivate ? setPrivatePath : setCurrentPath}
                     onProperties={handleProperties}
@@ -2239,7 +2344,7 @@ export default function Page() {
                       <div className={style.mobileSelectionHeaderInfo}>
                         <button className={style.backButton} onClick={handleClearMobileSelection}><X size={20} /></button>
                         <div className={style.mobileSelectionMeta}>
-                          <h3 className={style.explorerTitle}>{selectedItems.length} selected</h3>
+                          <h3 className={style.explorerTitle}>{activeSelection.length} selected</h3>
                           <span className={style.mobileSelectionSize}>{formatFileSize(selectedTotalSize)}</span>
                         </div>
                       </div>
@@ -2275,7 +2380,7 @@ export default function Page() {
                           )}
                         </div>
                       )}
-                      {!mobileSelectionActive && !mobileInSpecialPage && (
+                      {!mobileSelectionActive && (!mobileInSpecialPage || sharedAccessActive) && (
                         <button className={style.viewToggleButton} onClick={toggleViewMode}>
                           {viewMode === 'list' ? <LayoutGrid /> : <List />}
                         </button>
@@ -2285,15 +2390,19 @@ export default function Page() {
                           <button className={style.menuButton} onClick={handleDownload} aria-label="Download selected">
                             <Download size={18} />
                           </button>
-                          <button className={style.menuButton} onClick={handleFavorite} aria-label={`${mobileFavoriteActionLabel} selected`} title={mobileFavoriteActionLabel}>
-                            <Star size={18} fill={mobileFavoriteActionLabel === 'Unfavourite' ? 'currentColor' : 'none'} />
-                          </button>
+                          {!sharedAccessActive && (
+                            <button className={style.menuButton} onClick={handleFavorite} aria-label={`${mobileFavoriteActionLabel} selected`} title={mobileFavoriteActionLabel}>
+                              <Star size={18} fill={mobileFavoriteActionLabel === 'Unfavourite' ? 'currentColor' : 'none'} />
+                            </button>
+                          )}
                           <button className={style.menuButton} onClick={handleDelete} aria-label={trashEnabled ? "Move selected to bin" : "Delete selected"}>
                             <Trash2 size={18} />
                           </button>
-                          <button className={style.menuButton} onClick={handleMobileSelectionShare} aria-label="Share selected">
-                            <Share2 size={18} />
-                          </button>
+                          {!sharedAccessActive && (
+                            <button className={style.menuButton} onClick={handleMobileSelectionShare} aria-label="Share selected">
+                              <Share2 size={18} />
+                            </button>
+                          )}
                         </>
                       )}
                       {!mobileInSpecialPage && (
@@ -2342,7 +2451,28 @@ export default function Page() {
                       isMobile={isMobile}
                     />
                   ) : showSharedWithYou ? (
-                    <SharedWithYou toast={toast} />
+                    <Shared
+                      initialSubtab={sharedSubtab}
+                      setInitialSubtab={setSharedSubtab}
+                      toast={toast}
+                      fileListRef={fileListRef}
+                      sharedAccessRef={sharedAccessRef}
+                      onSharedAccessSelectionChange={setSharedAccessSelectedItems}
+                      onSharedAccessReadyChange={setSharedAccessReady}
+                      socket={socket}
+                      currentPath={currentPath}
+                      onFolderDoubleClick={handleFolderDoubleClick}
+                      onRootLoadError={handleStorageRootError}
+                      onSelectionChange={handleSelectionChange}
+                      onFilesUpload={handleFilesUpload}
+                      onNavigateToFile={(path) => setCurrentPath(path)}
+                      onProperties={handleProperties}
+                      sortBy={sortBy}
+                      viewMode={viewMode}
+                      user={user}
+                      mobile={isMobile}
+                      trashEnabled={trashEnabled}
+                    />
                   ) : showTrash ? (
                     <TrashView toast={toast} />
                   ) : showPrivate ? (
@@ -2400,6 +2530,7 @@ export default function Page() {
                       onFolderDoubleClick={showPrivate ? setPrivatePath : handleFolderDoubleClick}
                       onRootLoadError={handleStorageRootError}
                       onSelectionChange={handleSelectionChange}
+                      onShareAccess={openSharedAccessDialog}
                       onFilesUpload={handleFilesUpload}
                       onNavigateToFile={showPrivate ? setPrivatePath : setCurrentPath}
                       onProperties={handleProperties}

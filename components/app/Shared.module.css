@@ -1,0 +1,441 @@
+.shared {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    background: var(--background);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.sharedHeader {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    padding: 18px 24px 12px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.sharedHeader h3 {
+    margin: 0;
+    font-size: 28px;
+    font-weight: 600;
+    font-family: var(--font-poppins);
+}
+
+.subtabs {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    overflow-x: auto;
+}
+
+.subtabs button {
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text-color-muted);
+    padding: 9px 12px;
+    cursor: pointer;
+    white-space: nowrap;
+    font: inherit;
+}
+
+.subtabs button:hover {
+    background: var(--hover-background);
+    color: var(--text);
+}
+
+.activeSubtab {
+    background: var(--button-primary) !important;
+    color: #fff !important;
+}
+
+.sharedBody {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.toYouContent {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.sharedSidebar {
+    width: 260px;
+    border-right: 1px solid var(--border-color);
+    padding: 20px 14px;
+    overflow-y: auto;
+    display: grid;
+    align-content: start;
+    gap: 8px;
+}
+
+.shareRow {
+    display: flex;
+    align-items: center;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.shareRowActive {
+    background: var(--button-primary);
+}
+
+.shareRowMain {
+    border: none;
+    background: transparent;
+    color: var(--text-color-muted);
+    text-align: left;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 12px 14px;
+    flex: 1;
+    min-width: 0;
+}
+
+.shareRowMain:hover {
+    background: var(--hover-background);
+    color: var(--text);
+}
+
+.shareRowActive .shareRowMain,
+.shareRowActive .iconButton {
+    color: #fff;
+}
+
+.shareRowTitle {
+    font-weight: 600;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.itemTitle {
+    font-weight: 600;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: wrap;
+}
+
+.shareRowMeta,
+.itemMeta {
+    font-size: 12px;
+    color: var(--text-color-muted);
+}
+
+.iconButton {
+    border: none;
+    background: transparent;
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--text-color-muted);
+    margin-right: 6px;
+}
+
+.sharedMainContent {
+    flex: 1;
+    height: calc(100vh - 180px);
+    overflow: hidden auto;
+    padding: 24px 32px;
+    display: grid;
+    align-content: start;
+    gap: 14px;
+}
+
+.mainHeaderRow,
+.browserToolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.mainHeaderRow h4 {
+    margin: 0;
+    font-size: 22px;
+}
+
+.itemRow {
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    background: var(--surface);
+    padding: 10px 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+
+.metaLine {
+    margin: 4px 0 0;
+    color: var(--text-color-muted);
+    font-size: 13px;
+}
+
+.breadcrumbRow,
+.viewModeButtons {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.breadcrumbRow {
+    min-width: 0;
+    overflow-x: auto;
+}
+
+.breadcrumbButton,
+.backButton,
+.viewModeButtons button {
+    border: 1px solid var(--border-color);
+    background: var(--surface);
+    color: var(--text);
+    border-radius: 8px;
+    min-height: 34px;
+    cursor: pointer;
+}
+
+.breadcrumbButton,
+.backButton {
+    border: 0;
+    background: transparent;
+    white-space: nowrap;
+    padding: 6px 8px;
+}
+
+.viewModeButtons button {
+    width: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.activeViewMode {
+    background: var(--button-primary) !important;
+    color: #fff !important;
+}
+
+.itemsGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 180px));
+    gap: 10px;
+}
+
+.itemTile,
+.itemListRow {
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    background: var(--surface);
+    position: relative;
+}
+
+.itemTile {
+    height: 150px;
+    padding: 12px;
+}
+
+.itemOpenButton {
+    border: 0;
+    background: transparent;
+    color: var(--text);
+    width: 100%;
+    height: 100%;
+    cursor: pointer;
+}
+
+.itemTile .itemOpenButton {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.itemIcon {
+    color: var(--text-color-muted);
+}
+
+.itemDownloadButton,
+.rowDownloadButton {
+    width: 32px;
+    height: 32px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--surface);
+    color: var(--text);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.itemDownloadButton {
+    position: absolute;
+    right: 8px;
+    bottom: 8px;
+}
+
+.itemsListView {
+    display: grid;
+    gap: 4px;
+}
+
+.itemListRow {
+    height: 48px;
+}
+
+.itemListRow .itemOpenButton {
+    display: grid;
+    grid-template-columns: 32px minmax(120px, 1fr) minmax(120px, 220px);
+    align-items: center;
+    padding: 4px 48px 4px 8px;
+    text-align: left;
+}
+
+.detailsView {
+    width: 100%;
+    height: 100%;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+}
+
+.detailsHeader,
+.detailsRow {
+    display: grid;
+    grid-template-columns: minmax(180px, 1fr) 120px 120px 36px;
+    align-items: center;
+    min-height: 42px;
+}
+
+.detailsHeader {
+    background: var(--surface);
+    color: var(--text-color-muted);
+    font-size: 12px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.detailsHeader span,
+.detailsRow>span {
+    padding: 0 10px;
+}
+
+.detailsRow {
+    border-bottom: 1px solid var(--border-color);
+}
+
+.detailsName {
+    border: 0;
+    background: transparent;
+    color: var(--text);
+    height: 42px;
+    padding: 0 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+}
+
+.input {
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--surface);
+    color: var(--text);
+    padding: 8px 10px;
+    width: min(320px, 100%);
+}
+
+.primaryButton,
+.secondaryButton,
+.dangerButton {
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    padding: 8px 12px;
+    margin-left: 10px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    text-decoration: none;
+    font-size: 15px;
+    height: 40px;
+}
+
+.primaryButton {
+    background: var(--button-primary);
+    color: #fff;
+    border-color: transparent;
+}
+
+.secondaryButton {
+    background: var(--surface);
+    color: var(--text);
+}
+
+.dangerButton {
+    background: rgba(239, 68, 68, 0.08);
+    color: #ef4444;
+    border-color: rgba(239, 68, 68, 0.5);
+    width: fit-content;
+}
+
+.passcodePanel {
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    background: var(--surface);
+    padding: 16px;
+    display: grid;
+    gap: 10px;
+}
+
+.emptyHint {
+    margin: 0;
+    color: var(--text-color-muted);
+}
+
+.errorText {
+    margin: 0;
+    color: #ef4444;
+}
+
+.loadingCenter {
+    min-height: 180px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+@media (max-width: 700px) {
+    .sharedHeader {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 10px;
+        padding: 14px 12px 10px;
+    }
+
+    .sharedHeader h3 {
+        font-size: 22px;
+    }
+
+    .subtabs {
+        width: 100%;
+    }
+
+    .subtabs button {
+        padding: 8px 10px;
+        font-size: 13px;
+    }
+}

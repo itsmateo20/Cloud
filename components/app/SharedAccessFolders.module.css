@@ -1,0 +1,406 @@
+.sharedAccess {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    display: flex;
+    background: var(--background);
+    overflow: hidden;
+}
+
+.shareList {
+    width: 260px;
+    border-right: 1px solid var(--border-color);
+    padding: 14px 12px;
+    overflow-y: auto;
+}
+
+.shareListHeader,
+.folderToolbar,
+.toolbarActions,
+.viewButtons,
+.breadcrumbs,
+.shareRow,
+.shareOpen,
+.itemActions,
+.modalHeader,
+.modalActions {
+    display: flex;
+    align-items: center;
+}
+
+.shareListHeader {
+    justify-content: space-between;
+    margin-bottom: 10px;
+    font-weight: 600;
+}
+
+.createButton,
+.leaveButton,
+.iconButton,
+.viewButtons button,
+.toolbarActions button,
+.itemActions button {
+    border: 1px solid var(--border-color);
+    background: var(--surface);
+    color: var(--text);
+    border-radius: 8px;
+    height: 34px;
+    min-width: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.shareRow {
+    border-radius: 8px;
+    margin-bottom: 4px;
+}
+
+.activeShare {
+    background: var(--button-primary);
+    color: #fff;
+}
+
+.shareOpen {
+    border: 0;
+    background: transparent;
+    color: inherit;
+    flex: 1;
+    min-width: 0;
+    height: 44px;
+    gap: 8px;
+    padding: 6px 8px;
+    cursor: pointer;
+}
+
+.shareOpen span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.leaveButton {
+    border: 0;
+    background: transparent;
+    color: inherit;
+    margin-right: 4px;
+}
+
+.folderMain {
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+    padding: 16px 20px;
+    overflow: auto;
+}
+
+.emptyMain {
+    height: 100%;
+    display: grid;
+    place-content: center;
+    justify-items: center;
+    color: var(--text-color-muted);
+}
+
+.folderToolbar {
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.breadcrumbs {
+    min-width: 0;
+    overflow-x: auto;
+}
+
+.breadcrumbs button {
+    border: 0;
+    background: transparent;
+    color: var(--text);
+    min-height: 34px;
+    padding: 6px 8px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.toolbarActions {
+    gap: 6px;
+}
+
+.toolbarActions button {
+    gap: 5px;
+    padding: 0 8px;
+}
+
+.viewButtons {
+    gap: 4px;
+}
+
+.viewButtons button {
+    padding: 0;
+}
+
+.active {
+    background: var(--button-primary) !important;
+    color: #fff !important;
+}
+
+.gridView {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 180px));
+    gap: 10px;
+}
+
+.tile,
+.listRow {
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    background: var(--surface);
+    position: relative;
+}
+
+.tile {
+    height: 150px;
+}
+
+.itemOpen {
+    border: 0;
+    background: transparent;
+    color: var(--text);
+    width: 100%;
+    height: 100%;
+    cursor: pointer;
+}
+
+.tile .itemOpen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.tile .itemOpen span {
+    max-width: 140px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.listView {
+    display: grid;
+    gap: 4px;
+}
+
+.listRow {
+    height: 48px;
+}
+
+.listRow .itemOpen {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 100px 4px 8px;
+    text-align: left;
+}
+
+.itemActions {
+    position: absolute;
+    right: 6px;
+    bottom: 6px;
+    gap: 4px;
+}
+
+.itemActions a,
+.itemActions button {
+    width: 32px;
+}
+
+.itemActions a {
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--surface);
+    color: var(--text);
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.detailsView {
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.detailsHeader,
+.detailsRow {
+    display: grid;
+    grid-template-columns: minmax(180px, 1fr) 120px 120px 110px;
+    align-items: center;
+    min-height: 42px;
+}
+
+.detailsHeader {
+    background: var(--surface);
+    color: var(--text-color-muted);
+    font-size: 12px;
+}
+
+.detailsHeader span,
+.detailsRow>span {
+    padding: 0 10px;
+}
+
+.detailsRow {
+    border-top: 1px solid var(--border-color);
+}
+
+.selectedRow {
+    background: color-mix(in srgb, var(--button-primary) 18%, var(--surface));
+}
+
+.detailsName {
+    border: 0;
+    background: transparent;
+    color: var(--text);
+    height: 42px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 10px;
+    cursor: pointer;
+}
+
+.detailsRow .itemActions {
+    position: static;
+    justify-self: end;
+    margin-right: 6px;
+}
+
+.emptyText,
+.loadingCenter {
+    color: var(--text-color-muted);
+}
+
+.loadingCenter {
+    min-height: 180px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modalOverlay {
+    position: fixed;
+    inset: 0;
+    z-index: 10020;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal,
+.editorModal {
+    width: min(520px, calc(100vw - 24px));
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    background: var(--background);
+    padding: 16px;
+    display: grid;
+    gap: 10px;
+}
+
+.editorModal {
+    width: min(760px, calc(100vw - 24px));
+}
+
+.modalHeader {
+    justify-content: space-between;
+}
+
+.modalHeader h4 {
+    margin: 0;
+}
+
+.modalHeader button {
+    border: 0;
+    background: transparent;
+    color: var(--text);
+    cursor: pointer;
+}
+
+.modal input,
+.modal textarea,
+.editor {
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--surface);
+    color: var(--text);
+    padding: 9px 10px;
+}
+
+.modal textarea {
+    min-height: 100px;
+    resize: vertical;
+}
+
+.editor {
+    min-height: 360px;
+    resize: vertical;
+    font-family: monospace;
+}
+
+.modalActions {
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.modalActions button {
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--surface);
+    color: var(--text);
+    min-height: 34px;
+    padding: 6px 12px;
+    cursor: pointer;
+}
+
+.primaryButton {
+    background: var(--button-primary) !important;
+    color: #fff !important;
+    border-color: transparent !important;
+}
+
+@media (max-width: 700px) {
+    .sharedAccess {
+        flex-direction: column;
+    }
+
+    .shareList {
+        width: 100%;
+        max-height: 180px;
+        border-right: 0;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .folderMain {
+        padding: 12px;
+    }
+
+    .folderToolbar {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .toolbarActions {
+        width: 100%;
+        flex-wrap: wrap;
+    }
+
+    .detailsHeader,
+    .detailsRow {
+        grid-template-columns: minmax(150px, 1fr) 90px 90px 110px;
+    }
+}

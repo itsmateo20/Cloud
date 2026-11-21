@@ -30,7 +30,8 @@ import {
     BarChart3,
     LayoutGrid,
     RefreshCw,
-    Share2
+    Share2,
+    FolderUsers
 } from 'lucide-react';
 
 const Controls = ({
@@ -50,9 +51,14 @@ const Controls = ({
     onViewChange,
     onRefresh,
     onShare,
-    privateMode = false,
+    onShareAccess,
     trashEnabled = true,
-    disabled = false
+    disabled = false,
+    favoriteDisabled = false,
+    propertiesDisabled = false,
+    shareDisabled = false,
+    qrDisabled = false,
+    shareAccessDisabled = false
 }) => {
     const selectedArray = Array.isArray(selectedItems)
         ? selectedItems
@@ -119,6 +125,7 @@ const Controls = ({
 
     const hasSelection = selectedArray.length > 0;
     const isSpecialPath = currentPath === 'favorites';
+    const controlsInactive = disabled || isSpecialPath;
 
     const sortOptions = [
         { value: 'name', label: 'Name', icon: <Edit3 size={16} /> },
@@ -141,19 +148,19 @@ const Controls = ({
         <div className={styles.controls}>
             <div className={styles.section}>
                 <div className={styles.dropdown} ref={newDropdownRef}>
-                    {!privateMode && <button
-                        className={`${styles.button} ${styles.newButton}`}
+                    <button
+                        className={`${styles.button} ${styles.newButton} ${controlsInactive ? styles.disabled : ''}`}
                         onClick={() => setShowNewDropdown(!showNewDropdown)}
-                        disabled={isSpecialPath || disabled}
+                        disabled={controlsInactive}
                         title="New"
                     >
                         <span className={styles.icon}><Plus size={16} /></span>
                         <span className={styles.label}>New</span>
                         <span className={styles.arrow}><ChevronDown size={12} /></span>
-                    </button>}
+                    </button>
                     {showNewDropdown && !isSpecialPath && !disabled && (
                         <div className={styles.dropdownMenu}>
-                            {!privateMode && <button
+                            <button
                                 className={styles.dropdownItem}
                                 onClick={() => {
                                     onOpenNewItemModal?.('folder');
@@ -162,8 +169,8 @@ const Controls = ({
                             >
                                 <span className={styles.dropdownIcon}><FolderPlus size={16} /></span>
                                 Folder
-                            </button>}
-                            {!privateMode && <button
+                            </button>
+                            <button
                                 className={styles.dropdownItem}
                                 onClick={() => {
                                     onOpenNewItemModal?.('file');
@@ -172,7 +179,7 @@ const Controls = ({
                             >
                                 <span className={styles.dropdownIcon}><FileIcon size={16} /></span>
                                 File
-                            </button>}
+                            </button>
                             <button
                                 className={styles.dropdownItem}
                                 onClick={() => {
@@ -189,9 +196,9 @@ const Controls = ({
 
                 <div className={styles.dropdown} ref={uploadDropdownRef}>
                     <button
-                        className={styles.button}
+                        className={`${styles.button} ${controlsInactive ? styles.disabled : ''}`}
                         onClick={() => setShowUploadDropdown(!showUploadDropdown)}
-                        disabled={isSpecialPath || disabled}
+                        disabled={controlsInactive}
                         title="Upload"
                     >
                         <span className={styles.icon}><Upload size={16} /></span>
@@ -245,6 +252,7 @@ const Controls = ({
                             </button>
                             <button
                                 className={styles.dropdownItem}
+                                disabled={qrDisabled}
                                 onClick={() => {
                                     onGenerateQR?.('upload', []);
                                     setShowUploadDropdown(false);
@@ -258,7 +266,7 @@ const Controls = ({
                 </div>
                 <div className={styles.dropdown} ref={downloadDropdownRef}>
                     <button
-                        className={`${styles.button} ${!hasSelection ? styles.disabled : ''}`}
+                        className={`${styles.button} ${!hasSelection || disabled ? styles.disabled : ''}`}
                         onClick={() => hasSelection && !disabled && setShowDownloadDropdown(!showDownloadDropdown)}
                         disabled={!hasSelection || disabled}
                         title="Download"
@@ -281,6 +289,7 @@ const Controls = ({
                             </button>
                             <button
                                 className={styles.dropdownItem}
+                                disabled={qrDisabled}
                                 onClick={() => {
                                     onGenerateQR?.('download', selectedArray);
                                     setShowDownloadDropdown(false);
@@ -298,7 +307,7 @@ const Controls = ({
 
             <div className={styles.section}>
                 <button
-                    className={`${styles.button} ${!hasSelection ? styles.disabled : ''}`}
+                    className={`${styles.button} ${!hasSelection || isSpecialPath || disabled ? styles.disabled : ''}`}
                     onClick={onDelete}
                     disabled={!hasSelection || isSpecialPath || disabled}
                     title={trashEnabled ? "Move to Bin" : "Delete"}
@@ -308,7 +317,7 @@ const Controls = ({
                 </button>
 
                 <button
-                    className={`${styles.button} ${!hasSelection ? styles.disabled : ''}`}
+                    className={`${styles.button} ${!hasSelection || selectedArray.length !== 1 || disabled ? styles.disabled : ''}`}
                     onClick={onRename}
                     disabled={!hasSelection || selectedArray.length !== 1 || disabled}
                     title="Rename"
@@ -318,17 +327,27 @@ const Controls = ({
                 </button>
 
                 <button
-                    className={`${styles.button} ${!hasSelection ? styles.disabled : ''}`}
+                    className={`${styles.button} ${!hasSelection || disabled || shareDisabled ? styles.disabled : ''}`}
                     onClick={() => onShare?.(selectedArray)}
-                    disabled={!hasSelection || disabled}
-                    title="Share"
+                    disabled={!hasSelection || disabled || shareDisabled}
+                    title="Share files"
                 >
                     <span className={styles.icon}><Share2 size={16} /></span>
-                    <span className={styles.label}>Share</span>
+                    <span className={styles.label}>Share files</span>
                 </button>
 
                 <button
-                    className={styles.button}
+                    className={`${styles.button} ${!hasSelection || disabled || shareAccessDisabled ? styles.disabled : ''}`}
+                    onClick={() => onShareAccess?.(selectedArray)}
+                    disabled={!hasSelection || disabled || shareAccessDisabled}
+                    title="Share folder access"
+                >
+                    <span className={styles.icon}><FolderUsers size={16} /></span>
+                    <span className={styles.label}>Share Access</span>
+                </button>
+
+                <button
+                    className={`${styles.button} ${disabled ? styles.disabled : ''}`}
                     onClick={onRefresh}
                     disabled={disabled}
                     title="Refresh"
@@ -343,7 +362,7 @@ const Controls = ({
             <div className={styles.section}>
                 <div className={styles.dropdown} ref={sortDropdownRef}>
                     <button
-                        className={styles.button}
+                        className={`${styles.button} ${disabled ? styles.disabled : ''}`}
                         onClick={() => !disabled && setShowSortDropdown(!showSortDropdown)}
                         disabled={disabled}
                         title="Sort"
@@ -374,7 +393,7 @@ const Controls = ({
 
                 <div className={styles.dropdown} ref={viewDropdownRef}>
                     <button
-                        className={styles.button}
+                        className={`${styles.button} ${disabled ? styles.disabled : ''}`}
                         onClick={() => !disabled && setShowViewDropdown(!showViewDropdown)}
                         disabled={disabled}
                         title="View"
@@ -409,7 +428,7 @@ const Controls = ({
             <div className={styles.section}>
                 <div className={styles.dropdown} ref={moreDropdownRef}>
                     <button
-                        className={styles.button}
+                        className={`${styles.button} ${disabled ? styles.disabled : ''}`}
                         onClick={() => !disabled && setShowMoreDropdown(!showMoreDropdown)}
                         disabled={disabled}
                         title="More"
@@ -426,7 +445,7 @@ const Controls = ({
                                     onFavorite();
                                     setShowMoreDropdown(false);
                                 }}
-                                disabled={!hasSelection || isSpecialPath || disabled}
+                                disabled={!hasSelection || isSpecialPath || disabled || favoriteDisabled}
                             >
                                 <span className={styles.dropdownIcon}><Star size={16} /></span>
                                 Favorite
@@ -437,7 +456,7 @@ const Controls = ({
                                     onProperties();
                                     setShowMoreDropdown(false);
                                 }}
-                                disabled={!hasSelection || disabled}
+                                disabled={!hasSelection || disabled || propertiesDisabled}
                             >
                                 <span className={styles.dropdownIcon}><Settings size={16} /></span>
                                 Properties

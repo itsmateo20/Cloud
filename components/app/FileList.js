@@ -360,6 +360,7 @@ const FileList = forwardRef(({
     onFilesUpload,
     onProperties,
     onNavigateToFile,
+    onShareAccess,
     sortBy = 'name',
     viewMode = 'list',
     user,
@@ -2748,6 +2749,7 @@ const FileList = forwardRef(({
                     selectedItems={contextMenu.items}
                     onAction={handleContextMenuAction}
                     currentPath={currentPath}
+                    onShareAccess={onShareAccess}
                     mobile={mobile}
                     trashEnabled={trashEnabled}
                     privateMode={privateMode}

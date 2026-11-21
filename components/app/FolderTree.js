@@ -245,13 +245,16 @@ export default function FolderTree({
     const checkTabVisibility = async () => {
         try {
             const favoritesData = await api.get("/api/user/favorites");
-            const sharedWithYouData = await api.get("/api/shares/shared-with-you");
+            const sharedWithYouData = await api.get("/api/shares/shared");
+            const sharedByYouData = await api.get("/api/shares");
             const trashData = await api.get("/api/user/trash");
             const hasFavorites = favoritesData.success && (
                 (favoritesData.files && favoritesData.files.length > 0) ||
                 (favoritesData.folders && favoritesData.folders.length > 0)
             );
-            const hasSharedWithYou = sharedWithYouData.success && (sharedWithYouData.shares || []).length > 0;
+            const hasSharedWithYou =
+                (sharedWithYouData.success && (sharedWithYouData.shares || []).length > 0) ||
+                (sharedByYouData.success && (sharedByYouData.shares || []).length > 0);
             const hasTrash = trashData.success && (trashData.items || []).length > 0;
 
             setTabVisibility({
@@ -360,7 +363,7 @@ export default function FolderTree({
                         onClick={() => onOpenSharedWithYou ? onOpenSharedWithYou() : onFolderSelect('')}
                     >
                         <span className={styles.folderIcon}><Share2 size={18} /></span>
-                        <span>Shared with you</span>
+                        <span>Shared</span>
                     </div>
                 )}
 

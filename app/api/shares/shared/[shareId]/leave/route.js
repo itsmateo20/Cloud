@@ -1,4 +1,4 @@
-// app/api/shares/shared-with-you/[shareId]/leave/route.js
+// app/api/shares/shared/[shareId]/leave/route.js
 
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";

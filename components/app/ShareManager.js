@@ -231,9 +231,11 @@ export default function ShareManager({
 
             {shareManager.visible && (
                 <div ref={shareManagerModalRef} className={`${styles.shares} ${sharesOnly ? styles.sharesStandalone : ""}`}>
-                    <div className={styles.sharesHeader}>
-                        <h3>Shared Files</h3>
-                    </div>
+                    {!sharesOnly && (
+                        <div className={styles.sharesHeader}>
+                            <h3>Shared</h3>
+                        </div>
+                    )}
                     <div className={styles.sharesContent}>
                         {shareManager.loading ? (
                             <div className={styles.shareLoadingCenter}>

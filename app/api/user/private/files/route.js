@@ -105,6 +105,22 @@ export async function POST(req) {
         return NextResponse.json({ success: true });
     }
 
+    if (action === "create_file") {
+        const name = sanitizeFilename(path.basename(String(formData.get("name") || "").replace(/\\/g, "/")));
+        if (!name || name === "." || name === "..") {
+            return NextResponse.json({ success: false, code: "invalid_file_name", message: "Invalid file name" }, { status: 400 });
+        }
+        try {
+            await fs.writeFile(path.join(target, name), "", { flag: "wx" });
+        } catch (error) {
+            if (error.code === "EEXIST") {
+                return NextResponse.json({ success: false, code: "item_exists", message: "An item with that name already exists" }, { status: 409 });
+            }
+            throw error;
+        }
+        return NextResponse.json({ success: true });
+    }
+
     const files = formData.getAll("files");
     for (const file of files) {
         if (!file || typeof file === "string") continue;

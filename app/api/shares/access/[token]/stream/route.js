@@ -74,7 +74,11 @@ export async function GET(req, { params }) {
 
         const userFolder = getUserUploadPath(share.ownerId);
         const itemResolution = resolvePathWithinBase(userFolder, itemPath);
-        const matchedItem = (share.items || []).find((item) => item.path === itemResolution.relativePath && item.type === "file");
+        const matchedItem = (share.items || []).find((item) => {
+            if (item.path === itemResolution.relativePath) return item.type === "file";
+            return item.type === "folder" &&
+                itemResolution.relativePath.startsWith(`${item.path}/`);
+        });
         if (!matchedItem) {
             return NextResponse.json({ success: false, code: "share_item_not_found", message: "File is not part of this share" }, { status: 404 });
         }

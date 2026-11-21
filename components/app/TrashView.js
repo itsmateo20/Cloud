@@ -5,7 +5,7 @@ import { RotateCcw, Trash2, RefreshCw, Eye } from "lucide-react";
 import { api } from "@/utils/api";
 import SoftLoading from "@/components/SoftLoading";
 import { FileViewer } from "@/components/app/FileViewer";
-import styles from "./SharedWithYou.module.css";
+import styles from "./Shared.module.css";
 
 export default function TrashView({ toast }) {
     const [items, setItems] = useState([]);

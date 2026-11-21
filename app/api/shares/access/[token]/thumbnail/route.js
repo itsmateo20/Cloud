@@ -59,12 +59,19 @@ export async function GET(req, { params }) {
             relativePath: normalizedItemPath,
             isInside: true
         };
-        const matchedItem = (share.items || []).find((item) => item.path === normalizedItemPath);
+        const matchedItem = (share.items || []).find((item) => {
+            if (item.path === normalizedItemPath) return true;
+            return item.type === "folder" &&
+                normalizedItemPath.startsWith(`${item.path}/`);
+        });
         if (!matchedItem) {
             return NextResponse.json({ success: false, code: "share_item_not_found", message: "File is not part of this share" }, { status: 404 });
         }
 
-        if (matchedItem.type === "folder") {
+        await fs.access(itemResolution.resolvedPath);
+        const itemStat = await fs.stat(itemResolution.resolvedPath);
+
+        if (itemStat.isDirectory()) {
             return new NextResponse(placeholderSvg("FOLDER"), {
                 headers: { "Content-Type": "image/svg+xml", "Cache-Control": "private, max-age=120" }
             });
@@ -80,8 +87,6 @@ export async function GET(req, { params }) {
         const fileExtension = path.extname(fullPath).toLowerCase();
         const isImage = [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".svg"].includes(fileExtension);
         const isVideo = [".mp4", ".avi", ".mov", ".wmv", ".webm", ".mkv"].includes(fileExtension);
-
-        await fs.access(fullPath);
 
         if (fileExtension === ".svg") {
             const svg = await fs.readFile(fullPath, "utf-8");
