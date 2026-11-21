@@ -33,7 +33,7 @@
         "@prisma/adapter-libsql": "^7.10.1",
         "@prisma/client": "^7.10.1",
         "@simplewebauthn/browser": "^14.0.0",
-        "@simplewebauthn/server": "^14.0.3",
+        "@simplewebauthn/server": "^14.1.0",
         "archiver": "^8.0.0",
         "bcrypt": "^6.0.0",
         "chalk": "4.1.2",
@@ -42,7 +42,7 @@
         "gravatar": "^1.8.2",
         "jsonwebtoken": "^9.0.3",
         "jszip": "^3.10.2",
-        "lucide-react": "^1.63.0",
+        "lucide-react": "^1.77.0",
         "marked": "^18.2.1",
         "next": "16.2.11",
         "path": "^0.12.7",
@@ -52,13 +52,13 @@
         "re-resizable": "^6.11.2",
         "react": "^19.3.1",
         "react-dom": "^19.3.1",
-        "sanitize-filename": "^1.6.4",
+        "sanitize-filename": "^1.6.5",
         "sharp": "0.35.3",
         "socket.io": "^4.8.4",
         "socket.io-client": "^4.8.4"
     },
     "devDependencies": {
-        "@types/bun": "^1.4.4",
+        "@types/bun": "^1.4.5",
         "cross-env": "^10.1.0"
     },
     "peerDependencies": {
