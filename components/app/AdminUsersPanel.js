@@ -22,6 +22,15 @@ const defaultSettings = {
     thumbnailResolution: "medium",
 };
 
+function getAllowedEmails(allowedEmails) {
+    try {
+        const parsedEmails = JSON.parse(allowedEmails || "[]");
+        return Array.isArray(parsedEmails) ? parsedEmails : [];
+    } catch {
+        return [];
+    }
+}
+
 export default function AdminUsersPanel({ onClose, openToken }) {
     const { user } = useAuth();
     const { addSuccess, addError } = useToast();
@@ -54,6 +63,11 @@ export default function AdminUsersPanel({ onClose, openToken }) {
     const [activeView, setActiveView] = useState("overview");
     const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
     const [shares, setShares] = useState([]);
+    const [sharedAccessFolders, setSharedAccessFolders] = useState([]);
+    const [sharedAccessFolderToRemove, setSharedAccessFolderToRemove] = useState(null);
+    const [editingSharedAccessId, setEditingSharedAccessId] = useState(null);
+    const [sharedAccessEdit, setSharedAccessEdit] = useState({ name: "", folderPath: "", allowedEmails: [] });
+    const [savingSharedAccess, setSavingSharedAccess] = useState(false);
     const [selectedShareId, setSelectedShareId] = useState(null);
     const [shareSettings, setShareSettings] = useState({
         name: "",
@@ -112,6 +126,19 @@ export default function AdminUsersPanel({ onClose, openToken }) {
         setLoading(false);
     };
 
+    const loadSharedAccessFolders = async () => {
+        setLoading(true);
+        setError("");
+        const response = await api.get("/api/admin/shared-access");
+        if (!response?.success) {
+            setError(response?.message || "Failed to load shared access folders");
+            setLoading(false);
+            return;
+        }
+        setSharedAccessFolders(Array.isArray(response.shares) ? response.shares : []);
+        setLoading(false);
+    };
+
     useEffect(() => {
         loadUsers();
         api.get("/api/admin/settings").then((response) => {
@@ -139,6 +166,7 @@ export default function AdminUsersPanel({ onClose, openToken }) {
 
     useEffect(() => {
         if (activeView === "shares") loadShares();
+        if (activeView === "sharedAccess") loadSharedAccessFolders();
     }, [activeView]);
 
     const createUser = async () => {
@@ -262,6 +290,37 @@ export default function AdminUsersPanel({ onClose, openToken }) {
         await loadShares();
     };
 
+    const removeSharedAccessFolder = async () => {
+        if (!sharedAccessFolderToRemove) return;
+        const response = await api.delete(`/api/admin/shared-access/${sharedAccessFolderToRemove.id}`);
+        if (!response?.success) return addError(response?.message || "Failed to remove shared access folder");
+        setSharedAccessFolderToRemove(null);
+        addSuccess("Shared access folder removed");
+        await loadSharedAccessFolders();
+    };
+
+    const editSharedAccessFolder = (share) => {
+        setEditingSharedAccessId(share.id);
+        setSharedAccessEdit({
+            name: share.name || "",
+            folderPath: share.folderPath || "",
+            allowedEmails: getAllowedEmails(share.allowedEmails)
+        });
+    };
+
+    const saveSharedAccessFolder = async (shareId) => {
+        setSavingSharedAccess(true);
+        const response = await api.patch(`/api/admin/shared-access/${shareId}`, {
+            ...sharedAccessEdit,
+            allowedEmails: sharedAccessEdit.allowedEmails.map((email) => email.trim()).filter(Boolean)
+        });
+        setSavingSharedAccess(false);
+        if (!response?.success) return addError(response?.message || "Failed to update shared access folder");
+        setEditingSharedAccessId(null);
+        addSuccess("Shared access folder updated");
+        await loadSharedAccessFolders();
+    };
+
     const copyShareLink = async (token) => {
         const link = `${window.location.origin}${withBasePath(`/shared/${token}`)}`;
         try {
@@ -324,7 +383,7 @@ export default function AdminUsersPanel({ onClose, openToken }) {
     return (
         <div className={styles.panel}>
             <div className={styles.header}>
-                <h2>{activeView === "shares" ? <Share2 size={22} /> : activeView === "auth" ? <KeyRound size={22} /> : <Users size={22} />} {activeView === "users" ? "Manage Users" : activeView === "shares" ? "Manage Share Links" : activeView === "auth" ? "Authentication Providers" : "Admin Panel"}</h2>
+                <h2>{activeView === "shares" || activeView === "sharedAccess" ? <Share2 size={22} /> : activeView === "auth" ? <KeyRound size={22} /> : <Users size={22} />} {activeView === "users" ? "Manage Users" : activeView === "shares" ? "Manage Share Links" : activeView === "sharedAccess" ? "Shared Access Folders" : activeView === "auth" ? "Authentication Providers" : "Admin Panel"}</h2>
                 <div className={styles.headerActions}>
                     {user?.impersonatorId && (
                         <button type="button" onClick={handleStopImpersonation} disabled={impersonating} className={styles.secondaryButton}>
@@ -339,10 +398,10 @@ export default function AdminUsersPanel({ onClose, openToken }) {
                             </button>
                             <button type="button" onClick={() => setShowCreateUser((value) => !value)} className={styles.secondaryButton}><UserPlus size={16} /> Create User</button>
                         </>
-                    ) : activeView === "shares" || activeView === "auth" ? (
+                    ) : activeView === "shares" || activeView === "sharedAccess" || activeView === "auth" ? (
                         <>
                             <button type="button" onClick={() => setActiveView("overview")} className={styles.secondaryButton}>Back</button>
-                            <button type="button" onClick={loadShares} disabled={loading} className={styles.secondaryButton}><RefreshCw size={16} /> Refresh</button>
+                            <button type="button" onClick={activeView === "sharedAccess" ? loadSharedAccessFolders : loadShares} disabled={loading} className={styles.secondaryButton}><RefreshCw size={16} /> Refresh</button>
                         </>
                     ) : (
                         null
@@ -369,6 +428,10 @@ export default function AdminUsersPanel({ onClose, openToken }) {
                     <button type="button" className={styles.manageUsersCard} onClick={() => setActiveView("shares")}>
                         <Share2 size={24} />
                         <span><strong>Manage Share Links</strong><small>View active links, copy them, edit access settings, or remove them.</small></span>
+                    </button>
+                    <button type="button" className={styles.manageUsersCard} onClick={() => setActiveView("sharedAccess")}>
+                        <FolderOpen size={24} />
+                        <span><strong>Shared Access Folders</strong><small>Review shared folders and revoke access when needed.</small></span>
                     </button>
                 </div>
             )}
@@ -536,7 +599,8 @@ export default function AdminUsersPanel({ onClose, openToken }) {
             </div>}
 
             {activeView === "shares" && (
-                <div className={shareStyles.sharesContent}>
+                <div className={styles.shareLinksContent}>
+                <div className={`${shareStyles.sharesContent} ${styles.shareManagerContent}`}>
                     {loading ? (
                         <div className={shareStyles.shareLoadingCenter}><p>Loading share links...</p></div>
                     ) : shares.length === 0 ? (
@@ -661,6 +725,127 @@ export default function AdminUsersPanel({ onClose, openToken }) {
                         </>
                     )}
                 </div>
+                </div>
+            )}
+
+            {activeView === "sharedAccess" && (
+                <div className={styles.sharedAccessContent}>
+                    {loading ? (
+                        <p>Loading shared access folders...</p>
+                    ) : sharedAccessFolders.length === 0 ? (
+                        <p className={styles.meta}>There are no shared access folders.</p>
+                    ) : (
+                        sharedAccessFolders.map((share) => {
+                            const allowedEmails = getAllowedEmails(share.allowedEmails);
+                            const isEditing = editingSharedAccessId === share.id;
+                            return (
+                                <article key={share.id} className={styles.sharedAccessCard}>
+                                    <div className={styles.sharedAccessCardHeader}>
+                                        <div>
+                                            <h3>{share.name}</h3>
+                                            <p className={styles.meta}>Owner: {share.ownerEmail || `User ${share.ownerId}`}</p>
+                                        </div>
+                                        <div className={styles.sharedAccessCardActions}>
+                                            <button
+                                                type="button"
+                                                className={styles.secondaryButton}
+                                                onClick={() => isEditing ? setEditingSharedAccessId(null) : editSharedAccessFolder(share)}
+                                            >
+                                                <Pencil size={16} /> {isEditing ? "Cancel Edit" : "Edit"}
+                                            </button>
+                                            <button
+                                                type="button"
+                                                className={styles.dangerButton}
+                                                onClick={() => setSharedAccessFolderToRemove(share)}
+                                            >
+                                                <Trash2 size={16} /> Revoke
+                                            </button>
+                                        </div>
+                                    </div>
+                                    {isEditing ? (
+                                        <div className={styles.sharedAccessEditForm}>
+                                            <label>
+                                                Display name
+                                                <input
+                                                    value={sharedAccessEdit.name}
+                                                    onChange={(event) => setSharedAccessEdit((current) => ({ ...current, name: event.target.value }))}
+                                                />
+                                            </label>
+                                            <label>
+                                                Folder path (inside the owner's storage)
+                                                <input
+                                                    value={sharedAccessEdit.folderPath}
+                                                    onChange={(event) => setSharedAccessEdit((current) => ({ ...current, folderPath: event.target.value }))}
+                                                />
+                                            </label>
+                                            <label>
+                                                Allowed emails
+                                                <div className={shareStyles.shareEmailEditor}>
+                                                    {sharedAccessEdit.allowedEmails.length === 0 ? (
+                                                        <p className={shareStyles.shareEmailHint}>Add account emails to grant access to this folder.</p>
+                                                    ) : (
+                                                        sharedAccessEdit.allowedEmails.map((email, index) => (
+                                                            <div key={`shared-access-email-${index}`} className={shareStyles.shareEmailRow}>
+                                                                <input
+                                                                    type="email"
+                                                                    className={shareStyles.shareInput}
+                                                                    value={email}
+                                                                    placeholder="name@example.com"
+                                                                    onChange={(event) => setSharedAccessEdit((current) => {
+                                                                        const nextEmails = [...current.allowedEmails];
+                                                                        nextEmails[index] = event.target.value;
+                                                                        return { ...current, allowedEmails: nextEmails };
+                                                                    })}
+                                                                />
+                                                                <button
+                                                                    type="button"
+                                                                    className={shareStyles.shareEmailRemoveButton}
+                                                                    onClick={() => setSharedAccessEdit((current) => ({
+                                                                        ...current,
+                                                                        allowedEmails: current.allowedEmails.filter((_, emailIndex) => emailIndex !== index)
+                                                                    }))}
+                                                                    aria-label={`Remove email ${email || index + 1}`}
+                                                                >
+                                                                    <Minus size={14} />
+                                                                </button>
+                                                            </div>
+                                                        ))
+                                                    )}
+                                                    <button
+                                                        type="button"
+                                                        className={shareStyles.shareEmailAddButton}
+                                                        onClick={() => setSharedAccessEdit((current) => ({
+                                                            ...current,
+                                                            allowedEmails: [...current.allowedEmails, ""]
+                                                        }))}
+                                                    >
+                                                        <Plus size={14} /> Add email
+                                                    </button>
+                                                </div>
+                                            </label>
+                                            <div>
+                                                <button
+                                                    type="button"
+                                                    className={styles.primaryButton}
+                                                    disabled={savingSharedAccess}
+                                                    onClick={() => saveSharedAccessFolder(share.id)}
+                                                >
+                                                    <Save size={16} /> {savingSharedAccess ? "Saving..." : "Save Changes"}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <dl className={styles.sharedAccessDetails}>
+                                            <div><dt>Folder</dt><dd>{share.folderPath}</dd></div>
+                                            <div><dt>Members</dt><dd>{Number(share.memberCount) || 0}</dd></div>
+                                            <div><dt>Allowed emails</dt><dd>{allowedEmails.length ? allowedEmails.join(", ") : "None"}</dd></div>
+                                        </dl>
+                                    )}
+                                </article>
+                            );
+                        })
+                    )}
+                </div>
             )}
 
             <ConfirmModal
@@ -682,6 +867,16 @@ export default function AdminUsersPanel({ onClose, openToken }) {
                 destructive
                 onCancel={() => setShowRemoveShareConfirm(false)}
                 onConfirm={removeShare}
+            />
+            <ConfirmModal
+                open={Boolean(sharedAccessFolderToRemove)}
+                title="Revoke Shared Access"
+                message={`Remove "${sharedAccessFolderToRemove?.name || "this shared folder"}"? All members will lose access.`}
+                confirmLabel="Revoke Access"
+                cancelLabel="Cancel"
+                destructive
+                onCancel={() => setSharedAccessFolderToRemove(null)}
+                onConfirm={removeSharedAccessFolder}
             />
         </div>
     );

@@ -97,7 +97,7 @@
 
 .primaryButton {
     background: var(--button-primary);
-    color: #fff;
+    color: var(--button-text-color);
     border-color: transparent;
 }
 

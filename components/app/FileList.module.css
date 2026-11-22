@@ -1484,7 +1484,7 @@
 
 .sharePrimaryButton {
     background: var(--accent-color, #2563eb);
-    color: #fff;
+    color: var(--button-text-color);
     border-color: transparent;
 }
 
@@ -1558,12 +1558,12 @@
 }
 
 .shareRowActive .shareRowMain {
-    color: white;
+    color: var(--button-text-color);
 }
 
 .shareRowActive .shareRowMain:hover {
     background: transparent;
-    color: white;
+    color: var(--button-text-color);
 }
 
 .shareRowTitle {
@@ -1600,7 +1600,7 @@
 }
 
 .shareRowActive .shareIconButton {
-    color: white;
+    color: var(--button-text-color);
 }
 
 .shareRowActive .shareIconButton:hover {

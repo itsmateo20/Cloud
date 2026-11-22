@@ -387,6 +387,49 @@
     .explorerControls {
         gap: 4px;
     }
+
+    .storageList {
+        display: grid;
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+    }
+
+    .storageItem {
+        display: flex;
+        grid-column: span 2;
+        min-width: 0;
+        height: auto;
+        min-height: 84px;
+        padding: 8px;
+        flex-direction: column;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 4px;
+    }
+
+    .storageItem:nth-child(n + 4) {
+        grid-column: span 3;
+    }
+
+    .storageItem .storageIcon {
+        width: 32px;
+        height: 32px;
+    }
+
+    .storageInfo {
+        width: 100%;
+        min-width: 0;
+        align-items: center;
+    }
+
+    .storageItem .storageName {
+        max-width: 100%;
+        font-size: 12px;
+    }
+
+    .storageItem .storageSize {
+        max-width: 100%;
+        font-size: 9px;
+    }
 }
 
 .storageItem:hover {

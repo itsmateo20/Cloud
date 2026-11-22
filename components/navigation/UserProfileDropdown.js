@@ -15,7 +15,7 @@ import nav from "./UserProfileDropdown.module.css";
 
 import { Cog, LogOut, Settings, User, Share2, Users } from "lucide-react";
 
-export default function UserProfileDropdown({ user, mobile, onOpenSettings, onOpenShares, onOpenAdminUsers }) {
+export default function UserProfileDropdown({ user, mobile, onOpenSettings, onOpenShares, onOpenAdminUsers, onCloseNavigation }) {
     const { signout } = useAuth();
     const userProfileRef = useRef(null);
     const userDropdownRef = useRef(null);
@@ -24,6 +24,11 @@ export default function UserProfileDropdown({ user, mobile, onOpenSettings, onOp
     const [openedManually, setOpenedManually] = useState(false);
     const [profileImage, setProfileImage] = useState(null);
     const [dropdownVisible, setDropdownVisible] = useState(false);
+
+    const handleMobileAction = (action) => {
+        action?.();
+        onCloseNavigation?.();
+    };
 
     useEffect(() => {
         const gravatarUrl = gravatar.url(user.email, { s: "120", r: "pg", d: "identicon" });
@@ -78,21 +83,21 @@ export default function UserProfileDropdown({ user, mobile, onOpenSettings, onOp
                     {profileImage ? <Image className={nav.userProfileMobileImg} src={"https:" + profileImage} alt="User profile picture" width={30} height={30} loading="eager" /> : <SoftLoading className={nav.userProfileImg} />}
                     <h1>{user.email}</h1>
                 </div>
-                <div className={`${nav.userProfileMobileListItem} ${nav.userProfileMobileSettings}`} onClick={onOpenSettings}>
+                <div className={`${nav.userProfileMobileListItem} ${nav.userProfileMobileSettings}`} onClick={() => handleMobileAction(onOpenSettings)}>
                     <Settings size={25} strokeWidth={2} />
                     <h1>Settings</h1>
                 </div>
-                <div className={`${nav.userProfileMobileListItem} ${nav.userProfileMobileSettings}`} onClick={() => window.open(`https://gravatar.com/emails/`, '_blank')}>
+                <div className={`${nav.userProfileMobileListItem} ${nav.userProfileMobileSettings}`} onClick={() => handleMobileAction(() => window.open(`https://gravatar.com/emails/`, '_blank'))}>
                     <User size={25} strokeWidth={2} />
                     <h1>Edit Gravatar</h1>
                 </div>
                 {user?.admin && (
-                    <div className={`${nav.userProfileMobileListItem} ${nav.userProfileMobileSettings}`} onClick={onOpenAdminUsers}>
+                    <div className={`${nav.userProfileMobileListItem} ${nav.userProfileMobileSettings}`} onClick={() => handleMobileAction(onOpenAdminUsers)}>
                         <Users size={25} strokeWidth={2} />
                         <h1>Admin Panel</h1>
                     </div>
                 )}
-                <div className={`${nav.userProfileMobileListItem} ${nav.userProfileMobileLogout}`} onClick={() => signout()}>
+                <div className={`${nav.userProfileMobileListItem} ${nav.userProfileMobileLogout}`} onClick={() => handleMobileAction(signout)}>
                     <LogOut size={23} strokeWidth={2} />
                     <h1>Logout</h1>
                 </div>

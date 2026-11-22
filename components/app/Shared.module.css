@@ -53,6 +53,10 @@
     font: inherit;
 }
 
+.subtabMobileLabel {
+    display: none;
+}
+
 .subtabs button:hover {
     background: var(--hover-background);
     color: var(--text);
@@ -60,7 +64,7 @@
 
 .activeSubtab {
     background: var(--button-primary) !important;
-    color: #fff !important;
+    color: var(--button-text-color) !important;
 }
 
 .sharedBody {
@@ -119,7 +123,7 @@
 
 .shareRowActive .shareRowMain,
 .shareRowActive .iconButton {
-    color: #fff;
+    color: var(--button-text-color);
 }
 
 .shareRowTitle {
@@ -238,7 +242,7 @@
 
 .activeViewMode {
     background: var(--button-primary) !important;
-    color: #fff !important;
+    color: var(--button-text-color) !important;
 }
 
 .itemsGrid {
@@ -404,7 +408,7 @@
 
 .primaryButton {
     background: var(--button-primary);
-    color: #fff;
+    color: var(--button-text-color);
     border-color: transparent;
 }
 
@@ -446,7 +450,7 @@
     justify-content: center;
 }
 
-@media (max-width: 700px) {
+@media (max-width: 768px) {
     .sharedHeader {
         align-items: flex-start;
         flex-direction: column;
@@ -458,11 +462,6 @@
         font-size: 22px;
     }
 
-    .trashHeaderActions {
-        width: 100%;
-        justify-content: flex-end;
-    }
-
     .subtabs {
         width: 100%;
     }
@@ -470,5 +469,210 @@
     .subtabs button {
         padding: 8px 10px;
         font-size: 13px;
+    }
+
+    .sharedTabbed .sharedHeader {
+        align-items: center;
+        justify-content: center;
+        padding: 10px 12px;
+        border-bottom: 0;
+    }
+
+    .sharedTabbed .sharedHeader h3 {
+        display: none;
+    }
+
+    .sharedTabbed .subtabs {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 4px;
+        padding: 4px;
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        background: var(--surface);
+        overflow: visible;
+    }
+
+    .sharedTabbed .subtabs button {
+        min-width: 0;
+        min-height: 40px;
+        padding: 8px 4px;
+        border-radius: 8px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    .subtabDesktopLabel {
+        display: none;
+    }
+
+    .subtabMobileLabel {
+        display: inline;
+    }
+
+    .trashHeaderActions {
+        width: 100%;
+        justify-content: flex-end;
+    }
+
+    .mobileToYouContent {
+        flex-direction: column;
+    }
+
+    .mobileToYouContent .sharedSidebar {
+        width: 100%;
+        height: 100%;
+        padding: 12px;
+        border-right: 0;
+        gap: 10px;
+    }
+
+    .mobileToYouContent .shareRow {
+        min-height: 72px;
+        border: 1px solid var(--border-color);
+        border-radius: 14px;
+        background: var(--surface);
+    }
+
+    .mobileToYouContent .shareRowMain {
+        min-height: 70px;
+        padding: 12px;
+    }
+
+    .mobileToYouContent .iconButton {
+        width: 40px;
+        height: 40px;
+        margin-right: 8px;
+    }
+
+    .mobileShareContent {
+        height: auto;
+        min-height: 0;
+        padding: 12px;
+        gap: 12px;
+    }
+
+    .mobileDetailHeader {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 0;
+        padding: 4px 0 12px;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .mobileDetailBackButton {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex: none;
+        gap: 6px;
+        min-height: 40px;
+        padding: 0 10px;
+        border: 1px solid var(--border-color);
+        border-radius: 10px;
+        background: var(--surface);
+        color: var(--text);
+        font: inherit;
+        font-size: 13px;
+        cursor: pointer;
+    }
+
+    .mobileDetailHeading {
+        min-width: 0;
+    }
+
+    .mobileDetailHeading strong,
+    .mobileDetailHeading span {
+        display: block;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .mobileDetailHeading strong {
+        font-size: 14px;
+    }
+
+    .mobileDetailHeading span {
+        margin-top: 2px;
+        color: var(--text-color-muted);
+        font-size: 12px;
+    }
+
+    .sharedMainContent {
+        height: auto;
+        min-height: 0;
+    }
+
+    .mobileShareContent .mainHeaderRow {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .mobileShareContent .mainHeaderRow h4 {
+        font-size: 18px;
+    }
+
+    .mobileShareContent .mainHeaderRow > div:last-child {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .mobileShareContent .mainHeaderRow button,
+    .mobileShareContent .mainHeaderRow a {
+        margin-left: 0;
+        font-size: 13px;
+    }
+
+    .mobileShareContent .browserToolbar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+    }
+
+    .mobileShareContent .viewModeButtons {
+        justify-content: flex-end;
+    }
+
+    .itemsGrid {
+        grid-template-columns: repeat(auto-fill, minmax(min(140px, 100%), 1fr));
+    }
+
+    .itemTile {
+        height: 138px;
+    }
+
+    .itemListRow .itemOpenButton {
+        grid-template-columns: 32px minmax(0, 1fr);
+        padding-right: 44px;
+    }
+
+    .itemListRow .itemMeta {
+        display: none;
+    }
+
+    .itemRow {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .itemRow > div:first-child {
+        min-width: 0;
+    }
+
+    .itemMeta {
+        overflow-wrap: anywhere;
+    }
+
+    .itemRow .mainHeaderRow {
+        justify-content: flex-start;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .itemRow .mainHeaderRow button {
+        margin-left: 0;
     }
 }

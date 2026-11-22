@@ -107,7 +107,7 @@
     gap: 8px;
     cursor: pointer;
     background: var(--button-primary);
-    color: white;
+    color: var(--button-text-color);
     font-weight: 600;
     box-shadow: 0 10px 24px color-mix(in srgb, var(--button-primary) 34%, transparent);
     transition: transform 0.18s ease, filter 0.18s ease;

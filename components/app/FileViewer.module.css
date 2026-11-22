@@ -1021,7 +1021,7 @@
     height: 50px;
     border-radius: 50%;
     background: var(--accent-color);
-    color: white;
+    color: var(--button-text-color);
 }
 
 .videoPlayButton:hover {
@@ -1252,5 +1252,5 @@
 
 .previewButtonActive {
     background: var(--accent-color) !important;
-    color: white !important;
+    color: var(--button-text-color) !important;
 }

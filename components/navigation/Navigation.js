@@ -343,14 +343,14 @@ export function Navigation({ user, sideNav = false, currentPath, onOpenSettings,
                 onMouseDown={isMobile && user ? handleMouseDown : undefined}
             >
                 <div className={style.titleContainer}>
-                    <Link className={style.logo} href="/">
+                    <Link className={style.logo} href="/" onClick={closeNavigation}>
                         <Suspense fallback={null}>
                             <Image src={withBasePath("/assets/logo/logo.png")} alt="Cloud Storage Icon" width={54} height={33} quality={100} loading="eager" priority />
                         </Suspense>
                     </Link>
                     <h1 className={style.title}>Cloud</h1>
                 </div>
-                {user && deviceResolved ? <UserProfileDropdown user={user} mobile={isMobile} onOpenSettings={onOpenSettings} onOpenShares={onOpenShares} onOpenAdminUsers={onOpenAdminUsers} /> : null}
+                {user && deviceResolved ? <UserProfileDropdown user={user} mobile={isMobile} onOpenSettings={onOpenSettings} onOpenShares={onOpenShares} onOpenAdminUsers={onOpenAdminUsers} onCloseNavigation={closeNavigation} /> : null}
             </nav>
         </>
     );

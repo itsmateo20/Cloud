@@ -170,7 +170,7 @@
 
 .dropdownItem.active {
     background-color: var(--accent-color);
-    color: white;
+    color: var(--button-text-color);
 }
 
 .dropdownItem.active:hover {

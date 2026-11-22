@@ -8,6 +8,7 @@ import { getSiteUrl } from "@/lib/getSiteUrl";
 import { withBasePath } from "@/lib/basePath";
 import { DownloadManager } from "@/components/app/DownloadManager";
 import { UploadManager } from "@/components/app/UploadManager";
+import ThemeColorSync from "@/components/ThemeColorSync";
 
 export async function generateMetadata() {
   const siteUrl = await getSiteUrl();
@@ -84,16 +85,14 @@ export const viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f1f1f1" },
-    { media: "(prefers-color-scheme: dark)", color: "#141414" },
-  ],
+  themeColor: "#141414",
 };
 
 export default async function RootLayout({ children }) {
   return (
     <html lang="en" className={fonts.join(' ')}>
       <body>
+        <ThemeColorSync />
         <ToastProvider>
           <AuthProvider>
             {children}

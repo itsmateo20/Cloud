@@ -8,7 +8,7 @@ import { withBasePath } from "@/lib/basePath";
 import ConfirmModal from "@/components/app/ConfirmModal";
 import styles from "./SharedAccessFolders.module.css";
 
-const SharedAccessFolders = forwardRef(function SharedAccessFolders({ toast, viewMode = "grid", sortBy = "name", onSelectionChange, onReadyChange }, ref) {
+const SharedAccessFolders = forwardRef(function SharedAccessFolders({ toast, viewMode = "grid", sortBy = "name", mobile = false, onSelectionChange, onReadyChange }, ref) {
     const [loading, setLoading] = useState(true);
     const [shares, setShares] = useState([]);
     const [selectedShareId, setSelectedShareId] = useState(null);
@@ -404,9 +404,16 @@ const SharedAccessFolders = forwardRef(function SharedAccessFolders({ toast, vie
             : (share.ownerEmail || "Shared Folder")
     );
 
+    const mobileShareOpened = mobile && Boolean(selectedShare);
+
     return (
-        <div className={styles.sharedAccess}>
-            <aside className={styles.shareList}>
+        <div className={`${styles.sharedAccess} ${mobile ? styles.mobileSharedAccess : ""}`}>
+            {(!mobile || !mobileShareOpened) && (
+            <aside className={`${styles.shareList} ${mobile ? styles.mobileSharePicker : ""}`}>
+                <div className={styles.shareListHeader}>
+                    <span>Shared folders</span>
+                    <span>{shares.length}</span>
+                </div>
                 {loading ? (
                     <div className={styles.loadingCenter}><SoftLoading /></div>
                 ) : shares.length === 0 ? (
@@ -423,8 +430,29 @@ const SharedAccessFolders = forwardRef(function SharedAccessFolders({ toast, vie
                     </div>
                 ))}
             </aside>
+            )}
 
-            <section className={styles.folderMain}>
+            {(!mobile || mobileShareOpened) && (
+            <section className={`${styles.folderMain} ${mobile ? styles.mobileFolderMain : ""}`}>
+                {mobile && (
+                    <div className={styles.mobileDetailHeader}>
+                        <button
+                            type="button"
+                            className={styles.mobileDetailBackButton}
+                            onClick={() => {
+                                setSelectedShareId(null);
+                                setBrowsePath("");
+                            }}
+                        >
+                            <ArrowLeft size={18} />
+                            <span>All folders</span>
+                        </button>
+                        <div className={styles.mobileDetailHeading}>
+                            <strong>{getShareLabel(selectedShare)}</strong>
+                            <span>{selectedShare?.isOwner ? "Shared by you" : "Shared with you"}</span>
+                        </div>
+                    </div>
+                )}
                 {!selectedShare ? (
                     <div className={styles.emptyMain}>
                         <FolderUsers size={48} />
@@ -487,6 +515,7 @@ const SharedAccessFolders = forwardRef(function SharedAccessFolders({ toast, vie
                     </>
                 )}
             </section>
+            )}
 
             {createOpen && (
                 <div className={styles.modalOverlay}>

@@ -2414,45 +2414,54 @@ export default function Page() {
                   </div>
                 </div>
 
-                {trashItemCount > 0 && (
-                  <div
-                    className={style.storageItem}
-                    onClick={handleOpenTrash}
-                  >
-                    <div className={style.storageIcon}>
-                      <Trash2 size={25} />
-                    </div>
-                    <div className={style.storageInfo}>
-                      <span className={style.storageName}>Bin</span>
-                      <span className={style.storageSize}>
-                        {trashItemCount} {trashItemCount === 1 ? 'item' : 'items'} inside
-                      </span>
-                    </div>
+                <div
+                  className={style.storageItem}
+                  onClick={handleOpenShared}
+                >
+                  <div className={style.storageIcon}>
+                    <Share2 size={25} />
                   </div>
-                )}
+                  <div className={style.storageInfo}>
+                    <span className={style.storageName}>Shared</span>
+                    <span className={style.storageSize}>Shared with you</span>
+                  </div>
+                </div>
 
-                {(favorites.files.length > 0 || favorites.folders.length > 0) && (
-                  <div
-                    className={style.storageItem}
-                    onClick={() => {
-                      setCurrentPath('favorites');
-                      setShowSettings(false);
-                      setShowShares(false);
-                      setShowSharedWithYou(false);
-                      setShowAdminUsers(false);
-                    }}
-                  >
-                    <div className={style.storageIcon}>
-                      <Star size={25} />
-                    </div>
-                    <div className={style.storageInfo}>
-                      <span className={style.storageName}>Favourites</span>
-                      <span className={style.storageSize}>
-                        {favorites.files.length + favorites.folders.length} items
-                      </span>
-                    </div>
+                <div
+                  className={style.storageItem}
+                  onClick={() => {
+                    setCurrentPath('favorites');
+                    setShowSettings(false);
+                    setShowShares(false);
+                    setShowSharedWithYou(false);
+                    setShowAdminUsers(false);
+                  }}
+                >
+                  <div className={style.storageIcon}>
+                    <Star size={25} />
                   </div>
-                )}
+                  <div className={style.storageInfo}>
+                    <span className={style.storageName}>Favourites</span>
+                    <span className={style.storageSize}>
+                      {favorites.files.length + favorites.folders.length} {favorites.files.length + favorites.folders.length === 1 ? 'item' : 'items'}
+                    </span>
+                  </div>
+                </div>
+
+                <div
+                  className={style.storageItem}
+                  onClick={handleOpenTrash}
+                >
+                  <div className={style.storageIcon}>
+                    <Trash2 size={25} />
+                  </div>
+                  <div className={style.storageInfo}>
+                    <span className={style.storageName}>Bin</span>
+                    <span className={style.storageSize}>
+                      {trashItemCount} {trashItemCount === 1 ? 'item' : 'items'} inside
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
 

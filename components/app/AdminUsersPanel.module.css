@@ -38,6 +38,9 @@
 }
 
 .overview {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
     width: 100%;
     max-width: 1000px;
     margin: 0;
@@ -248,7 +251,7 @@
 
 .primaryButton {
     background: var(--button-primary);
-    color: white;
+    color: var(--button-text-color);
     border-color: transparent;
     width: fit-content;
 }
@@ -266,6 +269,104 @@
 .message {
     color: var(--text);
     margin: 8px 20px 0;
+}
+
+.shareLinksContent {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+}
+
+.shareManagerContent {
+    flex: 1;
+    min-height: 0;
+}
+
+.sharedAccessContent {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    padding: 16px 20px;
+    display: grid;
+    align-content: start;
+    gap: 12px;
+}
+
+.sharedAccessCard {
+    min-width: 0;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 14px;
+    background: var(--surface);
+}
+
+.sharedAccessCardHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.sharedAccessCardHeader h3 {
+    margin: 0;
+    overflow-wrap: anywhere;
+}
+
+.sharedAccessCardActions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.sharedAccessEditForm {
+    display: grid;
+    gap: 12px;
+    margin-top: 16px;
+}
+
+.sharedAccessEditForm label {
+    display: grid;
+    gap: 6px;
+    color: var(--alt-text-2);
+    font-size: 13px;
+}
+
+.sharedAccessEditForm input,
+.sharedAccessEditForm textarea {
+    width: 100%;
+    min-width: 0;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 10px 12px;
+    background: var(--surface);
+    color: var(--text);
+    font: inherit;
+}
+
+.sharedAccessEditForm textarea {
+    resize: vertical;
+}
+
+.sharedAccessDetails {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+    margin: 14px 0 0;
+}
+
+.sharedAccessDetails div {
+    min-width: 0;
+}
+
+.sharedAccessDetails dt {
+    color: var(--alt-text-2);
+    font-size: 12px;
+}
+
+.sharedAccessDetails dd {
+    margin: 4px 0 0;
+    overflow-wrap: anywhere;
 }
 
 @media (max-width: 900px) {
@@ -296,5 +397,66 @@
     .headerActions {
         width: 100%;
         flex-wrap: wrap;
+    }
+
+    .panel {
+        overflow-y: auto;
+        overflow-x: hidden;
+    }
+
+    .header {
+        position: sticky;
+        top: 0;
+        z-index: 5;
+        flex: none;
+        background: var(--background);
+    }
+
+    .overview {
+        flex: none;
+        min-height: auto;
+        overflow: visible;
+    }
+
+    .grid {
+        display: flex;
+        flex: none;
+        flex-direction: column;
+        min-height: auto;
+        overflow: visible;
+    }
+
+    .userList {
+        flex: none;
+        min-height: auto;
+    }
+
+    .editor {
+        flex: none;
+        min-height: auto;
+        overflow: visible;
+    }
+
+    .shareLinksContent,
+    .sharedAccessContent {
+        flex: none;
+        min-height: auto;
+        overflow: visible;
+    }
+
+    .shareLinksContent {
+        min-height: 70vh;
+    }
+
+    .shareManagerContent {
+        min-height: 70vh;
+    }
+
+    .sharedAccessContent {
+        padding: 14px 16px;
+    }
+
+    .sharedAccessCardHeader {
+        flex-direction: column;
     }
 }

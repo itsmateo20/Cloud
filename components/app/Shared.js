@@ -79,7 +79,7 @@ export default function Shared({
     const subtab = initialSubtab;
 
     return (
-        <div className={styles.shared}>
+        <div className={`${styles.shared} ${styles.sharedTabbed}`}>
             <div className={styles.sharedHeader}>
                 <h3>Shared</h3>
                 <div className={styles.subtabs} role="tablist" aria-label="Shared views">
@@ -90,7 +90,8 @@ export default function Shared({
                         className={subtab === "to" ? styles.activeSubtab : ""}
                         onClick={() => setInitialSubtab?.("to")}
                     >
-                        Shared (to you)
+                        <span className={styles.subtabDesktopLabel}>Shared (to you)</span>
+                        <span className={styles.subtabMobileLabel}>For you</span>
                     </button>
                     <button
                         type="button"
@@ -99,7 +100,8 @@ export default function Shared({
                         className={subtab === "by" ? styles.activeSubtab : ""}
                         onClick={() => setInitialSubtab?.("by")}
                     >
-                        Shared (by you)
+                        <span className={styles.subtabDesktopLabel}>Shared (by you)</span>
+                        <span className={styles.subtabMobileLabel}>By you</span>
                     </button>
                     <button
                         type="button"
@@ -108,14 +110,15 @@ export default function Shared({
                         className={subtab === "access" ? styles.activeSubtab : ""}
                         onClick={() => setInitialSubtab?.("access")}
                     >
-                        Shared Access
+                        <span className={styles.subtabDesktopLabel}>Shared Access</span>
+                        <span className={styles.subtabMobileLabel}>Access</span>
                     </button>
                 </div>
             </div>
 
             <div className={styles.sharedBody}>
                 {subtab === "to" ? (
-                    <SharedToYou toast={toast} viewMode={viewMode} onSelectionChange={onSelectionChange} />
+                    <SharedToYou toast={toast} viewMode={viewMode} mobile={mobile} onSelectionChange={onSelectionChange} />
                 ) : subtab === "by" ? (
                     <FileList
                         key={`shared-by-${mobile ? "mobile" : "desktop"}`}
@@ -144,7 +147,7 @@ export default function Shared({
     );
 }
 
-function SharedToYou({ toast, viewMode = "grid", onSelectionChange }) {
+function SharedToYou({ toast, viewMode = "grid", mobile = false, onSelectionChange }) {
     const [loading, setLoading] = useState(true);
     const [shares, setShares] = useState([]);
     const [selectedShareId, setSelectedShareId] = useState(null);
@@ -179,12 +182,12 @@ function SharedToYou({ toast, viewMode = "grid", onSelectionChange }) {
             setShares(nextShares);
             setLoadError("");
             if (!nextShares.some((share) => Number(share.id) === Number(selectedShareId))) {
-                setSelectedShareId(nextShares[0]?.id || null);
+                setSelectedShareId(mobile ? null : nextShares[0]?.id || null);
                 setSelectedShareData(null);
             }
         }
         setLoading(false);
-    }, [selectedShareId]);
+    }, [mobile, selectedShareId]);
 
     useEffect(() => {
         loadShares();
@@ -339,13 +342,16 @@ function SharedToYou({ toast, viewMode = "grid", onSelectionChange }) {
         await loadShares();
     };
 
+    const mobileShareOpened = mobile && Boolean(selectedMeta);
+
     return (
-        <div className={styles.toYouContent}>
-            <aside className={styles.sharedSidebar}>
+        <div className={`${styles.toYouContent} ${mobile ? styles.mobileToYouContent : ""}`}>
+            {(!mobile || !mobileShareOpened) && (
+                <aside className={styles.sharedSidebar}>
                 {loading ? (
                     <div className={styles.loadingCenter}><SoftLoading /></div>
                 ) : shares.length === 0 ? (
-                    <p className={styles.emptyHint}>No shares are assigned to your email.</p>
+                    <p className={styles.emptyHint}>{mobile && loadError ? loadError : "No shares are assigned to your email."}</p>
                 ) : shares.map((share) => (
                     <div key={share.id} className={`${styles.shareRow} ${Number(selectedShareId) === Number(share.id) ? styles.shareRowActive : ""}`}>
                         <button type="button" className={styles.shareRowMain} onClick={() => setSelectedShareId(share.id)}>
@@ -357,9 +363,31 @@ function SharedToYou({ toast, viewMode = "grid", onSelectionChange }) {
                         </button>
                     </div>
                 ))}
-            </aside>
+                </aside>
+            )}
 
-            <section className={styles.sharedMainContent}>
+            {(!mobile || mobileShareOpened) && (
+            <section className={`${styles.sharedMainContent} ${mobile ? styles.mobileShareContent : ""}`}>
+                {mobile && (
+                    <div className={styles.mobileDetailHeader}>
+                        <button
+                            type="button"
+                            className={styles.mobileDetailBackButton}
+                            onClick={() => {
+                                setSelectedShareId(null);
+                                setSelectedShareData(null);
+                                setBrowsePath("");
+                            }}
+                        >
+                            <ArrowLeft size={18} />
+                            <span>All shares</span>
+                        </button>
+                        <div className={styles.mobileDetailHeading}>
+                            <strong>{selectedMeta?.name}</strong>
+                            <span>{selectedMeta?.ownerEmail || "Shared with you"}</span>
+                        </div>
+                    </div>
+                )}
                 {!selectedMeta ? (
                     <p className={styles.emptyHint}>Select a share to view or download files.</p>
                 ) : selectedMeta.hasPasscode && !selectedPasscode ? (
@@ -449,6 +477,7 @@ function SharedToYou({ toast, viewMode = "grid", onSelectionChange }) {
                     </>
                 )}
             </section>
+            )}
         </div>
     );
 }

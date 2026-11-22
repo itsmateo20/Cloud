@@ -99,7 +99,7 @@
 .primaryButton {
     padding: 10px 14px;
     background: var(--button-primary, var(--surface));
-    color: #fff;
+    color: var(--button-text-color, #fff);
     border-color: transparent;
 }
 
